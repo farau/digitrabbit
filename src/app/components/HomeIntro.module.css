@@ -1,0 +1,53 @@
+.intro {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center; /* <-- centre horizontalement */
+    z-index: 0;
+    opacity: 1;
+    transition: opacity 1s ease;
+    perspective: 1000px;
+  }
+
+  .logoContainer {
+    position: relative;
+    width: clamp(200px, 40vw, 400px); /* responsive entre 200px et 400px */
+    height: clamp(200px, 40vw, 400px);
+    transform-style: preserve-3d;
+    animation: spin3D 6s linear infinite;
+  }
+  
+
+  .fadeOut {
+    opacity: 0;
+    pointer-events: none;
+  }
+  
+  @keyframes spin3D {
+    from {
+      transform: rotateY(0deg);
+    }
+    to {
+      transform: rotateY(360deg);
+    }
+  }
+  
+  .enterButton {
+    display: block;
+    padding: 10px 20px;
+    font-size: clamp(1rem, 2.5vw, 1.5rem); /* taille responsive */
+    background: white;
+    color: black;
+    border: 2px solid black;
+    cursor: pointer;
+  }
+  
+
+  
+  
