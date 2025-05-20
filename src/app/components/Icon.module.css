@@ -12,7 +12,7 @@
   font-size: 14px;
 }
 
-@media (max-width: 576px) {
+@media (max-width: 630px) {
   .iconHiddenOnMobile {
     display: none;
   }

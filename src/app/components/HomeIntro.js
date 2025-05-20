@@ -37,10 +37,12 @@ export default function HomeIntro({ onEnter }) {
                 }}
                 >
                 <Image
-                    src="/img/logo.png"
-                    alt="Animated DigitRabbit"
-                    fill
-                    style={{ objectFit: "contain" }}
+                  src="/img/logo.png"
+                  alt="Animated DigitRabbit"
+                  fill
+                  style={{ objectFit: "contain" }}
+                  sizes={styles.logoContainer}
+                  priority
                 />
                 </div>
             ))}

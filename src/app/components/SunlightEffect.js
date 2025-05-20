@@ -31,13 +31,13 @@ export default function SunlightEffect() {
     const renderer = new THREE.WebGLRenderer({ alpha: true })
     renderer.setSize(window.innerWidth, window.innerHeight)
     renderer.setPixelRatio(window.devicePixelRatio)
+    container.innerHTML = ''
     container.appendChild(renderer.domElement)
 
     // SUN (visible in the main scene)
     //const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xfff9c4 })
     const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xfff6b0 }) // Orange doux
-
-      const sun = new THREE.Mesh(new THREE.SphereGeometry(0.3, 32, 32), sunMaterial)
+    const sun = new THREE.Mesh(new THREE.SphereGeometry(0.3, 32, 32), sunMaterial)
 
     // Placer le soleil dans le coin supérieur droit de la scène en 3D
     const distanceFromCamera = 5; // Distance de la caméra

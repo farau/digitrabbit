@@ -20,9 +20,9 @@
   top: 0;
   z-index: 10;
 }
-
-
-.background {
+  
+/* Background jour */
+.bgDay {
   position: relative;
   width: 100vw;
   height: 100vh;
@@ -32,17 +32,29 @@
   display: flex;
   flex-wrap: wrap;
 }
-  
+
+/* Background nuit */
+.bgNight {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background: url('/img/background-night.jpg') no-repeat center center fixed;
+  background-size: cover;
+  background-attachment: fixed; /* Fait en sorte que l'image reste fixe lors du défilement */
+  display: flex;
+  flex-wrap: wrap;
+}
+
 .mobileImage {
   display: none;
   position: absolute;
   opacity: 0;
   transform: translateY(30px);
   animation: fadeInDown 3s ease-out forwards;
-  z-index: 0;
+  z-index: 1;
 }
 
-@media (max-width: 576px) {
+@media (max-width: 630px) {
   .mobileImage {
     display: block;
     margin: 0 auto;

@@ -2,16 +2,33 @@
 
 import { useState, useEffect } from "react";
 import styles from "./MainPage.module.css";
+import Image from "next/image";
 import Icon from "./Icon";
 import Footer from "./Footer";
 import MemeGallery from "./MemeGallery";
 import AudioPlayer from "./AudioPlayer";
-import SunlightEffect from "./SunlightEffect";
+import BackgroundEffect from "./BackgroundEffect";
 import Profile from "./Profile"; 
+import Settings from "./Settings";
+import { useWindowSize } from "../hooks/useWindowSize"; // Assurez-vous d'importer le bon hook
+import Leaderboard from "./Leaderboard";
+import About from "./About";
+
 
 export default function MainPage() {
 
   const [visibleApps, setVisibleApps] = useState([""]);
+  const [isDay, setIsDay] = useState(true);
+  const [sound, setSound] = useState("crying");
+
+  function BackgroundSwitcher() {
+  
+    return (
+      <>
+        {isDay ? <BackgroundEffect /> : <BackgroundEffect mode="moon" />}
+      </>
+    );
+  }
 
   const restoreApp = (appName) => {
     setVisibleApps(() => [appName]);
@@ -28,24 +45,6 @@ export default function MainPage() {
     margin: "0 clamp(10px, 2vw, 20px)", // marge latérale responsive
   };
   
-
-  function useWindowSize() {
-    const [size, setSize] = useState({ width: 0 });
-  
-    useEffect(() => {
-      // Ne s'exécute que côté client
-      const handleResize = () => {
-        setSize({ width: window.innerWidth });
-      };
-  
-      handleResize(); // initialise la taille
-  
-      window.addEventListener("resize", handleResize);
-      return () => window.removeEventListener("resize", handleResize);
-    }, []);
-  
-    return size;
-  }
 
   const { width } = useWindowSize();
   
@@ -64,8 +63,8 @@ export default function MainPage() {
   }, []);
 
   return (
-    <div className={styles.background}>
-      <img src="/img/bg-img-mobile.png" alt="Mobile image" className={styles.mobileImage} />
+    <div className={`${isDay ? styles.bgDay : styles.bgNight}`}>
+      <Image src="/img/bg-img-mobile.png" alt="Mobile image" fill className={styles.mobileImage} />
       {/* Icônes interactives */}
       <Icon
         name="Home"
@@ -86,21 +85,21 @@ export default function MainPage() {
         src="/img/icons/profile.png"
         label="Profile"
         onClick={() => restoreApp("Profile")}
-        position={{ x: -140, y: "250px" }} // Spécifie la position de l'icône
+        position={{ x: -140, y: "40%" }} // Spécifie la position de l'icône
       />
       <Icon
         name="Leaderboard"
         src="/img/icons/leaderboard.png"
         label="Leaderboard"
-        onClick={() => restoreApp("Music")}
-        position={{ x: -140, y: "75%" }} // Spécifie la position de l'icône
+        onClick={() => restoreApp("Leaderboard")}
+        position={{ x: -140, y: "70%" }} // Spécifie la position de l'icône
       />
       <Icon
         name="Game"
         src="/img/icons/game.png"
         label="Game"
         onClick={() => restoreApp("Music")}
-        position={{ x: -100, y: 180 }} // Spécifie la position de l'icône
+        position={{ x: -100, y: "35%" }} // Spécifie la position de l'icône
       />
 
       {/*<Icon
@@ -111,23 +110,36 @@ export default function MainPage() {
         position={{ x: 0, y: 0 }} // Spécifie la position de l'icône
       />*/}
 
+
+      <Icon
+        name="Shop"
+        label="Shop"
+        src="/img/icons/shop.png" 
+        position={{ x: -100, y: "50%" }} // Spécifie la position de l'icône
+      />
+
       <Icon
         name="digit-head"
         src="/3d/head" // déclenche l'affichage 3D
-        position={{ x: `${width - 650}px`, y: "1%" }}
-        onClick={() => console.log("Clicked 3D icon")}
+        position={{ x: `${width - 690}px`, y: "1%" }}
+        sound={sound}
       />
 
+      <Icon
+        name="settings"
+        label={"Settings"}
+        src="/img/icons/settings.png" 
+        onClick={() => restoreApp("Settings")}
+        position={{ x: -150, y: "30%" }}
+      />
 
       {/* Fenêtre Home */}
       {visibleApps.includes("Home") && (
         <div
           className={styles.window}
-          width="400"
-          height="300"
         >
-        <div className="title-bar">
-          <span>Welcome to Digit Rabbits</span>
+        <div className="title-bar sticky">
+          <span>About our collection</span>
           <div className="title-bar-controls">
             <button
               onClick={() =>
@@ -137,35 +149,17 @@ export default function MainPage() {
             ></button>
           </div>
         </div>
-        <div className="window-body">
-          <p style={{ margin: 0, padding: 10, color: "black" }}>
-            <span style={{ fontWeight: "bold" }}>Digit Rabbit</span> aims to provide a Rabbitio experience through <span style={{ fontWeight: "bold" }}>MegaETH</span>. 
-              Choose from which side you want to be, help your <span style={{ fontWeight: "bold" }}>digital rabbit</span> to win the game and receive a famous WL!
-          </p>
-          <h5 style={{ margin: 0, padding: 10, color: "black", textAlign: "center", fontWeight: "bold" }}>What is a &quot;digital rabbit&quot; ?</h5>
-          <p style={{ margin: 0, padding: 10, color: "black" }}>
-            This is your avatar in the game, which will evolve depending on your actions.
-            <br />
-            The more you play and interact with the Rabbitio community, the more your RabbitScore will be better and bring you rewards 👀
-          </p>
-          <h5 style={{ margin: 0, padding: 10, color: "black", textAlign: "center", fontWeight: "bold" }}>Get ready to play our game which shows the MegaETH capabilities</h5>
-          <p style={{ margin: 0, padding: 10, color: "black" }}>We want to create a strong community dedicated to Rabbitio, which can land and evolve on MegaETH by showing to the entire world how we can combine NFT, gaming and community!</p>
-          <p style={{ margin: 0, padding: 10, color: "black" }}>Be ready to CLICK very very rabbitio much on the nice and beautiful Rabbihead surrounding the Rabbitio World, each day there will be opportunities to make the MOST transactions you can to FEED your &quot;digital rabbit&quot;.</p>
-          <p style={{ margin: 0, padding: 10, color: "black" }}>Be ready, we say it again, be ready, our rabbitio AI model will track your activity daily and update your Rabbitscore.</p>
           
-          <h5 style={{ margin: 0, padding: 10, color: "black", textAlign: "center", fontWeight: "bold" }}>Don&apos;t understand ?</h5>
-          <p style={{ margin: 0, padding: 10, color: "black" }}>No one cares. Just be ready to click and enjoy the game.</p>
-          <p style={{ margin: 0, padding: 10, color: "black" }}>A leaderboard will shows the best players for sure, but stay focus on yourself degen buddy because WL are limited and only the best one will get it.</p>
-          <p style={{ margin: 0, padding: 10, color: "black", textAlign: "center", fontStyle: "italic" }}>RABBITIOOOO</p>
+        <div className="window-body" style={{ overflowY: "auto", height: "calc(100% - 30px)", padding: "10px" }}>
+            <About />
         </div>
-      </div>
+      </div> 
       )}
 
       {/* Fenêtre Memes */}
       {visibleApps.includes("Memes") && (
         <div
           className={styles.window}
-
         >
         <div className="title-bar sticky">
           <span>Memes collection</span>
@@ -272,7 +266,55 @@ export default function MainPage() {
       </div>    
       )}
 
-      <SunlightEffect />
+      {/* Fenêtre Settings */}
+      {visibleApps.includes("Settings") && (
+        <div
+          className={styles.window}
+
+        >
+        <div className="title-bar sticky">
+          <span>Settings</span>
+          <div className="title-bar-controls">
+            <button
+              onClick={() =>
+                setVisibleApps((apps) => apps.filter((app) => app !== "Settings"))
+              }
+              aria-label="Close"
+            ></button>
+          </div>
+        </div>
+          
+        <div className="window-body" style={{ overflowY: "auto", height: "calc(100% - 30px)", padding: "10px" }}>
+            <Settings dayMode={isDay} setDayMode={setIsDay} sound={sound} setSound={setSound} />
+        </div>
+      </div>    
+      )}  
+
+      {/* Fenêtre Leaderboard */}
+      {visibleApps.includes("Leaderboard") && (
+        <div
+          className={styles.window}
+
+        >
+        <div className="title-bar sticky">
+          <span>Leaderboard</span>
+          <div className="title-bar-controls">
+            <button
+              onClick={() =>
+                setVisibleApps((apps) => apps.filter((app) => app !== "Leaderboard"))
+              }
+              aria-label="Close"
+            ></button>
+          </div>
+        </div>
+          
+        <div className="window-body" style={{ overflowY: "auto", height: "calc(100% - 30px)", padding: "10px" }}>
+            <Leaderboard />
+        </div>
+      </div>    
+      )}
+
+      <BackgroundSwitcher />
       <Footer visibleApps={visibleApps} setVisibleApps={setVisibleApps} />
     </div>
   );

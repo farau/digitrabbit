@@ -67,9 +67,13 @@ export default function Footer({ visibleApps, setVisibleApps }) {
             <hr className={styles.menuDivider} />
             <div className={styles.menuItem} onClick={() => openApp("Profile")}><Image src="/img/icons/profile.png" alt="Profile icon" width={30} height={30} /> Profile</div>
             <div className={styles.menuItem} onClick={() => openApp("Game")}><Image src="/img/icons/game.png" alt="Game icon" width={30} height={30} /> Game</div>
+            <div className={styles.menuItem} onClick={() => openApp("Shop")}><Image src="/img/icons/shop.png" alt="Shop icon" width={30} height={30} /> Shop</div> 
             <hr className={styles.menuDivider} />
             <div className={styles.menuItem} onClick={() => openApp("Leaderboard")}><Image src="/img/icons/leaderboard.png" alt="Leaderboard icon" width={30} height={30} /> Leaderboard</div>   
             {/* Ajoute d'autres apps ici */}
+            <hr className={styles.menuDivider} />
+            <div className={styles.menuItem} onClick={() => openApp("Settings")}><Image src="/img/icons/settings.png" alt="Settings icon" width={30} height={30} /> Settings</div>   
+            
           </div>
         )}
         <div className={styles.socialIcons}>

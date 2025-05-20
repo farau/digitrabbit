@@ -15,7 +15,7 @@
   padding: 0 8px;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   font-size: 14px;
-  z-index: 0;
+  z-index: 2;
   box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #000;
 }
 
@@ -33,18 +33,31 @@
   bottom: 40px;
   left: 10px;
   width: 200px;
-  background-color: #c0c0c0; /* gris typique Windows 95 */
+  background-color: #c0c0c0;
   display: flex;
   flex-direction: column;
 
-  /* Effet de relief */
-  border-top: 2px solid #ffffff;     /* bord clair en haut */
-  border-left: 2px solid #ffffff;    /* bord clair à gauche */
-  border-bottom: 2px solid #404040;  /* bord sombre en bas */
-  border-right: 2px solid #404040;   /* bord sombre à droite */
+  border-top: 2px solid #ffffff;
+  border-left: 2px solid #ffffff;
+  border-bottom: 2px solid #404040;
+  border-right: 2px solid #404040;
 
   box-shadow: inset 1px 1px 0 #808080, inset -1px -1px 0 #000000;
 }
+
+/* Si la fenêtre est trop petite, on réduit un peu la largeur */
+@media (max-width: 500px) {
+  .startMenu {
+    width: 160px;
+  }
+}
+
+@media (max-width: 350px) {
+  .startMenu {
+    width: 140px;
+  }
+}
+
 
 .menuItem {
   display: flex;
@@ -91,4 +104,5 @@
   gap: 10px; /* espace entre les deux icônes */
   align-items: center;
   margin-left: 0px;
+  height: auto;
 }

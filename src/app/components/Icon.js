@@ -88,11 +88,17 @@ function FloatingHeadModel({ mouse, click }) {
 
 
 
-export default function Icon({ name, src, label, onClick, position }) {
+export default function Icon({ name, src, label, onClick, position, sound }) {
   const is3D = src === "/3d/head";
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
   const [click, setClicked] = useState(false);
-  const soundRef = useRef(null);
+  const soundRef = useRef("crying");
+    
+  useEffect(() => {
+    if (sound) {
+      soundRef.current = new Audio(`/sounds/${sound}.mp3`);
+    }
+  }, [sound]);
 
   // Charger et préparer le son
   if (!soundRef.current) {  

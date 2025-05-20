@@ -7,7 +7,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass'
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass'
 
-export default function SunlightEffect() {
+export default function MoonEffect() {
   const containerRef = useRef(null)
 
   useEffect(() => {
@@ -31,23 +31,52 @@ export default function SunlightEffect() {
     const renderer = new THREE.WebGLRenderer({ alpha: true })
     renderer.setSize(window.innerWidth, window.innerHeight)
     renderer.setPixelRatio(window.devicePixelRatio)
+    container.innerHTML = ''
     container.appendChild(renderer.domElement)
 
-    // SUN (visible in the main scene)
-    const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xfff9c4 })
-    const sun = new THREE.Mesh(new THREE.SphereGeometry(0.3, 32, 32), sunMaterial)
+    // Lune avec shader custom pour découpe croissant
+    const geometry = new THREE.SphereGeometry(0.25, 36, 36) // Lune plus grosse
 
-    // Placer le soleil dans le coin supérieur droit de la scène en 3D
-    const distanceFromCamera = 5; // Distance de la caméra
-    sun.position.set(distanceFromCamera, distanceFromCamera, -5); // Ajuster la position en fonction de la caméra
-    scene.add(sun)
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        crescentCut: { value: 0.15 }, // Découpe un peu plus à droite, pour un croissant plus visible
+        moonColor: { value: new THREE.Color(0xf0f0f5) },
+      },
+      vertexShader: `
+        varying vec3 vPosition;
+        void main() {
+          vPosition = position;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform float crescentCut;
+        uniform vec3 moonColor;
+        varying vec3 vPosition;
 
-    // LIGHT (visible normalement)
-    const light = new THREE.PointLight(0xfff8c0, 2, 100)
-    light.position.copy(sun.position)
+        void main() {
+          // On crée un croissant en "découpant" une partie de la sphère sur l'axe x
+          // Découpe verticale : masque les fragments dont x < crescentCut
+          if (vPosition.x < crescentCut) discard;
+
+          gl_FragColor = vec4(moonColor, 1.0);
+        }
+      `,
+      transparent: true,
+    })
+
+    const moon = new THREE.Mesh(geometry, material)
+
+    // Position initiale, sera mise à jour dans animate()
+    const initialMoonOffset = new THREE.Vector3(2.5, 2.5, -5)
+
+    scene.add(moon)
+
+    // Lumière douce de la lune
+    const light = new THREE.PointLight(0xf0f0f5, 0.12, 10)
     scene.add(light)
 
-    // BLOOM COMPOSER
+    // Bloom composer
     const bloomComposer = new EffectComposer(renderer)
     bloomComposer.renderToScreen = false
     const renderScene = new RenderPass(scene, camera)
@@ -60,7 +89,7 @@ export default function SunlightEffect() {
     )
     bloomComposer.addPass(bloomPass)
 
-    // FINAL COMPOSER
+    // Final composer
     const finalComposer = new EffectComposer(renderer)
     finalComposer.addPass(renderScene)
 
@@ -68,16 +97,16 @@ export default function SunlightEffect() {
       new THREE.ShaderMaterial({
         uniforms: {
           baseTexture: { value: null },
-          bloomTexture: { value: bloomComposer.renderTarget2.texture }
+          bloomTexture: { value: bloomComposer.renderTarget2.texture },
         },
-        vertexShader: /* glsl */`
+        vertexShader: /* glsl */ `
           varying vec2 vUv;
           void main() {
             vUv = uv;
             gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
           }
         `,
-        fragmentShader: /* glsl */`
+        fragmentShader: /* glsl */ `
           uniform sampler2D baseTexture;
           uniform sampler2D bloomTexture;
           varying vec2 vUv;
@@ -86,30 +115,40 @@ export default function SunlightEffect() {
             vec4 bloom = texture2D(bloomTexture, vUv);
             gl_FragColor = base + bloom;
           }
-        `
+        `,
       }),
       'baseTexture'
     )
     finalPass.needsSwap = true
     finalComposer.addPass(finalPass)
 
-    // Animate
+    let time = 0
+
     function animate() {
       requestAnimationFrame(animate)
 
-      // Render the scene with the bloom effect
+      time += 0.01
+
+      // Scintillement subtil
+      const flicker = 1 + 0.01 * Math.sin(time * 5 + Math.random() * 0.5)
+      moon.scale.set(flicker, flicker, flicker)
+
+      // Lumière plus douce, variation faible
+      light.intensity = 0.12 + 0.005 * Math.sin(time * 3 + Math.random() * 0.5)
+
+      // Met à jour la position de la lune en fonction de la position et rotation de la caméra
+      moon.position.copy(camera.position).add(initialMoonOffset.clone().applyQuaternion(camera.quaternion))
+      light.position.copy(moon.position)
+
+      // Bloom sur layer 1
       scene.traverse(obj => {
-        if (obj.isMesh) {
-          obj.layers.set(1)
-        }
+        if (obj.isMesh) obj.layers.set(1)
       })
       bloomComposer.render()
 
-      // Restore all to default layer
+      // Rendu final sur layer 0
       scene.traverse(obj => {
-        if (obj.isMesh) {
-          obj.layers.set(0)
-        }
+        if (obj.isMesh) obj.layers.set(0)
       })
       finalComposer.render()
     }
