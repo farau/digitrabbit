@@ -4,6 +4,7 @@ import { useProfile } from '@/app/hooks/useProfile'
 import Image from 'next/image'
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, Tooltip } from 'recharts'
 import { Download } from 'lucide-react'
+import Wrapper from '@/app/components/Wrapper';
 
 export default function Profile() {
     const { profile, loading, error } = useProfile()
@@ -88,22 +89,14 @@ export default function Profile() {
         )
     }
 
-    if (loading) return <p style={{ margin: 0, padding: 10, color: "black" }}>Loading...</p>
-    if (error) return <p style={{ margin: 0, padding: 10, color: "black" }}>{error}</p>
-    if (!profile) return <p style={{ margin: 0, padding: 10, color: "black" }}>Please connect your wallet to see your profile.</p>
+    if (loading) return <p>Loading...</p>
+    if (error) return <p>{error}</p>
+    if (!profile) return <p>Please connect your wallet to see your profile.</p>
 
     const displayAddress = profile.userAddress.slice(0, 4) + '...' + profile.userAddress.slice(-4)
 
     return (
-        <div style={{
-            maxWidth: 600,
-            margin: '20px auto',
-            background: 'rgba(255, 255, 255, 0.85)',
-            borderRadius: '20px',
-            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
-            padding: 20,
-            fontFamily: 'sans-serif'
-        }}>
+        <Wrapper>
             <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
                 <div className="flex flex-col items-center">
                     <Image
@@ -168,6 +161,6 @@ export default function Profile() {
                     <RadarStatsChart />
                 </div>
             </div>
-        </div>
+        </Wrapper>
     )
 }

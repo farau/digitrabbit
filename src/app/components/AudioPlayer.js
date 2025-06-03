@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import Wrapper from '@/app/components/Wrapper';
 
 function AudioPlayer({ src }) {
   const [isPlaying, setIsPlaying] = useState(false); // État pour savoir si le son est en cours de lecture

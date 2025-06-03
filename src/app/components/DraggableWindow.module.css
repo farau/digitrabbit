@@ -1,0 +1,43 @@
+.lightMode {
+  position: absolute;
+  background-color: #f0f0f0;
+  color: #000000;
+  width: min(90%, 600px);
+  height: auto;
+  max-height: 80vh;
+  overflow-y: auto;
+  border: 1px solid black;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  z-index: 1;
+  transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+}
+
+.darkMode  {
+  position: absolute;
+  background-color: #2b2b2b;
+  color: #f0f0f0;
+  border-color: #555;
+  /* le reste est inchangé */
+  width: min(90%, 600px);
+  border: 1px solid black;
+  height: auto;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  z-index: 1;
+  transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+}
+
+.stickyTop {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #c0c0c0; /* Windows 98 style */
+}
+
+:global(body) {
+  margin: 0;
+  overflow: hidden; /* Pour éviter les scrolls non voulus */
+}

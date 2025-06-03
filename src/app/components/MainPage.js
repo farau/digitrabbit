@@ -13,19 +13,21 @@ import Settings from "./Settings";
 import { useWindowSize } from "../hooks/useWindowSize"; // Assurez-vous d'importer le bon hook
 import Leaderboard from "./Leaderboard";
 import About from "./About";
-
+import { useTheme } from "../context";
+import DraggableWindow from "./DraggableWindow";
 
 export default function MainPage() {
 
   const [visibleApps, setVisibleApps] = useState([""]);
-  const [isDay, setIsDay] = useState(true);
   const [sound, setSound] = useState("crying");
+  const { themeMode, toggleTheme } = useTheme();
+  const { width } = useWindowSize();
 
   function BackgroundSwitcher() {
   
     return (
       <>
-        {isDay ? <BackgroundEffect /> : <BackgroundEffect mode="moon" />}
+        {themeMode === 'light' ? <BackgroundEffect /> : <BackgroundEffect mode="moon" />}
       </>
     );
   }
@@ -46,8 +48,6 @@ export default function MainPage() {
   };
   
 
-  const { width } = useWindowSize();
-  
   // Gestion des memes sélectionnés
   const [memeList, setMemeList] = useState([]);
   const [selectedMemeIndex, setSelectedMemeIndex] = useState(null);
@@ -63,7 +63,7 @@ export default function MainPage() {
   }, []);
 
   return (
-    <div className={`${isDay ? styles.bgDay : styles.bgNight}`}>
+    <div className={`${themeMode === 'light' ? styles.bgDay : styles.bgNight}`}>
       <Image src="/img/bg-img-mobile.png" alt="Mobile image" fill className={styles.mobileImage} />
       {/* Icônes interactives */}
       <Icon
@@ -135,61 +135,26 @@ export default function MainPage() {
 
       {/* Fenêtre Home */}
       {visibleApps.includes("Home") && (
-        <div
-          className={styles.window}
+        <DraggableWindow
+          title="About our collection"
+          onClose={() => setVisibleApps(apps => apps.filter(app => app !== "Home"))}
+          theme={themeMode}
         >
-        <div className="title-bar sticky">
-          <span>About our collection</span>
-          <div className="title-bar-controls">
-            <button
-              onClick={() =>
-                setVisibleApps((apps) => apps.filter((app) => app !== "Home"))
-              }
-              aria-label="Close"
-            ></button>
-          </div>
-        </div>
-          
-        <div className="window-body" style={{ overflowY: "auto", height: "calc(100% - 30px)", padding: "10px" }}>
-            <About />
-        </div>
-      </div> 
+          <About />
+        </DraggableWindow>
       )}
 
-      {/* Fenêtre Memes */}
+
       {visibleApps.includes("Memes") && (
-        <div
-          className={styles.window}
+        <DraggableWindow
+          title="Our Rabbitio memes"
+          onClose={() => setVisibleApps(apps => apps.filter(app => app !== "Memes"))}
+          theme={themeMode}
         >
-        <div className="title-bar sticky">
-          <span>Memes collection</span>
-          <div className="title-bar-controls">
-            <button
-              onClick={() =>
-                setVisibleApps((apps) => apps.filter((app) => app !== "Memes"))
-              }
-              aria-label="Close"
-            ></button>
-          </div>
-        </div>
-          
-        <div className="window-body" style={{ overflowY: "auto", height: "calc(100% - 30px)", padding: "10px" }}>
-          <p style={{
-            margin: 0,
-            padding: 10,
-            color: "black",
-            textAlign: "center",
-            fontStyle: "italic"
-          }}>
-            &quot;You&apos;re gonna see too much memes, you may even get tired of seeing them and you will say PLEASE PLEASE it&apos;s too much RABBITIOOOO&quot;
-          </p>
-
-            <MemeGallery memeList={memeList} setSelectedMemeIndex={setSelectedMemeIndex}/>
-        </div>
-      </div>    
+          <MemeGallery memeList={memeList} setSelectedMemeIndex={setSelectedMemeIndex} />
+        </DraggableWindow>
       )}
 
-      {/*Affichage du meme sélectionné*/}  
       {selectedMemeIndex !== null && (
         <div
           style={{
@@ -204,114 +169,42 @@ export default function MainPage() {
             justifyContent: "center",
             zIndex: 9999,
           }}
-          onClick={() => setSelectedMemeIndex(null)} // Fermer en cliquant hors navigation
+          onClick={() => setSelectedMemeIndex(null)}
         >
-          {/* Navigation gauche */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setSelectedMemeIndex((prev) => (prev > 0 ? prev - 1 : memeList.length - 1));
-            }}
-            style={navButtonStyle}
-          >
-            ◀
-          </button>
-
-          {/* Image en grand */}
-          <img
-            src={`img/memes/${encodeURIComponent(memeList[selectedMemeIndex])}`}
-            alt="Full meme"
-            style={{
-              maxHeight: "70%",
-              maxWidth: "70%",
-              borderRadius: "10px",
-              boxShadow: "0 0 20px black",
-            }}
-          />
-
-          {/* Navigation droite */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setSelectedMemeIndex((prev) => (prev + 1) % memeList.length);
-            }}
-            style={navButtonStyle}
-          >
-            ▶
-          </button>
+          <button onClick={(e) => { e.stopPropagation(); setSelectedMemeIndex((prev) => (prev > 0 ? prev - 1 : memeList.length - 1)); }} style={navButtonStyle}>◀</button>
+          <img src={`img/memes/${encodeURIComponent(memeList[selectedMemeIndex])}`} alt="Full meme" style={{ maxHeight: "70%", maxWidth: "70%", borderRadius: "10px", boxShadow: "0 0 20px black" }} />
+          <button onClick={(e) => { e.stopPropagation(); setSelectedMemeIndex((prev) => (prev + 1) % memeList.length); }} style={navButtonStyle}>▶</button>
         </div>
       )}
 
-      {/* Fenêtre Profile */}
       {visibleApps.includes("Profile") && (
-        <div
-          className={styles.window}
-
+        <DraggableWindow
+          title="Your profile"
+          onClose={() => setVisibleApps(apps => apps.filter(app => app !== "Profile"))}
+          theme={themeMode}
         >
-        <div className="title-bar sticky">
-          <span>Profile</span>
-          <div className="title-bar-controls">
-            <button
-              onClick={() =>
-                setVisibleApps((apps) => apps.filter((app) => app !== "Profile"))
-              }
-              aria-label="Close"
-            ></button>
-          </div>
-        </div>
-          
-        <div className="window-body" style={{ overflowY: "auto", height: "calc(100% - 30px)", padding: "10px" }}>
-            <Profile />
-        </div>
-      </div>    
+          <Profile/>
+        </DraggableWindow>
       )}
 
-      {/* Fenêtre Settings */}
       {visibleApps.includes("Settings") && (
-        <div
-          className={styles.window}
-
+        <DraggableWindow
+          title="Settings"
+          onClose={() => setVisibleApps(apps => apps.filter(app => app !== "Settings"))}
+          theme={themeMode}
         >
-        <div className="title-bar sticky">
-          <span>Settings</span>
-          <div className="title-bar-controls">
-            <button
-              onClick={() =>
-                setVisibleApps((apps) => apps.filter((app) => app !== "Settings"))
-              }
-              aria-label="Close"
-            ></button>
-          </div>
-        </div>
-          
-        <div className="window-body" style={{ overflowY: "auto", height: "calc(100% - 30px)", padding: "10px" }}>
-            <Settings dayMode={isDay} setDayMode={setIsDay} sound={sound} setSound={setSound} />
-        </div>
-      </div>    
-      )}  
+          <Settings sound={sound} setSound={setSound} />
+        </DraggableWindow>
+      )}
 
-      {/* Fenêtre Leaderboard */}
       {visibleApps.includes("Leaderboard") && (
-        <div
-          className={styles.window}
-
+        <DraggableWindow
+          title="Leaderboard"
+          onClose={() => setVisibleApps(apps => apps.filter(app => app !== "Leaderboard"))}
+          theme={themeMode}
         >
-        <div className="title-bar sticky">
-          <span>Leaderboard</span>
-          <div className="title-bar-controls">
-            <button
-              onClick={() =>
-                setVisibleApps((apps) => apps.filter((app) => app !== "Leaderboard"))
-              }
-              aria-label="Close"
-            ></button>
-          </div>
-        </div>
-          
-        <div className="window-body" style={{ overflowY: "auto", height: "calc(100% - 30px)", padding: "10px" }}>
-            <Leaderboard />
-        </div>
-      </div>    
+          <Leaderboard />
+        </DraggableWindow>
       )}
 
       <BackgroundSwitcher />

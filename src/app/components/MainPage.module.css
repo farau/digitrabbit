@@ -1,24 +1,41 @@
-
-.window {
+/* Mode clair */
+.lightMode {
+  background-color: #f0f0f0;
+  color: #000000;
+  /* le reste est inchangé */
   position: absolute;
   top: 10vh;
   left: 50%;
   transform: translateX(-50%);
-  width: min(90%, 600px); /* max 600px, sinon 90% de l’écran */
-  background: white;
-  border: 2px solid black;
+  width: min(90%, 600px);
+  border: 1px solid black;
   height: auto;
   max-height: 80vh;
-  overflow-y: auto; /* scroll si contenu déborde */
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); /* un peu de relief */
+  overflow-y: auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   border-radius: 8px;
   z-index: 1;
+  transition: background-color 0.3s, color 0.3s, border-color 0.3s;
 }
 
-.title-bar.sticky {
-  position: sticky;
-  top: 0;
-  z-index: 10;
+.darkMode  {
+  background-color: #2b2b2b;
+  color: #f0f0f0;
+  border-color: #555;
+  /* le reste est inchangé */
+  position: absolute;
+  top: 10vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(90%, 600px);
+  border: 1px solid black;
+  height: auto;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  z-index: 1;
+  transition: background-color 0.3s, color 0.3s, border-color 0.3s;
 }
   
 /* Background jour */
@@ -31,6 +48,9 @@
   background-attachment: fixed; /* Fait en sorte que l'image reste fixe lors du défilement */
   display: flex;
   flex-wrap: wrap;
+  color: white;
+  --windows-background: #f0f0f0; /* clair */
+  --windows-text: #000000;       /* sombre */
 }
 
 /* Background nuit */
@@ -43,6 +63,7 @@
   background-attachment: fixed; /* Fait en sorte que l'image reste fixe lors du défilement */
   display: flex;
   flex-wrap: wrap;
+  color: white;
 }
 
 .mobileImage {
@@ -71,4 +92,11 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+.stickyTop {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #c0c0c0; 
 }
