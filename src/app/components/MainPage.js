@@ -6,14 +6,14 @@ import Image from "next/image";
 import Icon from "./Icon";
 import Footer from "./Footer";
 import MemeGallery from "./MemeGallery";
-import AudioPlayer from "./AudioPlayer";
 import BackgroundEffect from "./BackgroundEffect";
 import Profile from "./Profile"; 
 import Settings from "./Settings";
 import { useWindowSize } from "../hooks/useWindowSize"; // Assurez-vous d'importer le bon hook
 import Leaderboard from "./Leaderboard";
 import About from "./About";
-
+import Shop from "./Shop";
+import Game from "./Game";
 
 export default function MainPage() {
 
@@ -98,7 +98,7 @@ export default function MainPage() {
         name="Game"
         src="/img/icons/game.png"
         label="Game"
-        onClick={() => restoreApp("Music")}
+        onClick={() => restoreApp("Game")}
         position={{ x: -100, y: "35%" }} // Spécifie la position de l'icône
       />
 
@@ -115,6 +115,7 @@ export default function MainPage() {
         name="Shop"
         label="Shop"
         src="/img/icons/shop.png" 
+        onClick={() => restoreApp("Shop")}
         position={{ x: -100, y: "50%" }} // Spécifie la position de l'icône
       />
 
@@ -289,6 +290,54 @@ export default function MainPage() {
         </div>
       </div>    
       )}  
+
+      {/* Fenêtre Game */}
+      {visibleApps.includes("Game") && (
+        <div
+          className={styles.window}
+
+        >
+        <div className="title-bar sticky">
+          <span>Game</span>
+          <div className="title-bar-controls">
+            <button
+              onClick={() =>
+                setVisibleApps((apps) => apps.filter((app) => app !== "Game"))
+              }
+              aria-label="Close"
+            ></button>
+          </div>
+        </div>
+          
+        <div className="window-body" style={{ overflowY: "auto", height: "calc(100% - 30px)", padding: "10px" }}>
+            <Game />
+        </div>
+      </div>    
+      )}
+
+      {/* Fenêtre Shop */}
+      {visibleApps.includes("Shop") && (
+        <div
+          className={styles.window}
+
+        >
+        <div className="title-bar sticky">
+          <span>Shop</span>
+          <div className="title-bar-controls">
+            <button
+              onClick={() =>
+                setVisibleApps((apps) => apps.filter((app) => app !== "Shop"))
+              }
+              aria-label="Close"
+            ></button>
+          </div>
+        </div>
+          
+        <div className="window-body" style={{ overflowY: "auto", height: "calc(100% - 30px)", padding: "10px" }}>
+            <Shop />
+        </div>
+      </div>    
+      )}
 
       {/* Fenêtre Leaderboard */}
       {visibleApps.includes("Leaderboard") && (
