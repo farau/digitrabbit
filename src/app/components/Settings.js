@@ -6,7 +6,7 @@ import Wrapper from './Wrapper';
 
 export default function Settings({ sound, setSound }) {
   const { themeMode, toggleTheme } = useTheme();
-  const sounds = ['crying', 'robot'];
+  const sounds = ['crying', 'robot', 'bird', 'cat', 'sheep', 'cow', 'rooster'];
 
   return (
     <Wrapper>

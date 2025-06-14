@@ -39,9 +39,12 @@ function RotatingModel({ mouse, clicked }) {
   return <primitive object={scene} ref={modelRef} />;
 }
 
-function FloatingHeadModel({ mouse, click }) {
-  const headGltf = useGLTF("/3d/head");
+function FloatingHeadModel({ mouse, click, themeMode }) {
+  const headGltfLight = useGLTF("/3d/head");
   const cryGltf = useGLTF("/3d/cry");
+  const headGltfDark = useGLTF("/3d/sleep");
+
+  const headGltf = themeMode === "dark" ? headGltfDark : headGltfLight;
 
   const modelRef = useRef();
   const headRef = useRef();
@@ -88,7 +91,7 @@ function FloatingHeadModel({ mouse, click }) {
 
 
 
-export default function Icon({ name, src, label, onClick, position, sound }) {
+export default function Icon({ name, src, label, onClick, position, sound, themeMode }) {
   const is3D = src === "/3d/head";
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
   const [click, setClicked] = useState(false);
@@ -97,12 +100,14 @@ export default function Icon({ name, src, label, onClick, position, sound }) {
   useEffect(() => {
     if (sound) {
       soundRef.current = new Audio(`/sounds/${sound}.mp3`);
+      soundRef.current.volume = 0.4; // volume réduit
     }
   }, [sound]);
 
   // Charger et préparer le son
   if (!soundRef.current) {  
     soundRef.current = new Audio("/sounds/crying.mp3");
+    soundRef.current.volume = 0.2; // volume réduit
   }
 
   const handlePointerMove = (e) => {
@@ -155,7 +160,7 @@ export default function Icon({ name, src, label, onClick, position, sound }) {
           <ambientLight />
             <directionalLight position={[2, 2, 2]} />
             
-            <FloatingHeadModel click={click} />
+            <FloatingHeadModel click={click} themeMode={themeMode} />
           <OrbitControls enableZoom={false} autoRotate={false} />
         </Canvas>
 
@@ -163,7 +168,7 @@ export default function Icon({ name, src, label, onClick, position, sound }) {
       ) : (
         <Image src={src} alt={name} width={50} height={50} />
       )}
-      <p style={{ margin: 0, fontSize: 12 }}>{label}</p>
+      <p style={{ margin: 0, fontSize: 8 }}>{label}</p>
     </div>
   );
 }

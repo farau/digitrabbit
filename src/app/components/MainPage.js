@@ -123,6 +123,7 @@ export default function MainPage() {
         src="/3d/head" // déclenche l'affichage 3D
         position={{ x: `${width - 690}px`, y: "1%" }}
         sound={sound}
+        themeMode={themeMode}
       />
 
       <Icon
@@ -183,7 +184,7 @@ export default function MainPage() {
           onClose={() => setVisibleApps(apps => apps.filter(app => app !== "Profile"))}
           theme={themeMode}
         >
-          <Profile/>
+          <Profile themeMode={themeMode} />
         </DraggableWindow>
       )}
 

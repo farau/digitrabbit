@@ -1,26 +1,49 @@
-import { useState, useRef } from 'react';
-import Wrapper from '@/app/components/Wrapper';
+import { useEffect, useRef, useState } from 'react';
+import { Volume2, VolumeX } from 'lucide-react';
 
 function AudioPlayer({ src }) {
-  const [isPlaying, setIsPlaying] = useState(false); // État pour savoir si le son est en cours de lecture
-  const audioRef = useRef(null); // Référence à l'élément audio
+  const [isPlaying, setIsPlaying] = useState(true);
+  const audioRef = useRef(null);
 
-  // Fonction pour lancer ou arrêter la lecture
-  const toggleAudio = () => {
-    if (isPlaying) {
-      audioRef.current.pause(); // Arrêter la lecture
-    } else {
-      audioRef.current.play(); // Démarrer la lecture
+  // Lecture automatique au chargement du composant
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      // Nécessaire pour certains navigateurs
+      audio.volume = 0.5; // facultatif : volume réduit
+      audio.play().catch((err) => {
+        console.warn('Lecture bloquée par le navigateur :', err);
+        setIsPlaying(false); // On désactive l’état "playing"
+      });
     }
-    setIsPlaying(!isPlaying); // Inverser l'état de lecture
+  }, []);
+
+  const toggleAudio = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (isPlaying) {
+      audio.pause();
+    } else {
+      audio.play().catch(() => {});
+    }
+
+    setIsPlaying(!isPlaying);
   };
 
   return (
     <div>
       <audio ref={audioRef} src={src} />
-      <button onClick={toggleAudio}>
-        {isPlaying ? 'Stop' : 'Play'} Sound
-      </button>
+      <div
+        onClick={toggleAudio}
+        className="cursor-pointer w-6 h-6 text-white hover:text-gray-400 transition"
+      >
+      <img
+        src={isPlaying ? "img/icons/loudspeaker_on.png" : "img/icons/loudspeaker_off.png"}
+        alt="Volume"
+        className="w-full h-full"
+      />
+      </div>
     </div>
   );
 }

@@ -10,6 +10,7 @@ export default function HomeIntro({ onEnter }) {
   useEffect(() => {
     // Cette ligne est exécutée uniquement côté client
     audioRef.current = new Audio("/sounds/enter.mp3");
+    audioRef.current.volume = 0.2; // facultatif : volume réduit
   }, []);
 
   const handleClick = () => {

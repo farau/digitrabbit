@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useEffect } from "react";
 import { useRef } from "react";
 import WalletButton from "./WalletButton";
+import AudioPlayer from "./AudioPlayer";
 
 export default function Footer({ visibleApps, setVisibleApps }) {
 
@@ -88,6 +89,7 @@ export default function Footer({ visibleApps, setVisibleApps }) {
       </div>
       {/* Icônes de réseaux sociaux sur la droite */} 
       <div className={styles.taskbarRight}>
+        <AudioPlayer src="/sounds/soundtrack.mp3" />
         <WalletButton />
         <span className={styles.clock}>{time}</span>
       </div>

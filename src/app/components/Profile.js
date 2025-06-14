@@ -6,8 +6,15 @@ import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Responsi
 import { Download } from 'lucide-react'
 import Wrapper from '@/app/components/Wrapper';
 
-export default function Profile() {
-    const { profile, loading, error } = useProfile()
+export default function Profile({ themeMode = 'light' }) {
+    const isNight = themeMode === 'dark';
+    const textColor = isNight ? '#eee' : '#333';
+    const cardBg = isNight ? '#222' : '#f3f3f3';
+    const labelColor = isNight ? '#ccc' : '#333';
+    const tooltipBg = isNight ? '#333' : '#fff';
+    const tooltipColor = isNight ? '#eee' : '#333';
+
+        const { profile, loading, error } = useProfile()
 
     const rawStats = {
         clothes: 4,             // max = 6
@@ -25,12 +32,11 @@ export default function Profile() {
     ]
 
     const renderVerticalLabels = ({ payload, x, y, textAnchor }) => {
-        const angle = payload.coordinate?.angle ?? 0
-        const label = payload.value
-    
-        const shouldRotate = label === 'Streak' || label === 'Bonus'
-        const isLeft = angle > 90 && angle < 270
-    
+        const angle = payload.coordinate?.angle ?? 0;
+        const label = payload.value;
+        const shouldRotate = label === 'Streak' || label === 'Bonus';
+        const isLeft = angle > 90 && angle < 270;
+
         return (
             <text
                 x={x}
@@ -38,55 +44,52 @@ export default function Profile() {
                 textAnchor={isLeft ? 'end' : 'start'}
                 dominantBaseline="middle"
                 transform={shouldRotate ? `rotate(90 ${x} ${y})` : undefined}
-                style={{ fill: '#333', fontSize: 12 }}
+                style={{ fill: labelColor, fontSize: 12 }}
             >
                 {label}
             </text>
-        )
-    }
-        
-    
-    // ✅ Custom Tooltip
+        );
+    };
+
     const CustomTooltip = ({ active, payload }) => {
         if (active && payload && payload.length) {
-        const { stat, real } = payload[0].payload
-        return (
-            <div style={{
-            backgroundColor: '#fff',
-            border: '1px solid #ccc',
-            padding: '8px',
-            borderRadius: 4
-            }}>
-            <p style={{ margin: 0, color: '#333' }}><strong>{stat}</strong>: {real}</p>
-            </div>
-        )
+            const { stat, real } = payload[0].payload;
+            return (
+                <div style={{
+                    backgroundColor: tooltipBg,
+                    border: '1px solid #666',
+                    padding: '8px',
+                    borderRadius: 4
+                }}>
+                    <p style={{ margin: 0, color: tooltipColor }}>
+                        <strong>{stat}</strong>: {real}
+                    </p>
+                </div>
+            );
         }
-        return null
-    }
-    
+        return null;
+    };
+
     function RadarStatsChart() {
         return (
-        <div className="w-full md:w-64 h-64">
-            <ResponsiveContainer width="100%" height="100%">
-            <RadarChart data={blockchainStats}>
-                <PolarGrid />
-                <PolarAngleAxis
-                dataKey="stat"
-                tick={renderVerticalLabels}
-                />
-                <PolarRadiusAxis domain={[0, 1]} tickCount={6} />
-                <Tooltip content={<CustomTooltip />} />
-                <Radar
-                name="Stats"
-                dataKey="value"
-                stroke="#4f46e5"
-                fill="#818cf8"
-                fillOpacity={0.6}
-                />
-            </RadarChart>
-            </ResponsiveContainer>
-        </div>
-        )
+            <div className="w-full md:w-64 h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart data={blockchainStats}>
+                        <PolarGrid stroke={isNight ? '#555' : '#ccc'} />
+                        <PolarAngleAxis dataKey="stat" tick={renderVerticalLabels} />
+                        <PolarRadiusAxis domain={[0, 1]} tickCount={6} stroke={labelColor} />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Radar
+                            name="Stats"
+                            dataKey="value"
+                            stroke="#4f46e5"
+                            fill="#818cf8"
+                            fillOpacity={0.6}
+                        />
+                    </RadarChart>
+                </ResponsiveContainer>
+            </div>
+        );
     }
 
     if (loading) return <p>Loading...</p>
@@ -98,55 +101,40 @@ export default function Profile() {
     return (
         <Wrapper>
             <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+                {/* Avatar */}
                 <div className="flex flex-col items-center">
-                    <Image
-                        src="/img/profile-rabbit.jpg"
-                        alt="Avatar"
-                        className="w-24 h-24 rounded-full border-2 border-white shadow-md"
-                        width={80}
-                        height={80}
+                    <Image src="/img/profile-rabbit.jpg" alt="Avatar"
+                        width={80} height={80}
+                        className="w-24 h-24 rounded-full border-2 shadow-md"
                         style={{
                             borderRadius: '50%',
-                            border: '3px solid #ddd'
+                            border: `3px solid ${isNight ? '#888' : '#ddd'}`
                         }}
                     />
-                    <a
-                        href="/img/profile-rabbit.jpg"
-                        download
-                        className="mt-2 text-xs text-blue-500 hover:underline"
-                    >
-                        <Download className="w-3 h-3" /> 
+                    <a href="/img/profile-rabbit.jpg" download
+                        className="mt-2 text-xs text-blue-500 hover:underline">
+                        <Download className="w-3 h-3" />
                     </a>
                 </div>
-                <div style={{ flex: 1 , color: '#333'}}>
-                    <div style={{
-                        background: '#f3f3f3',
-                        padding: '10px 15px',
-                        borderRadius: '10px',
-                        marginBottom: 10
-                    }}>
+
+                {/* Infos */}
+                <div style={{ flex: 1, color: textColor }}>
+                    <div style={{ background: cardBg, padding: '10px 15px', borderRadius: '10px', marginBottom: 10 }}>
                         <strong>Wallet Address: </strong>
-                        <span style={{ wordBreak: 'break-all' }}>
-                        {displayAddress}
-                        </span>
+                        <span style={{ wordBreak: 'break-all' }}>{displayAddress}</span>
                     </div>
-                    <div style={{
-                        background: '#f3f3f3',
-                        padding: '10px 15px',
-                        borderRadius: '10px'
-                    }}>
-                        <strong>RabbitScore:</strong> 213 
-                        <br />
+                    <div style={{ background: cardBg, padding: '10px 15px', borderRadius: '10px' }}>
+                        <strong>RabbitScore:</strong> 213 <br />
                         <strong>Points (Socials):</strong> {profile.points_socials}
                     </div>
                 </div>
             </div>
 
-            {/* Section des statistiques blockchain */}
+            {/* Stats */}
             <div className="flex-1 flex flex-col md:flex-row gap-8 items-start mt-4">
-                <div className="w-full" style={{ color: '#333'}}>
-                    <h4 className="text-lg font-semibold text-gray-800 mb-3 text-center">RabbitStatio</h4>
-                    <div style={{ background: '#f3f3f3', padding: '10px 15px', borderRadius: '10px'}}>
+                <div className="w-full" style={{ color: textColor }}>
+                    <h4 className="text-lg font-semibold mb-3 text-center">RabbitStatio</h4>
+                    <div style={{ background: cardBg, padding: '10px 15px', borderRadius: '10px' }}>
                         <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 10 }}>
                             <li>Number of clothes: <strong>4/6</strong></li>
                             <li>Bonus: <strong>x1.6</strong></li>
@@ -155,12 +143,8 @@ export default function Profile() {
                         </ul>
                     </div>
                 </div>
-
-                {/* Radar Chart */}
-                <div className="w-full md:w-64 h-64">
-                    <RadarStatsChart />
-                </div>
+                <RadarStatsChart />
             </div>
         </Wrapper>
-    )
+    );
 }

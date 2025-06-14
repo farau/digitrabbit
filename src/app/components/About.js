@@ -11,7 +11,7 @@ export default function About() {
             Choose from which side you want to be, help your <span style={{ fontWeight: "bold" }}>digital rabbit</span> to win the game and receive a famous WL!
         </p>
         <Image src={"/img/digit-rabbits.jpg"} alt="Logo" width={500} height={300} style={{ margin: "0 auto", display: "block", borderRadius: 12 }} />
-        <h5 className="text-center"><b>What is a &quot;digital rabbit&quot; ?</b></h5>
+        <h5 className="text-center mt-4"><b>What is a &quot;digital rabbit&quot; ?</b></h5>
         <p style={{ margin: 0, padding: 10}}>
         This is your avatar in the game, which will evolve depending on your actions.
         <br />
