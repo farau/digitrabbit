@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { parseAbi } from 'viem';
+import { parseAbiItem } from 'viem';
 import { publicClient } from '@/constants';
 import styles from './EventToast.module.css';
 
@@ -12,9 +12,8 @@ export default function EventToast({ isTimeExpired, setIsTimeExpired, setIsGameS
 
   useEffect(() => {
     const unwatch = publicClient.watchEvent({
-      event: parseAbi([ 
+      event: parseAbiItem([ 
             'event GameStarted(address indexed player, uint256 seasonId, uint256 sessionEndsAt)',
-            'event GamePlayed(address indexed player, uint256 seasonId, uint256 points)'
         ]),
       onLogs: (logs) => {
         const l = logs[0];
