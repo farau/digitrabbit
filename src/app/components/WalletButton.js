@@ -1,69 +1,64 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useAppKit, useAppKitAccount, useDisconnect } from "@reown/appkit/react";
-import styles from "./WalletButton.module.css"; // Assurez-vous d'importer le bon fichier CSS
+import {useLogin, usePrivy} from '@privy-io/react-auth';
+import {useLoginWithEmail} from '@privy-io/react-auth';
+import { useWallets, getEmbeddedConnectedWallet } from '@privy-io/react-auth'
+import { initWalletClient, clearWalletClient } from '@/utils/walletClient';
+
+function LogoutButton() {
+  const { ready, authenticated, logout } = usePrivy();
+
+  // Disable logout when Privy is not ready or the user is not authenticated
+  const disableLogout = !ready || (ready && !authenticated);
+
+  return (
+    <button disabled={disableLogout} onClick={logout}>
+      Log out
+    </button>
+  );
+}
+
+function LoginButton() {
+    const { ready, authenticated} = usePrivy();
+    const { login } = useLogin();
+    // Disable login when Privy is not ready or the user is already authenticated
+    const disableLogin = !ready || (ready && authenticated);
+
+    return (
+        <button disabled={disableLogin} onClick={() => login({
+                        loginMethods: ['wallet'],
+                        walletChainType: 'ethereum',
+                        disableSignup: false
+                    })}>
+            Log in
+        </button>
+    );
+}
 
 const WalletButton = () => {
-    const { open } = useAppKit(); // Ouvre la popup de connexion
-    const { address, isConnected } = useAppKitAccount(); // Récupère l'adresse du wallet
-    const { disconnect } = useDisconnect(); // Gère la déconnexion
 
-    const [walletAddress, setWalletAddress] = useState(null);
+    const { ready, authenticated } = usePrivy();
+    const { login } = useLogin();
+    // Disable login when Privy is not ready or the user is already authenticated
+    const disableLogin = !ready || (ready && !authenticated);
+    const { wallets } = useWallets();
+    const embeddedWallet = getEmbeddedConnectedWallet(wallets);
 
     useEffect(() => {
-        if (isConnected && address) {
-            setWalletAddress(address);
-            fetch('/api/users/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                credentials: 'include', // Permet d'envoyer et recevoir les cookies
-                body: JSON.stringify({ userAddress: address }) // Envoie l'adresse du wallet
-            })
-            .then(response => {
-                if (response.status === 204) return null;
-                if (!response.ok) throw new Error('Error API');
-                return response.json();
-            })
-            .catch(error => console.error('Error during login process:', error));
+        if (embeddedWallet?.address) {
+        initWalletClient(embeddedWallet);
+        } else {
+        clearWalletClient(); // si on se déconnecte ou change de compte
         }
-    }, [isConnected, address]);
-    
-
-    const connectWallet = async () => {
-        try {
-            await open(); // Ouvre la popup de connexion
-        } catch (error) {
-            console.error("Error during login :", error);
-        }
-    };
-
-    const handleDisconnect = async () => {
-        try {
-            //await open(); // Ouvre la popup de connexion
-            await disconnect(); // déconnecte le wallet via Reown
-            await fetch('/api/users/logout', { method: 'POST', credentials: 'include' });
-            
-        } catch (error) {
-            console.error("Failed to disconnect:", error);
-        }
-    };
+    }, [embeddedWallet]);
 
     return (
         <div>
-            <div className={styles['wallet-container']}>
-            {isConnected ? (
-                        <button className={styles['wallet-button']} onClick={handleDisconnect} id="connectWallet">
-                            {walletAddress
-                                ? `${walletAddress.substring(0, 4)}...${walletAddress.substring(walletAddress.length - 4)}`
-                                : "Connect Wallet"}
-                        </button>
-                    
+            <div>
+            {authenticated ? (
+                <LogoutButton />
             ) : (
-                <button id="connectWallet" onClick={connectWallet} className={styles['connect-btn']}>
-                    Connect Wallet
-                </button>
+                <LoginButton />
             )}
             </div>
         </div>

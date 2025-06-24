@@ -164,7 +164,7 @@ export default function MoonEffect() {
       finalComposer.setSize(window.innerWidth, window.innerHeight)
     }
 
-    window.addEventListener('resize', handleResize)
+    window.addEventListener('resize', handleResize, { passive: true })
 
     return () => {
       window.removeEventListener('resize', handleResize)

@@ -14,7 +14,8 @@ export default function Profile({ themeMode = 'light' }) {
     const tooltipBg = isNight ? '#333' : '#fff';
     const tooltipColor = isNight ? '#eee' : '#333';
 
-        const { profile, loading, error } = useProfile()
+    const { profile, loading, error, embeddedWallet, smartWallet, wallets } = useProfile()
+
 
     const rawStats = {
         clothes: 4,             // max = 6
@@ -92,59 +93,111 @@ export default function Profile({ themeMode = 'light' }) {
         );
     }
 
-    if (loading) return <p>Loading...</p>
-    if (error) return <p>{error}</p>
-    if (!profile) return <p>Please connect your wallet to see your profile.</p>
+  if (loading) return <p>Loading...</p>
+  if (error) return <p>{error}</p>
+  if (!profile) return <p>Please connect your wallet to see your profile.</p>
 
-    const displayAddress = profile.userAddress.slice(0, 4) + '...' + profile.userAddress.slice(-4)
+  const userAddress =
+    wallets?.[0]?.address ||
+    '0x0000000000000000000000000000000000000000'
 
-    return (
-        <Wrapper>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-                {/* Avatar */}
-                <div className="flex flex-col items-center">
-                    <Image src="/img/profile-rabbit.jpg" alt="Avatar"
-                        width={80} height={80}
-                        className="w-24 h-24 rounded-full border-2 shadow-md"
-                        style={{
-                            borderRadius: '50%',
-                            border: `3px solid ${isNight ? '#888' : '#ddd'}`
-                        }}
-                    />
-                    <a href="/img/profile-rabbit.jpg" download
-                        className="mt-2 text-xs text-blue-500 hover:underline">
-                        <Download className="w-3 h-3" />
-                    </a>
-                </div>
+  const displayAddress = userAddress.slice(0, 4) + '...' + userAddress.slice(-4)
 
-                {/* Infos */}
-                <div style={{ flex: 1, color: textColor }}>
-                    <div style={{ background: cardBg, padding: '10px 15px', borderRadius: '10px', marginBottom: 10 }}>
-                        <strong>Wallet Address: </strong>
-                        <span style={{ wordBreak: 'break-all' }}>{displayAddress}</span>
-                    </div>
-                    <div style={{ background: cardBg, padding: '10px 15px', borderRadius: '10px' }}>
-                        <strong>RabbitScore:</strong> 213 <br />
-                        <strong>Points (Socials):</strong> {profile.points_socials}
-                    </div>
-                </div>
-            </div>
+  const renderWallet = (wallet, label) => (
+    <div
+      key={wallet.address}
+      style={{
+        background: cardBg,
+        padding: '8px 12px',
+        borderRadius: '8px',
+        fontSize: '0.875rem',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 6,
+      }}
+    >
+      <span>
+        <strong>{label}:</strong>{' '}
+        {wallet.address.slice(0, 6)}...{wallet.address.slice(-4)}
+      </span>
+    </div>
+  )
 
-            {/* Stats */}
-            <div className="flex-1 flex flex-col md:flex-row gap-8 items-start mt-4">
-                <div className="w-full" style={{ color: textColor }}>
-                    <h4 className="text-lg font-semibold mb-3 text-center">RabbitStatio</h4>
-                    <div style={{ background: cardBg, padding: '10px 15px', borderRadius: '10px' }}>
-                        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 10 }}>
-                            <li>Number of clothes: <strong>4/6</strong></li>
-                            <li>Bonus: <strong>x1.6</strong></li>
-                            <li>Transactions: <strong>152</strong></li>
-                            <li>Streak: <strong>10 days</strong></li>
-                        </ul>
-                    </div>
-                </div>
-                <RadarStatsChart />
-            </div>
-        </Wrapper>
-    );
+  return (
+    <Wrapper>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+        {/* Avatar */}
+        <div className="flex flex-col items-center">
+          <Image
+            src="/img/profile-rabbit.jpg"
+            alt="Avatar"
+            width={80}
+            height={80}
+            className="w-24 h-24 rounded-full border-2 shadow-md"
+            style={{
+              borderRadius: '50%',
+              border: `3px solid ${isNight ? '#888' : '#ddd'}`,
+            }}
+          />
+          <a
+            href="/img/profile-rabbit.jpg"
+            download
+            className="mt-2 text-xs text-blue-500 hover:underline"
+          >
+            <Download className="w-3 h-3" />
+          </a>
+        </div>
+
+        {/* Infos */}
+        <div style={{ flex: 1, color: textColor }}>
+          <div
+            style={{
+              background: cardBg,
+              padding: '10px 15px',
+              borderRadius: '10px',
+              marginBottom: 10,
+            }}
+          >
+            <strong>Wallet Address: </strong>
+            <span style={{ wordBreak: 'break-all' }}>{displayAddress}</span>
+          </div>
+          <div
+            style={{
+              background: cardBg,
+              padding: '10px 15px',
+              borderRadius: '10px',
+              marginBottom: 10,
+            }}
+          >
+            <strong>RabbitScore:</strong> 213 <br />
+            <strong>Points (Socials):</strong> {profile.points_socials ?? 0}
+          </div>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="flex-1 flex flex-col md:flex-row gap-8 items-start mt-4">
+        <div className="w-full" style={{ color: textColor }}>
+          <div
+            style={{
+              background: cardBg,
+              padding: '10px 15px',
+              marginTop: 50,
+              borderRadius: '10px',
+            }}
+          >
+            <h4 className="text-lg font-semibold mb-3 text-center">RabbitStatio</h4>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 10 }}>
+              <li>Number of clothes: <strong>4/6</strong></li>
+              <li>Bonus: <strong>x1.6</strong></li>
+              <li>Transactions: <strong>152</strong></li>
+              <li>Streak: <strong>10 days</strong></li>
+            </ul>
+          </div>
+        </div>
+        <RadarStatsChart />
+      </div>
+    </Wrapper>
+  )
 }

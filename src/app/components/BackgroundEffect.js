@@ -146,7 +146,7 @@ export default function BackgroundEffect({ mode = 'sun' }) {
       finalComposer.setSize(window.innerWidth, window.innerHeight)
     }
 
-    window.addEventListener('resize', handleResize)
+    window.addEventListener('resize', handleResize, { passive: true })
 
     return () => {
       cancelAnimationFrame(animationId)

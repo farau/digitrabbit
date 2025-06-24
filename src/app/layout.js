@@ -1,10 +1,10 @@
 import "98.css";
 import "./globals.css";
-import { ContextProvider } from '@/app/context'
+import { ContextProvider } from '@/context'
 
 export const metadata = {
-  title: "Digit Rabbit",
-  description: "Explore the wonderful world of Digit Rabbit!",
+  title: "Digit Rabbits",
+  description: "Explore the wonderful world of Digit Rabbits!",
   icons: {
     icon: 'img/favicon.ico',
   },

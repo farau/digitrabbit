@@ -39,7 +39,7 @@ function RotatingModel({ mouse, clicked }) {
   return <primitive object={scene} ref={modelRef} />;
 }
 
-function FloatingHeadModel({ mouse, click, themeMode }) {
+export function FloatingHeadModel({ mouse, isClicked, themeMode, onPointerDown, onPointerUp }) {
   const headGltfLight = useGLTF("/3d/head");
   const cryGltf = useGLTF("/3d/cry");
   const headGltfDark = useGLTF("/3d/sleep");
@@ -64,27 +64,38 @@ function FloatingHeadModel({ mouse, click, themeMode }) {
       modelRef.current.position.y = Math.sin(t * 1.5) * 0.15;
 
       // Interpolation de la taille
-      targetScale.current = click ? 1.8 : 1.5;
+      targetScale.current = isClicked ? 1.8 : 1.5;
       scaleRef.current = THREE.MathUtils.lerp(scaleRef.current, targetScale.current, 0.05);
       modelRef.current.scale.setScalar(scaleRef.current);
     }
 
-    // Suivre la souris
-    if (headRef.current && mouse) {
+    // La tête suit la souris
+    if (headRef.current && mouse && typeof mouse.x === "number" && typeof mouse.y === "number") {
       const maxY = 0.5;
       const maxX = 0.3;
 
       headRef.current.rotation.y += ((mouse.x * maxY) - headRef.current.rotation.y) * 0.1;
-      headRef.current.rotation.x += ((mouse.y * maxX) - headRef.current.rotation.x) * 0.1;
+      headRef.current.rotation.x += (((-mouse.y) * maxX) - headRef.current.rotation.x) * 0.1;
 
       headRef.current.rotation.y = THREE.MathUtils.clamp(headRef.current.rotation.y, -maxY, maxY);
       headRef.current.rotation.x = THREE.MathUtils.clamp(headRef.current.rotation.x, -maxX, maxX);
     }
+
+
   });
 
   return (
-    <group ref={modelRef}>
-      <primitive object={click ? cryGltf.scene : headGltf.scene} dispose={null} />
+    <group ref={modelRef} onPointerDown={onPointerDown} onPointerUp={onPointerUp}>
+      <primitive
+        object={cryGltf.scene}
+        visible={isClicked}
+        dispose={null}
+      />
+      <primitive
+        object={headGltf.scene}
+        visible={!isClicked}
+        dispose={null}
+      />
     </group>
   );
 }
@@ -153,15 +164,12 @@ export default function Icon({ name, src, label, onClick, position, sound, theme
           style={{ width: "150px", height: "200px", position: "relative", zIndex: 1 }}
         >
           <Canvas
-            camera={{ position: [1, 0, 3] }}
             onPointerMove={handlePointerMove}
-            onPointerDown={handlePointerDown}
-            onPointerUp={handlePointerUp}>
-          <ambientLight />
+            camera={{ position: [1, 0, 3] }}>
+            <ambientLight />
             <directionalLight position={[2, 2, 2]} />
-            
-            <FloatingHeadModel click={click} themeMode={themeMode} />
-          <OrbitControls enableZoom={false} autoRotate={false} />
+            <FloatingHeadModel mouse={mouse} isClicked={click} themeMode={themeMode} onPointerDown={handlePointerDown}
+              onPointerUp={handlePointerUp} />
         </Canvas>
 
         </div>

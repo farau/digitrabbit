@@ -1,4 +1,4 @@
-/* Nav.module.css */
+/* Footer.module.css */
 
 .Footer {
   position: fixed;
@@ -12,20 +12,21 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  font-family: 'Verdana', sans-serif;
   padding: 0 8px;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   font-size: 14px;
-  z-index: 11;
+  z-index: 1000;
   box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #000;
 }
 
 .startButton {
   background: linear-gradient(to bottom, #e0e0e0, #a0a0a0);
-  border: 1px outset #fff;
+  border: 0.5px outset #fff;
   padding: 2px 10px;
   font-weight: bold;
   cursor: pointer;
   margin-right: 8px;
+  
 }
 
 .startMenu {
@@ -105,4 +106,38 @@
   align-items: center;
   margin-left: 0px;
   height: auto;
+  width: auto;
+}
+
+.taskbarApps {
+  display: flex;
+  gap: 1px;
+  margin-left: 4px;
+}
+
+.taskbarAppButton {
+  background-color: #c0c0c0;
+  border: 1px outset #fff;
+  padding: 4px 10px;
+  font-family: 'Tahoma', sans-serif;
+  font-size: 12px;
+  color: black;
+  cursor: pointer;
+  margin-right: 2px;
+  box-shadow: inset -1px -1px #808080, inset 1px 1px #ffffff;
+}
+
+
+.taskbarAppButton:active {
+  background: linear-gradient(to bottom, #a0a0a0, #e0e0e0); /* inversé */
+  border: 1px inset #fff; /* inverse border outset → inset */
+  box-shadow: inset 1px 1px 0 #000, inset -1px -1px 0 #fff; /* inversé */
+}
+
+
+/* Cacher les boutons taskbar en dessous de 768px de large */
+@media (max-width: 768px) {
+  .taskbarAppButton {
+    display: none;
+  }
 }

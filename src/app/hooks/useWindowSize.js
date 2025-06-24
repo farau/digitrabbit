@@ -13,7 +13,7 @@ export function useWindowSize() {
   
       handleResize(); // initialise la taille
   
-      window.addEventListener("resize", handleResize);
+      window.addEventListener("resize", handleResize, { passive: true });
       return () => window.removeEventListener("resize", handleResize);
     }, []);
   

@@ -1,44 +1,62 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useAppKitAccount } from '@reown/appkit/react'
+import { useEffect, useState } from 'react'
+import { usePrivy, useWallets } from '@privy-io/react-auth'
 
 export function useProfile() {
   const [profile, setProfile] = useState(null)
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(true)
 
-  const { isConnected } = useAppKitAccount()
+  const { ready, authenticated, user } = usePrivy()
+  const { wallets } = useWallets()
 
   useEffect(() => {
-    if (!isConnected) {
+    if (!ready) return
+
+    if (!authenticated || !user) {
       setProfile(null)
+      setError('Please login to see your profile.')
       setLoading(false)
-      setError("Please connect your wallet to see your profile.")
       return
     }
-  
+
     const timeoutId = setTimeout(() => {
       fetchProfile()
-    }, 1000) // délai court pour laisser le temps au cookie d’être écrit
-  
+    }, 1000)
+
     return () => clearTimeout(timeoutId)
-  
+
     async function fetchProfile() {
       setLoading(true)
       setError(null)
       try {
-        const res = await fetch('/api/users/profile', { method: 'POST' })
-        if (!res.ok) throw new Error(await res.text())
-        const data = await res.json()
-        setProfile(data.profile)
+        // Optionnel : appel à ton backend pour le profil utilisateur
+        // const res = await fetch('/api/users/profile', { method: 'POST' })
+        // if (!res.ok) throw new Error(await res.text())
+        // const data = await res.json()
+        // setProfile(data.profile)
+
+        // Ou juste utiliser les données du user si tu ne fais pas de fetch
+        setProfile({
+          id: user.id,
+          email: user.email?.address,
+          walletAddresses: [
+            ...(wallets || []).map(w => w.address)
+          ]
+        })
       } catch (err) {
         setError(err.message)
       } finally {
         setLoading(false)
       }
     }
-  }, [isConnected])
-  
-  return { profile, loading, error }
+  }, [ready, authenticated, user, wallets])
+
+  return {
+    profile,
+    wallets,
+    loading,
+    error
+  }
 }

@@ -2,12 +2,24 @@
 
 import Image from "next/image"
 import Wrapper from '@/app/components/Wrapper';
+import { useState, useEffect } from "react";
 
-export default function MemeGallery({ memeList, setSelectedMemeIndex }) {
+export default function MemeGallery({ memeList, setMemeList, setSelectedMemeIndex }) {
+
   function testSetSelectedMemeIndex(index) {
     setSelectedMemeIndex(index)
   }
 
+  // Récupération de la liste des memes
+  // (en supposant que l'API renvoie un tableau de noms de fichiers)  
+  // (ex: ["meme1.jpg", "meme2.jpg", ...])
+  useEffect(() => {
+    fetch("/api/memes")
+      .then((res) => res.json())
+      .then((data) => setMemeList(data))
+      .catch((err) => console.error("Erreur de chargement des memes", err));
+  }, []);
+  
   return (
     <Wrapper>  
       <p style={{ margin: 0, padding: 10, textAlign: "center", fontStyle: "italic" }}>

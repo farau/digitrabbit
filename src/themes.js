@@ -13,3 +13,19 @@ export const darkTheme = {
   inputBg: '#444',
   inputText: '#fff',
 };
+
+
+// Privy configuration for light and dark modes
+export const lightModeConfig = {
+  appearance: {
+    theme: 'light',
+    //logo: 'light-logo-url',
+  },
+};
+
+export const darkModeConfig = {
+  appearance: {
+    theme: 'dark',
+    //logo: 'dark-logo-url'
+  }
+};

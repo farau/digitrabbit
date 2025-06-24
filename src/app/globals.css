@@ -28,24 +28,24 @@ body {
 }
 
 /* Cacher complètement la scrollbar par défaut */
-/*::-webkit-scrollbar {
+::-webkit-scrollbar {
   width: 0px;
   height: 0px;
 }
 
-/* La rendre visible uniquement au survol de zones scrollables 
+/* La rendre visible uniquement au survol de zones scrollables */
 *:hover::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
-/* Piste de la scrollbar (fond) 
+/* Piste de la scrollbar (fond) */
 *:hover::-webkit-scrollbar-track {
   background: transparent;
   border-radius: 8px;
 }
 
-/* Bouton de défilement 
+/* Bouton de défilement */
 *:hover::-webkit-scrollbar-thumb {
   background-color: rgba(120, 120, 120, 0.5);
   border-radius: 8px;
@@ -53,7 +53,7 @@ body {
   background-clip: padding-box;
 }
 
-/* Firefox : cacher scrollbar 
+/* Firefox : cacher scrollbar */
 * {
-  scrollbar-width: none; /* Firefox 
-}*/
+  scrollbar-width: none; /* Firefox */
+}
