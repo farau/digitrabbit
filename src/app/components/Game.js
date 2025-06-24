@@ -53,7 +53,7 @@ const seasonId = Number(await publicClient.readContract({
 
 const COOLDOWN_SECONDS = 6 * 60 * 60; // 6h
 
-function RabbitScene({ mouse, isClicked, sound }) {
+function RabbitScene({ isClicked, sound }) {
   const headGltf = useGLTF("/3d/head-game");
   const cryGltf = useGLTF("/3d/cry-game");
 
@@ -101,7 +101,6 @@ function RabbitScene({ mouse, isClicked, sound }) {
 
     // Incrémente l’index cycliquement (de 1 à 5)
     clickIndex.current = ((clickIndex.current + 1) % 5) + 1;
-
     const nextSound = new Audio(`/sounds/hit${clickIndex.current}.mp3`);
     nextSound.volume = 0.4;
     nextSound.play();
@@ -112,6 +111,20 @@ function RabbitScene({ mouse, isClicked, sound }) {
   const handleModelUp = () => {
     setClick(false)
   };
+
+  // Garantit que si on sort du canva le clic se désactive (même si le clic reste actif)
+  useEffect(() => {
+    const handleGlobalPointerUp = () => {
+      setClick(false);
+    };
+
+    window.addEventListener("pointerup", handleGlobalPointerUp);
+
+    return () => {
+      window.removeEventListener("pointerup", handleGlobalPointerUp);
+    };
+  }, []);
+
 
 
   return (
@@ -125,19 +138,19 @@ function RabbitScene({ mouse, isClicked, sound }) {
   );
 }
 
-function RabbitModel({ mouse, isClicked, sound }) {
+function RabbitModel({ isClicked, sound }) {
   return (
     <div
-      className="relative w-[250px] h-[200px] z-10 rounded-3xl shadow-xl overflow-hidden"
-      style={{
-        backgroundImage: 'url(/img/background_game.jpg)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-      }}
+        className="relative w-64 h-64 z-10 rounded-full shadow-xl overflow-hidden"
+  style={{
+    backgroundImage: 'url(/img/background_game.jpg)',
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundRepeat: 'no-repeat',
+  }}
     >
       <Canvas camera={{ position: [0, 0, 3] }}>
-        <RabbitScene mouse={mouse} isClicked={isClicked} sound={sound} />
+        <RabbitScene isClicked={isClicked} sound={sound} />
       </Canvas>
     </div>
   );
@@ -452,7 +465,6 @@ export default function Game({ isTimeExpired, setIsTimeExpired, isGameStarted, s
           {/* 🐰 Le modèle interactif */}
           <div className="z-10">
             <RabbitModel
-              mouse={{ x: 0, y: 0 }}
               isClicked={() => {
                 if (isGameStarted && !isExecuting) {
                   executeTransaction();

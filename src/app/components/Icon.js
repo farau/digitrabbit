@@ -144,6 +144,23 @@ export default function Icon({ name, src, label, onClick, position, sound, theme
     if (onClick) onClick();
   }
 
+  // Garantit que si on sort du canva le clic se désactive (même si le clic reste actif)
+  useEffect(() => {
+    const handleGlobalPointerUp = () => {
+      setClicked(false);
+      if (soundRef.current && typeof soundRef.current.pause === "function") {
+        soundRef.current.pause();
+      }
+    };
+
+    window.addEventListener("pointerup", handleGlobalPointerUp);
+
+    return () => {
+      window.removeEventListener("pointerup", handleGlobalPointerUp);
+    };
+  }, []);
+
+
   return (
     <div
       className={`${styles.icon} ${styles.iconHiddenOnMobile}`}
