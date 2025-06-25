@@ -76,7 +76,7 @@ function RabbitScene({ isClicked, sound }) {
 
   // Initialiser le son
   useEffect(() => {
-    soundRef.current = new Audio(`/sounds/hit${clickIndex}.mp3`);
+    soundRef.current = new Audio(`/sounds/hit.mp3`);
     soundRef.current.volume = 0.4;
   }, [sound]);
 
@@ -295,24 +295,39 @@ export default function Game({ isTimeExpired, setIsTimeExpired, isGameStarted, s
   const [refreshCounter, setRefreshCounter] = useState(0)
   const { ready, authenticated } = usePrivy();
   const { wallets } = useWallets()
-  const embeddedWallet = getEmbeddedConnectedWallet(wallets)
+  //const embeddedWallet = getEmbeddedConnectedWallet(wallets)
   const clientRef = useRef(null)
+  const [embeddedWallet, setEmbeddedWallet] = useState(null);
 
-  // Initialiser et stocker le client
+  useEffect(() => {
+    const wallet = getEmbeddedConnectedWallet(wallets);
+    setEmbeddedWallet(wallet);
+  }, [wallets]);
+
+
+
+  // Initialiser et stocker le client à chaque fois que embeddedWallet change
+  // Réinitialiser les historiques de transactions, erreurs et results aussi
   useEffect(() => {
     try {
+      setResult('')
+      setError('')
+      setTransactionHistory([])
       const client = getWalletClient();
       clientRef.current = client;
     } catch (err) {
       console.warn('walletClient uninitialized');
     }
-  }, []);
+  }, [embeddedWallet]);
 
   // Contract interaction
   const handleStartGame = async () => {
     try {
       const walletClient = clientRef.current
-      if (!walletClient) return null
+      if (!walletClient || !embeddedWallet || !embeddedWallet.address) {
+        setError('No embedded wallet or address')
+        return
+      }
 
       console.log(`Starting game on MegaETH Testnet...`)
 
@@ -472,7 +487,36 @@ export default function Game({ isTimeExpired, setIsTimeExpired, isGameStarted, s
                 }
               }}
               sound="hit"
-            />
+              />
+              {result && (
+                result.split('\n').map((line, index) => {
+                  if (line.startsWith('Hash:')) {
+                    const hash = line.replace('Hash: ', '');
+                    const getExplorerUrl = (networkId, hash) =>
+                      networkId === 'megaeth'
+                        ? `https://web3.okx.com/explorer/megaeth-testnet/tx/${hash}`
+                        : '#';
+
+                    const explorerUrl = getExplorerUrl(selectedNetwork.id, hash);
+
+                    return (
+                      <a
+                        key={index}
+                        href={explorerUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="absolute top-4 left-[71%] px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs rounded shadow hover:bg-green-200 dark:hover:bg-green-800 transition-all cursor-pointer z-20 w-[180px]"
+                      >
+                        ✅ Transaction Successful
+                        <div className="mt-1 text-blue-600 dark:text-blue-400 underline font-mono break-all text-[10px]">
+                          {hash}
+                        </div>
+                      </a>
+                    );
+                  }
+                  return null;
+                })
+              )}
           </div>
         </div>
       )}
@@ -491,46 +535,13 @@ export default function Game({ isTimeExpired, setIsTimeExpired, isGameStarted, s
           {isExecuting ? (
             <>
               <Loader2 className="animate-spin inline mr-2" size={20} />
-              Testing {selectedNetwork.name}...
+              Executing transaction...
             </>
           ) : (
-            `Start Game on ${selectedNetwork.name}`
+            `Start Game`
           )}
         </button>
       </div>
-
-      {/* Result Message */}
-      {result && (
-        <div className="mb-6 p-4 bg-green-100 dark:bg-green-900 rounded-lg max-w-2xl text-left space-y-2">
-          <h3 className="font-semibold text-green-800 dark:text-green-200">✅ Transaction Successful</h3>
-          <div className="text-green-700 dark:text-green-300">
-            {result.split('\n').map((line, index) => {
-              if (line.startsWith('Hash:')) {
-                const hash = line.replace('Hash: ', '');
-                const getExplorerUrl = (networkId, hash) =>
-                  networkId === 'megaeth'
-                    ? `https://web3.okx.com/explorer/megaeth-testnet/tx/${hash}`
-                    : '#';
-
-                return (
-                  <div key={index}>
-                    <span>Hash: </span>
-                    <a
-                      href={getExplorerUrl(selectedNetwork.id, hash)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-300 font-mono break-all"
-                    >
-                      {hash}
-                    </a>
-                  </div>
-                );
-              }
-              return <p key={index}>{line}</p>;
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Error Message */}
       {error && (

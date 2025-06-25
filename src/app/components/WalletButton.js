@@ -42,15 +42,15 @@ const WalletButton = () => {
     // Disable login when Privy is not ready or the user is already authenticated
     const disableLogin = !ready || (ready && !authenticated);
     const { wallets } = useWallets();
-    const embeddedWallet = getEmbeddedConnectedWallet(wallets);
 
     useEffect(() => {
+        const embeddedWallet = getEmbeddedConnectedWallet(wallets);
         if (embeddedWallet?.address) {
         initWalletClient(embeddedWallet);
         } else {
         clearWalletClient(); // si on se déconnecte ou change de compte
         }
-    }, [embeddedWallet]);
+    }, [wallets]);
 
     return (
         <div>
