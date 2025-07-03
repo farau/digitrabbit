@@ -5,15 +5,301 @@ import {
 } from 'lucide-react';
 import { useTheme } from '@/context';
 import Wrapper from './Wrapper';
-import { usePrivy } from '@privy-io/react-auth';
-import { useWallets } from '@privy-io/react-auth';
+import { useWallets, useLinkAccount, usePrivy } from '@privy-io/react-auth';
+import { useAccount, useBalance } from 'wagmi';
+
+function AllLinkedWallets() {
+  const { user } = usePrivy();
+  const { themeMode } = useTheme();
+
+  const isNight = themeMode === 'dark';
+  const cardBg = isNight ? '#222' : '#f3f3f3';
+  const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)';
+  const borderColor = isNight ? '#444' : '#ddd';
+  const textColor = isNight ? 'text-white' : 'text-black';
+  const subTextColor = isNight ? 'text-zinc-400' : 'text-gray-600';
+
+  const allWallets = user?.linkedAccounts.filter(
+    (account) => account.type === 'wallet'
+  ) || [];
+
+  return (
+    <div
+      style={{
+        background: cardBg,
+        padding: '10px 15px',
+        borderRadius: '10px',
+        marginTop: 12,
+        boxShadow,
+        border: `1px solid ${borderColor}`,
+      }}
+    >
+      <p className={`text-sm font-semibold mb-3 ${textColor}`}>All historically linked wallets</p>
+
+      {allWallets.length > 0 ? (
+        <div>
+          {allWallets.map((wallet) => (
+            <div
+              key={wallet.address}
+              className="mb-4 pb-2 border-b border-dashed border-gray-300 dark:border-zinc-700 last:border-none last:pb-0"
+            >
+              <code className="block text-xs bg-gray-100 dark:bg-zinc-800 px-3 py-1 rounded-md text-gray-900 dark:text-white break-words select-none mb-1">
+                {wallet.address}
+              </code>
+              <p className={`text-xs ${subTextColor}`}>Type: {wallet.walletClientType}</p>
+              <p className={`text-xs ${subTextColor}`}>First linked: {new Date(wallet.firstVerifiedAt).toLocaleDateString()}</p>
+              <UnlinkButton addressToUnlink={wallet.address} />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className={`text-xs italic ${subTextColor}`}>No wallets have been linked to this account.</p>
+      )}
+      <LinkButton />
+      <p className={`text-xs italic ${subTextColor}`}>Keep in mind that a user can only unlink an account if they have at least one other linked account remaining.</p>
+    </div>
+  );
+}
 
 
-export default function Settings({ sound, setSound }) {
+function TelegramAccount() {
+  const { user } = usePrivy();
+  const { themeMode } = useTheme();
+
+  const isNight = themeMode === 'dark';
+  const cardBg = isNight ? '#222' : '#f3f3f3';
+  const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)';
+  const borderColor = isNight ? '#444' : '#ddd';
+  const textColor = isNight ? 'text-white' : 'text-black';
+  const subTextColor = isNight ? 'text-zinc-400' : 'text-gray-600';
+
+  const telegramAccount = user?.telegram;
+
+  if (!telegramAccount) {
+    return (
+      <div
+        style={{
+          background: cardBg,
+          padding: '10px 15px',
+          borderRadius: '10px',
+          marginTop: 12,
+          boxShadow,
+          border: `1px solid ${borderColor}`,
+        }}
+      >
+        <p className={`text-sm font-semibold mb-2 ${textColor}`}>Telegram Account</p>
+        <p className={`text-xs italic ${subTextColor}`}>No Telegram account linked.</p>
+        <LinkSocials />
+      </div>
+    );
+  }
+
+  const {
+    first_name,
+    last_name,
+    username,
+    photo_url,
+    telegram_user_id,
+  } = telegramAccount;
+
+  return (
+    <div
+      style={{
+        background: cardBg,
+        padding: '10px 15px',
+        borderRadius: '10px',
+        marginTop: 12,
+        boxShadow,
+        border: `1px solid ${borderColor}`,
+      }}
+    >
+      <p className={`text-sm font-semibold mb-3 ${textColor}`}>Telegram Account</p>
+
+      <div className="flex items-center gap-3 mb-3">
+        {photo_url && (
+          <img
+            src={photo_url}
+            alt="Telegram Profile"
+            className="w-12 h-12 rounded-full border border-gray-300 dark:border-zinc-600"
+          />
+        )}
+        <div>
+          <p className={`text-sm font-medium ${textColor}`}>{first_name} {last_name}</p>
+          {username && (
+            <p className={`text-xs ${subTextColor}`}>@{username}</p>
+          )}
+        </div>
+      </div>
+
+      <p className={`text-xs ${subTextColor}`}>
+        Telegram User ID: <span className="font-mono">{telegram_user_id}</span>
+      </p>
+    </div>
+  );
+}
+
+
+function MyWalletList() {
+  const { wallets } = useWallets();
+  const { themeMode } = useTheme();
+
+  const isNight = themeMode === 'dark';
+  const cardBg = isNight ? '#222' : '#f3f3f3';
+  const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)';
+  const borderColor = isNight ? '#444' : '#ddd';
+  const textColor = isNight ? 'text-white' : 'text-black';
+  const subTextColor = isNight ? 'text-zinc-400' : 'text-gray-600';
+
+  if (!wallets || wallets.length === 0) return null;
+
+  return (
+    <div
+      style={{
+        background: cardBg,
+        padding: '10px 15px',
+        borderRadius: '10px',
+        marginTop: 12,
+        boxShadow,
+        border: `1px solid ${borderColor}`,
+      }}
+    >
+      <p className={`text-sm font-semibold mb-3 ${textColor}`}>Active wallet</p>
+
+      {wallets
+        .filter((wallet) => wallet.walletClientType !== 'privy')
+        .map((wallet) => (
+          <div
+            key={wallet.address}
+            className="mb-4 pb-2 border-b border-dashed border-gray-300 dark:border-zinc-700 last:border-none last:pb-0"
+          >
+            <code className="block text-xs bg-gray-100 dark:bg-zinc-800 px-3 py-1 rounded-md text-gray-900 dark:text-white break-words select-none mb-1">
+              {wallet.address}
+            </code>
+            <p className={`text-xs ${subTextColor}`}>Chain ID: {wallet.chainId}</p>
+            <p className={`text-xs ${subTextColor}`}>Type: {wallet.walletClientType}</p>
+          </div>
+        ))}
+    </div>
+  );
+}
+
+function LinkSocials() {
+  const { linkTelegram } = useLinkAccount();
+
+  return (
+    <div className="link-options mb-4">
+      <p className='text-xs'>You can link only one account. Choose wisely.</p>
+      <button onClick={linkTelegram}>Link Telegram</button>
+    </div>
+  );
+}
+
+
+function LinkButton() {
+  const { linkWallet } = useLinkAccount();
+
+  return (
+    <div className="link-options mb-4">
+      <p className='text-xs'>Link wallets containing "partnerships" NFTs to get bonuses.</p>
+      <button onClick={linkWallet}>Link Wallet</button>
+    </div>
+  );
+}
+
+// Make sure to pass the address of the wallet you want to unlink
+function UnlinkButton({ addressToUnlink }) {
+  const { unlinkWallet } = usePrivy();
+  const [error, setError] = useState(null);
+
+  const handleUnlink = async () => {
+    try {
+      await unlinkWallet(addressToUnlink);
+      setError(null); // Clear previous error if any
+    } catch (err) {
+      console.error('Failed to unlink wallet:', err);
+      setError(err.message || 'An unknown error occurred while unlinking.');
+    }
+  };
+
+  return (
+    <div className="unlink-options text-xs mt-1">
+      <button onClick={handleUnlink} className="text-red-600 hover:underline">
+        Unlink Wallet
+      </button>
+      {error && (
+        <p className="text-xs text-red-500 mt-1">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function WalletBalance({ embeddedWallet, themeMode }) {
+  const { data: balance, refetch: refetchBalance } = useBalance({
+    address: embeddedWallet?.address,
+  });
+
+  if (!embeddedWallet?.address) {
+    return (
+      <div className="mt-2 text-sm text-red-600 dark:text-red-400">
+        ⚠️ No wallet connected
+      </div>
+    );
+  }
+
+  if (!balance) {
+    return (
+      <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+        Loading balance...
+      </div>
+    );
+  }
+
+  const hasBalance = balance?.value > 0n;
+  const textColor = themeMode === 'dark' ? 'text-white' : 'text-black';
+
+  return (
+    <div className="mt-4 space-y-2">
+      <p>
+        Balance: {balance.formatted} {balance.symbol}
+      </p>
+
+      {!hasBalance && (
+        <div className="space-y-2">
+          <p className="text-red-600 dark:text-red-400 text-sm font-medium">
+            ⚠️ You need testnet tokens to interact
+
+            <a
+              href="https://testnet.megaeth.com/?faucet=true"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-1.5 rounded transition focus:outline-none focus:ring-2 focus:ring-indigo-400 ml-2"
+            >
+              Get Tokens
+            </a>
+
+            <button
+              onClick={refetchBalance}
+              className="px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 text-sm font-medium ml-2"
+            >
+              Reload
+            </button>
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+export default function Settings({ sound, setSound, embeddedWallet }) {
   const { themeMode, toggleTheme } = useTheme();
   const isNight = themeMode === 'dark';
   const textColor = isNight ? '#eee' : '#333';
   const cardBg = isNight ? '#222' : '#f3f3f3';
+  const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)'
+  const borderColor = isNight ? '#444' : '#ddd'
 
   const { ready, authenticated, exportWallet } = usePrivy();
 
@@ -24,6 +310,7 @@ export default function Settings({ sound, setSound }) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [privateKey, setPrivateKey] = useState(null);
   const [showKey, setShowKey] = useState(false);
+
 
   if (!ready) return;
 
@@ -48,10 +335,9 @@ export default function Settings({ sound, setSound }) {
     }
   };
 
-  const embeddedWallet = wallets.find(
+  const embeddedWallet_ = wallets.find(
     (w) => w.walletClientType === 'privy' && w.address
   );
-  const smartWallet = user?.linkedAccounts?.find((account) => account.type === 'smart_wallet');
 
   const sounds = ['crying', 'robot', 'bird', 'cat', 'sheep', 'cow', 'rooster'];
 
@@ -86,10 +372,9 @@ export default function Settings({ sound, setSound }) {
           value={sound}
           onChange={(e) => setSound(e.target.value)}
           className={`w-full p-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 shadow-sm
-            ${
-              themeMode === 'light'
-                ? 'bg-white text-black border-gray-300'
-                : 'bg-white text-black border-zinc-600'
+            ${themeMode === 'light'
+              ? 'bg-white text-black border-gray-300'
+              : 'bg-white text-black border-zinc-600'
             }`}
         >
           {sounds.map((s) => (
@@ -105,69 +390,72 @@ export default function Settings({ sound, setSound }) {
         <div className="mt-8 border-t border-gray-200 dark:border-zinc-700 pt-6">
           <h4 className="text-md font-semibold mb-4">Wallets</h4>
 
-          {[{ label: 'Smart Wallet', wallet: smartWallet, type: 'smart' },
-            { label: 'Embedded Wallet', wallet: embeddedWallet, type: 'embedded' }].map(
-            ({ label, wallet, type }) =>
-              wallet && (
-                <div
-                  key={type}
-                  style={{
-                    background: cardBg,
-                    padding: '10px 15px',
-                    borderRadius: '10px',
-                    marginBottom: 10,
-                  }}
-                >
-                  <p
-                    className={
-                      "text-sm font-semibold mb-3 " +
-                      (themeMode === "dark" ? "text-white" : "text-black")
-                    }
+          {[
+            { label: 'Embedded Wallet', wallet: embeddedWallet_, type: 'embedded' }].map(
+              ({ label, wallet, type }) =>
+                wallet && (
+                  <div
+                    key={type}
+                    style={{
+                      background: cardBg,
+                      padding: '10px 15px',
+                      borderRadius: '10px',
+                      marginBottom: 10,
+                      boxShadow,
+                      border: `1px solid ${borderColor}`,
+                    }}
                   >
-                    {label}
-                  </p>
-                  <div className="flex items-center justify-between gap-3 flex-wrap">
-                    <code className="flex-1 min-w-0 text-xs bg-gray-100 dark:bg-zinc-800 px-3 py-1 rounded-md text-gray-900 dark:text-white break-words select-none">
-                      {wallet.address}
-                    </code>
-
-                    <button
-                      onClick={() => handleCopy(wallet.address, type)}
-                      aria-label={`Copy ${type} wallet address`}
-                      className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-zinc-700 transition focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    <p
+                      className={
+                        "text-sm font-semibold mb-3 " +
+                        (themeMode === "dark" ? "text-white" : "text-black")
+                      }
                     >
-                    {copied === type ? (
-                      <>
-                        Copied! 
-                      </>
-                    ) : (
-                      'Copy'
-                    )}
-                    </button>
-                  </div>
-
-                  {type === 'embedded' && (
-                    <>
+                      {label}
+                    </p>
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <code className="flex-1 min-w-0 text-xs bg-gray-100 dark:bg-zinc-800 px-3 py-1 rounded-md text-gray-900 dark:text-white break-words select-none">
+                        {wallet.address}
+                      </code>
                       <button
-                        onClick={() => setShowConfirm(true)}
-                        className="mt-4 inline-flex items-center text-xs font-semibold transition focus:outline-none focus:underline"
+                        onClick={() => handleCopy(wallet.address, type)}
+                        aria-label={`Copy ${type} wallet address`}
+                        className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-zinc-700 transition focus:outline-none focus:ring-2 focus:ring-indigo-400"
                       >
-                        <KeyRound className="w-0 h-3.5" /> Export Private Key
+                        {copied === type ? (
+                          <>
+                            Copied!
+                          </>
+                        ) : (
+                          'Copy'
+                        )}
                       </button>
 
-                      {showKey && privateKey && (
-                        <div className="mt-3 p-3 rounded-md bg-red-50 dark:bg-red-900/30 text-xs text-red-800 dark:text-red-300 break-words relative shadow-inner">
-                          <EyeOff className="w-5 h-5 absolute top-3 right-3 opacity-60" />
-                          {privateKey}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              )
-          )}
-          {/*<SignMessage />
-          <SendTransactionButton />*/}
+                    </div>
+
+                    {type === 'embedded' && (
+                      <>
+                        <WalletBalance embeddedWallet={embeddedWallet} />
+                        <button
+                          onClick={() => setShowConfirm(true)}
+                          className="mt-4 inline-flex items-center text-xs font-semibold transition focus:outline-none focus:underline"
+                        >
+                          <KeyRound className="w-0 h-3.5" /> Export Private Key
+                        </button>
+
+                        {showKey && privateKey && (
+                          <div className="mt-3 p-3 rounded-md bg-red-50 dark:bg-red-900/30 text-xs text-red-800 dark:text-red-300 break-words relative shadow-inner">
+                            <EyeOff className="w-5 h-5 absolute top-3 right-3 opacity-60" />
+                            {privateKey}
+                          </div>
+                        )}
+                        <MyWalletList />
+                        <AllLinkedWallets />
+                      </>
+                    )}
+                  </div>
+                )
+            )}
         </div>
       )}
 

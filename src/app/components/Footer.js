@@ -12,6 +12,7 @@ export default function Footer({ visibleApps, setVisibleApps, appZIndices, setAp
   const [startOpen, setStartOpen] = useState(false);
   const menuRef = useRef(null);
 
+
   // Met à jour l'heure toutes les secondes
   const [time, setTime] = useState("");
 
@@ -23,6 +24,8 @@ export default function Footer({ visibleApps, setVisibleApps, appZIndices, setAp
 
     updateClock(); // initialise immédiatement
     const interval = setInterval(updateClock, 60000); // met à jour chaque minute
+
+    return () => clearInterval(interval); // Nettoyage de l'interval
 
   }, []);
 
@@ -58,18 +61,45 @@ export default function Footer({ visibleApps, setVisibleApps, appZIndices, setAp
         {/* Menu de navigation */}
         {startOpen && (
           <div className={styles.startMenu} ref={menuRef}>
-            <div className={styles.menuItem} onClick={() => {openApp("Home"); setStartOpen(false);}}><Image src="/img/icons/about.png" alt="About icon" width={30} height={30} /> About</div>
-            <div className={styles.menuItem} onClick={() => {openApp("Memes"); setStartOpen(false);}}><Image src="/img/icons/memes.png" alt="Meme icon" width={30} height={30} /> Memes</div>
+            <div className={styles.menuItem} onClick={() => { openApp("About"); setStartOpen(false); }}>
+              <Image src="/img/icons/about.png" alt="About icon" width={30} height={30} className={styles.menuIcon} />
+              About
+            </div>
+            <div className={styles.menuItem} onClick={() => { openApp("Memes"); setStartOpen(false); }}>
+              <Image src="/img/icons/memes.png" alt="Meme icon" width={30} height={30} className={styles.menuIcon} />
+              Memes
+            </div>
+            <div className={styles.menuItem} onClick={() => { openApp("Assets"); setStartOpen(false); }}>
+              <Image src="/img/icons/assets.png" alt="Assets icon" width={30} height={30} className={styles.menuIcon} />
+              Assets
+            </div>
+            <div className={styles.menuItem} onClick={() => { openApp("Nothing"); setStartOpen(false); }}>
+              <Image src="/img/icons/nothing.png" alt="Nothing icon" width={30} height={30} className={styles.menuIcon} />
+              Chill
+            </div>
             <hr className={styles.menuDivider} />
-            <div className={styles.menuItem} onClick={() => {openApp("Profile"); setStartOpen(false);}}><Image src="/img/icons/profile.png" alt="Profile icon" width={30} height={30} /> Profile</div>
-            <div className={styles.menuItem} onClick={() => {openApp("Game"); setStartOpen(false);}}><Image src="/img/icons/game.png" alt="Game icon" width={30} height={30} /> Game</div>
-            <div className={styles.menuItem} onClick={() => {openApp("Shop"); setStartOpen(false);}}><Image src="/img/icons/shop.png" alt="Shop icon" width={30} height={30} /> Shop</div> 
+            <div className={styles.menuItem} onClick={() => { openApp("Profile"); setStartOpen(false); }}>
+              <Image src="/img/icons/profile.png" alt="Profile icon" width={30} height={30} className={styles.menuIcon} />
+              Profile
+            </div>
+            <div className={styles.menuItem} onClick={() => { openApp("Game"); setStartOpen(false); }}>
+              <Image src="/img/icons/game.png" alt="Game icon" width={30} height={30} className={styles.menuIcon} />
+              Game
+            </div>
+            <div className={styles.menuItem} onClick={() => { openApp("Shop"); setStartOpen(false); }}>
+              <Image src="/img/icons/shop.png" alt="Shop icon" width={30} height={30} className={styles.menuIcon} />
+              Shop
+            </div>
             <hr className={styles.menuDivider} />
-            <div className={styles.menuItem} onClick={() => {openApp("Leaderboard"); setStartOpen(false);}}><Image src="/img/icons/leaderboard.png" alt="Leaderboard icon" width={30} height={30} /> Leaderboard</div>   
-            {/* Ajoute d'autres apps ici */}
+            <div className={styles.menuItem} onClick={() => { openApp("Leaderboard"); setStartOpen(false); }}>
+              <Image src="/img/icons/leaderboard.png" alt="Leaderboard icon" width={30} height={30} className={styles.menuIcon} />
+              Leaderboard
+            </div>
             <hr className={styles.menuDivider} />
-            <div className={styles.menuItem} onClick={() => {openApp("Settings"); setStartOpen(false);}}><Image src="/img/icons/settings.png" alt="Settings icon" width={30} height={30} /> Settings</div>   
-            
+            <div className={styles.menuItem} onClick={() => { openApp("Settings"); setStartOpen(false); }}>
+              <Image src="/img/icons/settings.png" alt="Settings icon" width={30} height={30} className={styles.menuIcon} />
+              Settings
+            </div>
           </div>
         )}
 
@@ -88,7 +118,7 @@ export default function Footer({ visibleApps, setVisibleApps, appZIndices, setAp
           </div>
         )}
       </div>
-      {/* Icônes de réseaux sociaux sur la droite */} 
+      {/* Icônes de réseaux sociaux sur la droite */}
       <div className={styles.taskbarRight}>
         <div className={styles.socialIcons}>
           <a href="https://x.com/digitrabbits" target="_blank" rel="noopener noreferrer">
@@ -96,6 +126,9 @@ export default function Footer({ visibleApps, setVisibleApps, appZIndices, setAp
           </a>
           <a href="https://t.me/digitrabbitsHQ" target="_blank" rel="noopener noreferrer">
             <Image src="/img/icons/telegram-icon.png" alt="Telegram" width={20} height={20} />
+          </a>
+          <a href="https://www.megaeth.com/" target="_blank" rel="noopener noreferrer">
+            <Image src="/img/icons/megaeth.ico" alt="MegaETH" width={21} height={21} />
           </a>
         </div>
         <AudioPlayer src="/sounds/soundtrack.mp3" />

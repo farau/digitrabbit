@@ -35,6 +35,16 @@ export function ContextProvider({ children }) {
     }
   }, []);
 
+  // AJOUT : Synchroniser avec les classes Tailwind
+  useEffect(() => {
+    const root = document.documentElement; // ou document.body
+    if (themeMode === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }, [themeMode]);
+
   const toggleTheme = () => {
     setThemeMode((prev) => {
       const newMode = prev === 'light' ? 'dark' : 'light';

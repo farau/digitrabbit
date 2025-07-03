@@ -21,8 +21,7 @@ export default function Leaderboard({ userAddress = "0x12...34AB" }) {
   const highlightStyle = "bg-blue-300 dark:bg-blue-400 text-blue-900 dark:text-gray-900 font-semibold";
 
   const tabStyle = (active) =>
-    `px-4 py-2 rounded-full text-sm font-medium cursor-pointer transition-colors duration-200 ${
-      active ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+    `px-4 py-2 rounded-full text-sm font-medium cursor-pointer transition-colors duration-200 ${active ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
     }`
 
   const renderList = (items, keyName, label) => {
@@ -37,9 +36,8 @@ export default function Leaderboard({ userAddress = "0x12...34AB" }) {
           {items.map((item, i) => (
             <li
               key={item.address + item[keyName]}
-              className={`flex justify-between py-2 px-4 ${
-                item.address === userAddress ? highlightStyle : ""
-              }`}
+              className={`flex justify-between py-2 px-4 ${item.address === userAddress ? highlightStyle : ""
+                }`}
             >
               <span>{i + 1}. {item.address}</span>
               <span>{label(item)}</span>
@@ -55,7 +53,7 @@ export default function Leaderboard({ userAddress = "0x12...34AB" }) {
       {/* Onglets */}
       <div className="flex justify-center gap-4 mb-6">
         <button onClick={() => setTab('score')} className={tabStyle(tab === 'score')}>
-          Top RabbitScores
+          Top RabbitPointss
         </button>
         <button onClick={() => setTab('streak')} className={tabStyle(tab === 'streak')}>
           Top Streaks

@@ -2,129 +2,134 @@
 
 import { useProfile } from '@/app/hooks/useProfile'
 import Image from 'next/image'
-import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, Tooltip } from 'recharts'
+import {
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+  ResponsiveContainer,
+  Tooltip,
+} from 'recharts'
 import { Download } from 'lucide-react'
-import Wrapper from '@/app/components/Wrapper';
+import Wrapper from '@/app/components/Wrapper'
+import { useTheme } from '@/context'
 
-export default function Profile({ themeMode = 'light' }) {
-    const isNight = themeMode === 'dark';
-    const textColor = isNight ? '#eee' : '#333';
-    const cardBg = isNight ? '#222' : '#f3f3f3';
-    const labelColor = isNight ? '#ccc' : '#333';
-    const tooltipBg = isNight ? '#333' : '#fff';
-    const tooltipColor = isNight ? '#eee' : '#333';
+export default function Profile({ embeddedWallet, playerData }) {
+  const { themeMode } = useTheme();
+  const isNight = themeMode === 'dark';
+  const textColor = isNight ? '#eee' : '#333'
+  const cardBg = isNight ? '#222' : '#f3f3f3'
+  const labelColor = isNight ? '#ccc' : '#333'
+  const tooltipBg = isNight ? '#333' : '#fff'
+  const tooltipColor = isNight ? '#eee' : '#333'
+  const borderColor = isNight ? '#444' : '#ddd'
+  const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)'
 
-    const { profile, loading, error, embeddedWallet, smartWallet, wallets } = useProfile()
+  //const { profile, loading, error, wallets } = useProfile()
+  const { rabbitPoints, playerItems, totalClicks, sessionEndsAt, boost, streak } = playerData
 
+  const rawStats = {
+    clothes: playerItems.reduce((count, val) => count + (val > 0 ? 1 : 0), 0),
+    boost: Number(boost),
+    totalClicks: Number(totalClicks),
+    streak: Number(streak),
+  }
 
-    const rawStats = {
-        clothes: 4,             // max = 6
-        bonus: 1.6,             // max = 2
-        tx: 152,                // max = 1000
-        streak: 10              // max = 30
+  const blockchainStats = [
+    {
+      stat: 'Clothes',
+      value: (rawStats.clothes ?? 0) / 6,           // Max: 6
+      real: `${rawStats.clothes ?? 0}/6`
+    },
+    {
+      stat: 'Boost',
+      value: (rawStats.boost ?? 0) / 360,           // Max: 360%
+      real: `${rawStats.boost ?? 0}%`
+    },
+    {
+      stat: 'Total clicks',
+      value: Math.min((rawStats.totalClicks ?? 0) / 10000, 1),  // Max ≈ 10k
+      real: `${rawStats.totalClicks ?? 0}`
+    },
+    {
+      stat: 'Streak',
+      value: (rawStats.streak ?? 0) / 50,           // Max ≈ 50
+      real: `${rawStats.streak ?? 0} days`
     }
-      
-    // 🟠 Données normalisées + stockage valeur réelle pour le tooltip
-    const blockchainStats = [
-        { stat: 'Clothes', value: rawStats.clothes / 6, real: `${rawStats.clothes}/6` },
-        { stat: 'Bonus', value: rawStats.bonus / 2, real: `x${rawStats.bonus}` },
-        { stat: 'Tx', value: rawStats.tx / 1000, real: `${rawStats.tx}` },
-        { stat: 'Streak', value: rawStats.streak / 30, real: `${rawStats.streak} days` },
-    ]
+  ];
 
-    const renderVerticalLabels = ({ payload, x, y, textAnchor }) => {
-        const angle = payload.coordinate?.angle ?? 0;
-        const label = payload.value;
-        const shouldRotate = label === 'Streak' || label === 'Bonus';
-        const isLeft = angle > 90 && angle < 270;
 
-        return (
-            <text
-                x={x}
-                y={y}
-                textAnchor={isLeft ? 'end' : 'start'}
-                dominantBaseline="middle"
-                transform={shouldRotate ? `rotate(90 ${x} ${y})` : undefined}
-                style={{ fill: labelColor, fontSize: 12 }}
-            >
-                {label}
-            </text>
-        );
-    };
+  const renderVerticalLabels = ({ payload, x, y }) => {
+    const angle = payload.coordinate?.angle ?? 0
+    const label = payload.value
+    const shouldRotate = label === 'Streak' || label === 'Bonus'
+    const isLeft = angle > 90 && angle < 270
 
-    const CustomTooltip = ({ active, payload }) => {
-        if (active && payload && payload.length) {
-            const { stat, real } = payload[0].payload;
-            return (
-                <div style={{
-                    backgroundColor: tooltipBg,
-                    border: '1px solid #666',
-                    padding: '8px',
-                    borderRadius: 4
-                }}>
-                    <p style={{ margin: 0, color: tooltipColor }}>
-                        <strong>{stat}</strong>: {real}
-                    </p>
-                </div>
-            );
-        }
-        return null;
-    };
+    return (
+      <text
+        x={x}
+        y={y}
+        textAnchor={isLeft ? 'end' : 'start'}
+        dominantBaseline="middle"
+        transform={shouldRotate ? `rotate(90 ${x} ${y})` : undefined}
+        style={{ fill: labelColor, fontSize: 12 }}
+      >
+        {label}
+      </text>
+    )
+  }
 
-    function RadarStatsChart() {
-        return (
-            <div className="w-full md:w-64 h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart data={blockchainStats}>
-                        <PolarGrid stroke={isNight ? '#555' : '#ccc'} />
-                        <PolarAngleAxis dataKey="stat" tick={renderVerticalLabels} />
-                        <PolarRadiusAxis domain={[0, 1]} tickCount={6} stroke={labelColor} />
-                        <Tooltip content={<CustomTooltip />} />
-                        <Radar
-                            name="Stats"
-                            dataKey="value"
-                            stroke="#4f46e5"
-                            fill="#818cf8"
-                            fillOpacity={0.6}
-                        />
-                    </RadarChart>
-                </ResponsiveContainer>
-            </div>
-        );
+  const CustomTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+      const { stat, real } = payload[0].payload
+      return (
+        <div
+          style={{
+            backgroundColor: tooltipBg,
+            border: `1px solid ${borderColor}`,
+            padding: '8px',
+            borderRadius: 4,
+            color: tooltipColor,
+          }}
+        >
+          <p style={{ margin: 0 }}>
+            <strong>{stat}</strong>: {real}
+          </p>
+        </div>
+      )
     }
+    return null
+  }
 
-  if (loading) return <p>Loading...</p>
-  if (error) return <p>{error}</p>
-  if (!profile) return <p>Please connect your wallet to see your profile.</p>
+  function RadarStatsChart() {
+    return (
+      <div className="w-full md:w-64 h-64">
+        <ResponsiveContainer width="100%" height="100%">
+          <RadarChart data={blockchainStats}>
+            <PolarGrid stroke={isNight ? '#555' : '#ccc'} />
+            <PolarAngleAxis dataKey="stat" tick={renderVerticalLabels} />
+            <PolarRadiusAxis domain={[0, 1]} tickCount={6} stroke={labelColor} />
+            <Tooltip content={<CustomTooltip />} />
+            <Radar
+              name="Stats"
+              dataKey="value"
+              stroke="#4f46e5"
+              fill="#818cf8"
+              fillOpacity={0.6}
+            />
+          </RadarChart>
+        </ResponsiveContainer>
+      </div>
+    )
+  }
 
   const userAddress =
-    wallets?.[0]?.address ||
-    '0x0000000000000000000000000000000000000000'
-
+    embeddedWallet?.address || '0x0000000000000000000000000000000000000000'
   const displayAddress = userAddress.slice(0, 4) + '...' + userAddress.slice(-4)
 
-  const renderWallet = (wallet, label) => (
-    <div
-      key={wallet.address}
-      style={{
-        background: cardBg,
-        padding: '8px 12px',
-        borderRadius: '8px',
-        fontSize: '0.875rem',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 6,
-      }}
-    >
-      <span>
-        <strong>{label}:</strong>{' '}
-        {wallet.address.slice(0, 6)}...{wallet.address.slice(-4)}
-      </span>
-    </div>
-  )
 
-  return (
+  return (embeddedWallet ?
     <Wrapper>
       <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
         {/* Avatar */}
@@ -143,7 +148,8 @@ export default function Profile({ themeMode = 'light' }) {
           <a
             href="/img/profile-rabbit.jpg"
             download
-            className="mt-2 text-xs text-blue-500 hover:underline"
+            className="mt-2 text-xs hover:underline"
+            style={{ color: isNight ? '#90cdf4' : '#3b82f6' }}
           >
             <Download className="w-3 h-3" />
           </a>
@@ -157,6 +163,8 @@ export default function Profile({ themeMode = 'light' }) {
               padding: '10px 15px',
               borderRadius: '10px',
               marginBottom: 10,
+              border: `1px solid ${borderColor}`,
+              boxShadow,
             }}
           >
             <strong>Wallet Address: </strong>
@@ -168,10 +176,12 @@ export default function Profile({ themeMode = 'light' }) {
               padding: '10px 15px',
               borderRadius: '10px',
               marginBottom: 10,
+              border: `1px solid ${borderColor}`,
+              boxShadow,
             }}
           >
-            <strong>RabbitScore:</strong> 213 <br />
-            <strong>Points (Socials):</strong> {profile.points_socials ?? 0}
+            <strong>RabbitPoints:</strong> {rabbitPoints} <br />
+            <strong>Points (Partnership NFTs):</strong> TBA
           </div>
         </div>
       </div>
@@ -185,19 +195,36 @@ export default function Profile({ themeMode = 'light' }) {
               padding: '10px 15px',
               marginTop: 50,
               borderRadius: '10px',
+              border: `1px solid ${borderColor}`,
+              boxShadow,
             }}
           >
-            <h4 className="text-lg font-semibold mb-3 text-center">RabbitStatio</h4>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 10 }}>
-              <li>Number of clothes: <strong>4/6</strong></li>
-              <li>Bonus: <strong>x1.6</strong></li>
-              <li>Transactions: <strong>152</strong></li>
-              <li>Streak: <strong>10 days</strong></li>
+            <h4 className="text-lg font-semibold mb-3 text-center">
+              RabbitStatio
+            </h4>
+            <ul
+              style={{
+                listStyle: 'none',
+                padding: 0,
+                margin: 0,
+                display: 'grid',
+                gap: 10,
+                color: textColor,
+              }}
+            >
+              <li>Number of clothes: <strong>{rawStats.clothes}/6</strong></li>
+              <li>Boost: <strong>{rawStats.boost}%</strong></li>
+              <li>Total clicks: <strong>{rawStats.totalClicks}</strong></li>
+              <li>Streak: <strong>{rawStats.streak} days</strong></li>
             </ul>
           </div>
         </div>
         <RadarStatsChart />
       </div>
+    </Wrapper>
+    :
+    <Wrapper>
+      <p>Please connect your wallet to see your profile.</p>
     </Wrapper>
   )
 }

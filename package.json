@@ -22,6 +22,7 @@
     "@zerodev/sdk": "^5.4.36",
     "clsx": "^2.1.1",
     "ethers": "^6.14.0",
+    "framer-motion": "^12.22.0",
     "jose": "^6.0.11",
     "lucide-react": "^0.511.0",
     "next": "15.2.1",

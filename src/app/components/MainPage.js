@@ -7,7 +7,7 @@ import Icon from "./Icon";
 import Footer from "./Footer";
 import MemeGallery from "./MemeGallery";
 import BackgroundEffect from "./BackgroundEffect";
-import Profile from "./Profile"; 
+import Profile from "./Profile";
 import Settings from "./Settings";
 import { useWindowSize } from "../hooks/useWindowSize"; // Assurez-vous d'importer le bon hook
 import Leaderboard from "./Leaderboard";
@@ -16,11 +16,16 @@ import { useTheme } from "@/context";
 import DraggableWindow from "./DraggableWindow";
 import Game from "./Game";
 import EventToast from './EventToast';
-
+import Nothing from "./Nothing";
+import Shop from "./Shop";
+import Assets from "./Assets";
+import { useWallets, getEmbeddedConnectedWallet } from '@privy-io/react-auth'
+import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, publicClient, NUM_SLOTS } from '@/constants'
 
 export default function MainPage() {
 
   const [visibleApps, setVisibleApps] = useState([]);
+  const [minimizedApps, setMinimizedApps] = useState([]);
   const [appZIndices, setAppZIndices] = useState({});
   const [focusedApp, setFocusedApp] = useState(null);
   const [zCounter, setZCounter] = useState(1); // zIndex de départ
@@ -29,14 +34,92 @@ export default function MainPage() {
   const { themeMode, toggleTheme } = useTheme();
   const { width } = useWindowSize();
 
+  // Setters pour memes
   const [selectedMemeIndex, setSelectedMemeIndex] = useState(null);
   const [memeList, setMemeList] = useState([]);
+
+  // Setters pour assets
+  const [selectedAssetsIndex, setSelectedAssetsIndex] = useState(null);
+  const [assetsList, setAssetsList] = useState([]);
+
   // Setter timer jeu
   const [isTimeExpired, setIsTimeExpired] = useState(true);
   const [isGameStarted, setIsGameStarted] = useState(false)
 
+  // Refresher compteur pour réactualiser les valeurs du player
+  const [refreshCounter, setRefreshCounter] = useState(0)
+  const [seasonId, setSeasonId] = useState(null)
+
+  const [playerData, setPlayerData] = useState({
+    rabbitPoints: 0,
+    playerItems: Array(NUM_SLOTS).fill(0),
+    totalClicks: 0,
+    sessionEndsAt: null,
+    boost: 0,
+  })
+
+  // On récupère l'embedded wallet ici puis on propage ensuite
+  const [embeddedWallet, setEmbeddedWallet] = useState(null);
+  const { wallets } = useWallets()
+
+  // On initialise embeddedwallet
+  useEffect(() => {
+    const wallet = getEmbeddedConnectedWallet(wallets);
+    setEmbeddedWallet(wallet);
+  }, [wallets]);
+
+  // 1. On récupère la saison une seule fois au montage
+  useEffect(() => {
+    async function fetchSeason() {
+      console.log("📦 Fetching season ID...")
+      const season = await publicClient.readContract({
+        address: DIGIT_RABBITS_ADDRESS,
+        abi: DIGIT_RABBITS_ABI,
+        functionName: 'currentSeasonId',
+      })
+      setSeasonId(Number(season))
+    }
+
+    if (embeddedWallet?.address) {
+      fetchSeason()
+    }
+  }, [embeddedWallet])
+
+
+  // On charge playerData au démarrage et à chaque refresh
+  useEffect(() => {
+    if (!embeddedWallet?.address || seasonId === null) {
+      return
+    }
+
+    async function fetchPlayerData() {
+      console.log("📥 Fetching player data for", embeddedWallet.address, "Season:", seasonId)
+      const result = await publicClient.readContract({
+        address: DIGIT_RABBITS_ADDRESS,
+        abi: DIGIT_RABBITS_ABI,
+        functionName: 'getPlayerData',
+        args: [embeddedWallet.address, seasonId],
+      })
+
+      const rabbitPoints = result[0] !== undefined ? Number(result[0]) / 1_000_000 : -1
+      const [totalClicks, playerItems, sessionEndsAt, boost] = result.slice(1)
+
+      const data = {
+        rabbitPoints,
+        totalClicks,
+        playerItems,
+        sessionEndsAt,
+        boost,
+      }
+      setPlayerData(data)
+    }
+
+    fetchPlayerData()
+  }, [embeddedWallet?.address, seasonId, refreshCounter])
+
+
   function BackgroundSwitcher() {
-  
+
     return (
       <>
         {themeMode === 'light' ? <BackgroundEffect /> : <BackgroundEffect mode="moon" />}
@@ -53,7 +136,7 @@ export default function MainPage() {
       } else {
         // L'app n'est pas visible, on l'ajoute à la fin
         const newApps = [...apps, appName];
-        
+
         // On met aussi le zIndex de cette nouvelle app au plus haut
         setAppZIndices((oldZ) => {
           const allApps = Array.from(new Set([...newApps, ...Object.keys(oldZ)]));
@@ -66,10 +149,19 @@ export default function MainPage() {
           newZ[appName] = appsWithZ.length + 1;
           return newZ;
         });
-        
+
         return newApps;
       }
     });
+
+    // On traite le cas des app minimized
+    setMinimizedApps((prev) => {
+      if (prev.includes(appName)) {
+        return prev.filter((app) => app !== appName);
+      }
+      return prev; // <-- ici manquait un return
+    });
+
 
     setTimeout(() => {
       const event = new CustomEvent('recenterApp', { detail: { appName } });
@@ -109,20 +201,24 @@ export default function MainPage() {
 
   const renderAppContent = (appName) => {
     switch (appName) {
-      case "Home":
+      case "About":
         return <About />;
       case "Memes":
-        return <MemeGallery memeList={memeList} setMemeList={setMemeList} setSelectedMemeIndex={setSelectedMemeIndex}/>;
+        return <MemeGallery memeList={memeList} setMemeList={setMemeList} setSelectedMemeIndex={setSelectedMemeIndex} />;
+      case "Assets":
+        return <Assets assetsList={assetsList} setAssetsList={setAssetsList} setSelectedAssetsIndex={setSelectedAssetsIndex} />;
       case "Profile":
-        return <Profile />;
+        return <Profile embeddedWallet={embeddedWallet} playerData={playerData} />;
       case "Game":
-        return <Game isTimeExpired={isTimeExpired} setIsTimeExpired={setIsTimeExpired} isGameStarted={isGameStarted} setIsGameStarted={setIsGameStarted} sound={sound} themeMode={themeMode} />;
+        return <Game isTimeExpired={isTimeExpired} setIsTimeExpired={setIsTimeExpired} isGameStarted={isGameStarted} setIsGameStarted={setIsGameStarted} themeMode={themeMode} refreshCounter={refreshCounter} setRefreshCounter={setRefreshCounter} playerData={playerData} embeddedWallet={embeddedWallet} />;
       case "Shop":
-        return <Shop />;
+        return <Shop refreshCounter={refreshCounter} setRefreshCounter={setRefreshCounter} playerData={playerData} embeddedWallet={embeddedWallet} />;
       case "Leaderboard":
         return <Leaderboard />;
       case "Settings":
-        return <Settings />;
+        return <Settings setSound={setSound} embeddedWallet={embeddedWallet} />;
+      case "Nothing":
+        return <Nothing />;
       default:
         return null;
     }
@@ -139,17 +235,17 @@ export default function MainPage() {
     cursor: "pointer",
     margin: "0 clamp(10px, 2vw, 20px)", // marge latérale responsive
   };
-  
+
 
   return (
     <div className={`${themeMode === 'light' ? styles.bgDay : styles.bgNight}`}>
       <Image src="/img/bg-img-mobile.png" alt="Mobile image" fill className={styles.mobileImage} />
       {/* Icônes interactives */}
       <Icon
-        name="Home"
+        name="About"
         src="/img/icons/about.png"
         label="About"
-        onClick={() => restoreApp("Home")}
+        onClick={() => restoreApp("About")}
         position={{ x: "1%", y: "1%" }} // Spécifie la position de l'icône
       />
       <Icon
@@ -176,44 +272,53 @@ export default function MainPage() {
       <Icon
         name="Game"
         src="/img/icons/game.png"
-        label="Game"
+        label="Game.exe"
         onClick={() => restoreApp("Game")}
         position={{ x: -100, y: "35%" }} // Spécifie la position de l'icône
       />
 
-      {/*<Icon
+      <Icon
         name="Nothing"
-        src="/img/settings-icon.png"
-        label="Nothing"
-        onClick={() => restoreApp("")}
-        position={{ x: 0, y: 0 }} // Spécifie la position de l'icône
-      />*/}
+        src="/img/icons/nothing.png"
+        label="Chill.mp4"
+        onClick={() => restoreApp("Nothing")}
+        position={{ x: -100, y: "75%" }} // Spécifie la position de l'icône
+      />
 
 
       <Icon
         name="Shop"
+        src="/img/icons/shop.png"
         label="Shop"
-        src="/img/icons/shop.png" 
+        onClick={() => restoreApp("Shop")}
         position={{ x: -100, y: "50%" }} // Spécifie la position de l'icône
       />
 
       <Icon
         name="digit-head"
         src="/3d/head" // déclenche l'affichage 3D
-        position={{ x: `${width - 690}px`, y: "1%" }}
         sound={sound}
         themeMode={themeMode}
+        position={{ x: `${width - 690}px`, y: "1%" }}
       />
 
       <Icon
         name="settings"
         label={"Settings"}
-        src="/img/icons/settings.png" 
+        src="/img/icons/settings.png"
         onClick={() => restoreApp("Settings")}
-        position={{ x: -150, y: "30%" }}
+        position={{ x: "1%", y: "26%" }}
       />
 
+      <Icon
+        name="assets"
+        label={"Assets.png"}
+        src="/img/icons/assets.png"
+        onClick={() => restoreApp("Assets")}
+        position={{ x: "10%", y: "6%" }}
+      />
 
+      {/* Affichage des memes plein écran*/}
       {selectedMemeIndex !== null && (
         <div
           style={{
@@ -236,7 +341,7 @@ export default function MainPage() {
             href={`img/memes/${encodeURIComponent(memeList[selectedMemeIndex])}`}
             download
             onClick={(e) => e.stopPropagation()}
-            style={{ 
+            style={{
               background: "#fff",
               padding: "10px 20px",
               borderRadius: "8px",
@@ -254,6 +359,47 @@ export default function MainPage() {
         </div>
       )}
 
+      {/* Affichage des assets plein écran*/}
+      {selectedAssetsIndex !== null && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            backgroundColor: "rgba(0, 0, 0, 0.8)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={() => setSelectedAssetsIndex(null)}
+        >
+          <button onClick={(e) => { e.stopPropagation(); setSelectedAssetsIndex((prev) => (prev > 0 ? prev - 1 : assetsList.length - 1)); }} style={navButtonStyle}>◀</button>
+          <img src={`img/assets/${encodeURIComponent(assetsList[selectedAssetsIndex])}`} alt="Full asset" style={{ maxHeight: "70%", maxWidth: "70%", borderRadius: "10px", boxShadow: "0 0 20px black" }} />
+          <a
+            href={`img/assets/${encodeURIComponent(assetsList[selectedAssetsIndex])}`}
+            download
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#fff",
+              padding: "10px 20px",
+              borderRadius: "8px",
+              textDecoration: "none",
+              color: "#000",
+              fontWeight: "bold",
+              boxShadow: "0 0 10px rgba(0,0,0,0.5)",
+              position: "absolute",
+              bottom: "60px",
+            }}
+          >
+            Download
+          </a>
+          <button onClick={(e) => { e.stopPropagation(); setSelectedAssetsIndex((prev) => (prev + 1) % assetsList.length); }} style={navButtonStyle}>▶</button>
+        </div>
+      )}
+
 
       {visibleApps.map((appName) => (
         <DraggableWindow
@@ -264,6 +410,9 @@ export default function MainPage() {
           onFocus={() => bringToFront(appName)}
           theme={themeMode}
           visibleApps={visibleApps}
+          littleWindow={appName === 'Nothing' ? true : false}
+          onMinimize={() => setMinimizedApps(prev => [...prev, appName])}
+          isMinimized={Array.isArray(minimizedApps) && minimizedApps.includes(appName)}
         >
           {renderAppContent(appName)}
         </DraggableWindow>

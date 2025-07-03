@@ -21,11 +21,11 @@ export function useProfile() {
       return
     }
 
-    const timeoutId = setTimeout(() => {
+    /*const timeoutId = setTimeout(() => {
       fetchProfile()
     }, 1000)
 
-    return () => clearTimeout(timeoutId)
+    return () => clearTimeout(timeoutId)*/
 
     async function fetchProfile() {
       setLoading(true)

@@ -23,7 +23,7 @@ export default function MemeGallery({ memeList, setMemeList, setSelectedMemeInde
   return (
     <Wrapper>  
       <p style={{ margin: 0, padding: 10, textAlign: "center", fontStyle: "italic" }}>
-        &quot;You&apos;re gonna see too much memes, you may even get tired of seeing them and you will say PLEASE PLEASE it&apos;s too much RABBITIOOOO&quot;
+        &quot;You&apos;re gonna see too much Rabbitio, you may even get tired of seeing them and you will say PLEASE PLEASE it&apos;s too much RABBITIOOOO&quot;
       </p>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 15, padding: 10, justifyContent: "center", maxHeight: 10000, overflowY: "auto" }}>
         {memeList.map((filename, index) => (

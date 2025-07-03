@@ -1,0 +1,35 @@
+.bgBackground {
+  z-index: 0;
+  background-image: url('/img/background_game.png');
+  background-repeat: repeat-x;
+  background-size: auto 100%;
+  background-position: 0 0;
+  will-change: background-position;
+
+  /* Dégradé progressif sur tous les côtés */
+  mask-image: linear-gradient(to top, transparent 0%, black 10%, black 90%, transparent 100%),
+              linear-gradient(to left, transparent 0%, black 10%, black 90%, transparent 100%);
+  mask-composite: intersect;
+
+  -webkit-mask-image: linear-gradient(to top, transparent 0%, black 10%, black 90%, transparent 100%),
+                      linear-gradient(to left, transparent 0%, black 10%, black 90%, transparent 100%);
+  -webkit-mask-composite: destination-in;
+}
+
+@keyframes punch {
+  0% {
+    transform: translate(-50%, -50%) scale(0.3) rotate(-10deg);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.2) rotate(10deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(0.6) rotate(-10deg);
+    opacity: 0;
+  }
+}
+.animatePunch {
+  animation: punch 0.5s ease-out forwards;
+}
