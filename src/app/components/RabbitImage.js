@@ -6,7 +6,9 @@ export default function RabbitImage({ isClicked }) {
     const [ripples, setRipples] = useState([]);
     const [isClickDisabled, setIsClickDisabled] = useState(false); // Nouvel état pour contrôler le spam
     const soundRef = useRef(null);
+    const imageRef = useRef(null);
     const containerRef = useRef(null);
+    let index;
 
     const handleClick = (e) => {
         // Vérifier si les clics sont temporairement désactivés
@@ -15,11 +17,11 @@ export default function RabbitImage({ isClicked }) {
         setClick(true);
         isClicked();
 
-        // Désactiver les clics pendant 400ms pour éviter le spam
+        // Désactiver les clics pendant 100ms pour éviter le spam
         setIsClickDisabled(true);
         setTimeout(() => {
             setIsClickDisabled(false);
-        }, 400);
+        }, 100);
 
         // Jouer le son
         if (soundRef.current) {
@@ -53,7 +55,15 @@ export default function RabbitImage({ isClicked }) {
         soundRef.current = new Audio(`/sounds/hit.mp3`);
         soundRef.current.volume = 0.4;
         soundRef.current.preload = 'auto';
+
+        index = Math.round(Math.random() * 10) % 4 + 1
+
+        // Choix de l'image
+        imageRef.current = `/img/game/head${index}_.png`
+        console.log(imageRef.current)
     }, []);
+
+
 
     return (
         <div
@@ -80,7 +90,7 @@ export default function RabbitImage({ isClicked }) {
         >
             {/* Image principale */}
             <img
-                src={"/img/head.png"}
+                src={imageRef.current}
                 alt="Rabbit"
                 className={`
                     w-full h-full object-contain pointer-events-none

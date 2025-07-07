@@ -102,12 +102,12 @@ export function FloatingHeadModel({ mouse, isClicked, themeMode, onPointerDown, 
 
 
 
-export default function Icon({ name, src, label, onClick, position, sound, themeMode }) {
+export default function Icon({ name, src, label, onClick, position, sound, themeMode, show3DEffects }) {
   const is3D = src === "/3d/head";
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
   const [click, setClicked] = useState(false);
   const soundRef = useRef("crying");
-    
+
   useEffect(() => {
     if (sound) {
       soundRef.current = new Audio(`/sounds/${sound}.mp3`);
@@ -116,7 +116,7 @@ export default function Icon({ name, src, label, onClick, position, sound, theme
   }, [sound]);
 
   // Charger et préparer le son
-  if (!soundRef.current) {  
+  if (!soundRef.current) {
     soundRef.current = new Audio("/sounds/crying.mp3");
     soundRef.current.volume = 0.2; // volume réduit
   }
@@ -174,7 +174,7 @@ export default function Icon({ name, src, label, onClick, position, sound, theme
       }}
       onClick={handleClick}
     >
-      {is3D ? (
+      {show3DEffects && is3D && (
         <div
           className={styles.icon}
           onMouseMove={handlePointerMove}
@@ -187,12 +187,16 @@ export default function Icon({ name, src, label, onClick, position, sound, theme
             <directionalLight position={[2, 2, 2]} />
             <FloatingHeadModel mouse={mouse} isClicked={click} themeMode={themeMode} onPointerDown={handlePointerDown}
               onPointerUp={handlePointerUp} />
-        </Canvas>
+          </Canvas>
 
         </div>
-      ) : (
+      )
+      }
+
+      {!show3DEffects && !is3D && (
         <Image src={src} alt={name} width={50} height={50} />
       )}
+
       <p style={{ margin: 0, fontSize: 8 }}>{label}</p>
     </div>
   );

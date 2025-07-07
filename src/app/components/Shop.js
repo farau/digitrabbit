@@ -1,26 +1,26 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { getWalletClient } from '@/utils/walletClient'
-import { useWallets, getEmbeddedConnectedWallet } from '@privy-io/react-auth'
-import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, publicClient, NUM_SLOTS, MAX_LEVEL } from '@/constants'
-import { usePrivy } from '@privy-io/react-auth'
+import { useState, useEffect } from 'react'
+import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, NUM_SLOTS, MAX_LEVEL } from '@/constants'
 import { megaethTestnet } from 'viem/chains'
 import { Loader2, ArrowLeft, ArrowRight } from 'lucide-react'
 import Wrapper from './Wrapper'
 import styles from './Shop.module.css'
 import { useTheme } from '@/context'
+import Image from 'next/image'
+import DynamicAvatar from '@/app/components/DynamicAvatar'
+import { XLogo } from '@/constants'
+import { useWalletClient } from '../hooks/useWalletClient'
 
 export default function Shop({ refreshCounter, setRefreshCounter, playerData, embeddedWallet }) {
   const [selectedLevels, setSelectedLevels] = useState(Array(NUM_SLOTS).fill(0))
   const [isWriting, setIsWriting] = useState(false)
   const [error, setError] = useState('')
   const [txResult, setTxResult] = useState('')
-  const clientRef = useRef(null)
+  const { walletClient } = useWalletClient(embeddedWallet)
 
   // On récupère les données joueurs directement via la props
   const { rabbitPoints, playerItems, totalClicks, sessionEndsAt, boost } = playerData
-
 
   // Modale de confirmation achat d'item
   const [modalVisible, setModalVisible] = useState(false)
@@ -37,22 +37,20 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData, em
   const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)'
   const borderColor = isNight ? '#444' : '#ddd'
 
+  // Mapping des slots vers les noms de dossiers
+  const slotFolders = ['rabbit_color', 'backgrounds', 'clothes', 'eyes', 'hat']
+  const slotLabels = ["Rabbit Color", "Backgrounds", "Clothes", "Eyes", "Hat"]
 
-  // On initialise le client wallet à partir du moment où un embeddedWallet est présent ou changé
+  // Réinitialise les états quand le walletClient est disponible
   useEffect(() => {
-    try {
+    if (walletClient) {
       setError('')
-      const client = getWalletClient();
-      clientRef.current = client;
-    } catch (err) {
-      console.warn('walletClient uninitialized');
+      setTxResult('')
     }
-  }, [embeddedWallet]);
+  }, [walletClient])
 
   const handleBuyItem = async (slot, level) => {
-
     try {
-      const walletClient = clientRef.current
       if (!walletClient || !embeddedWallet || !embeddedWallet.address) {
         setError('No embedded wallet or address')
         return
@@ -77,12 +75,11 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData, em
       setRefreshCounter(c => c + 1)
 
     } catch (err) {
-      setError(err.message)
+      setError(err.shortMessage)
     } finally {
       setIsWriting(false)
     }
   }
-
 
   const changeLevel = (slot, delta) => {
     setSelectedLevels((prev) => {
@@ -93,66 +90,22 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData, em
   }
 
   // Prix des items
-  const getItemPrice = (level) => level > 0 ? 100 * level : 0
-  // Nom des traits
-  const slotLabels = ["Rabbit Color", "Backgrounds", "Clothes", "Glasses", "Eyes", "Hat"]
-  // Emoji map par slot et niveau
-  const emojiMap = {
-    0: { 1: '🤍', 2: '🤎', 3: '🖤', 4: '🐇', 5: '🐰', 6: '✨' },
-    1: { 1: '🌄', 2: '🌆', 3: '🌌', 4: '🌈', 5: '🔥', 6: '❄️' },
-    2: { 1: '👕', 2: '👘', 3: '🧥', 4: '🎽', 5: '🦺', 6: '🥼' },
-    3: { 1: '🕶️', 2: '👓', 3: '🥽', 4: '🦾', 5: '🪬', 6: '🧿' },
-    4: { 1: '👁️', 2: '👀', 3: '✨', 4: '💫', 5: '🔥', 6: '🌀' },
-    5: { 1: '🎩', 2: '🧢', 3: '⛑️', 4: '👑', 5: '🪖', 6: '👒' },
+  const getItemPrice = (level) => level > 0 ? 1000 * level : 0
+
+  // Fonction pour obtenir le chemin de l'image
+  const getImagePath = (slotIndex, level) => {
+    const folder = slotFolders[slotIndex]
+    return `/img/shop/${folder}/${level}.png`
   }
 
-  // Maj de l'emoji en fonction du niveau et du slot sélectionné
+  // Niveau sélectionné pour la preview
   const selected = selectedLevels[selectedSlot]
-  const emoji =
-    selected > 0
-      ? emojiMap[selectedSlot]?.[selected] ?? '❓'
-      : null
 
   return embeddedWallet ? (
     <Wrapper>
-      <div className="min-h-screen px-4 pt-10">
-        <div
-          style={{
-            backgroundColor: cardBg,
-            color: textColor,
-            borderColor,
-            boxShadow,
-            borderWidth: 1,
-            borderStyle: 'solid',
-            borderRadius: '0.75rem',
-            padding: '1rem',
-          }}
-          className="flex flex-col sm:flex-row items-center justify-between"
-        >
-          <p>RabbitPoints : {rabbitPoints}</p>
-        </div>
-
-        {/* SLOT SELECTOR */}
-        <div className="flex flex-wrap justify-center gap-2 pt-10">
-          {slotLabels.map((label, index) => (
-            <button
-              key={index}
-              onClick={() => setSelectedSlot(index)}
-              className={`px-4 py-2 rounded-full border text-sm transition ${selectedSlot === index
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-white border-gray-300 dark:border-gray-600'
-                }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* MAIN CONTENT */}
-        <div className="flex flex-col sm:flex-row gap-8 pt-10 items-start justify-center">
-          {/* LEFT : Canvas */}
+      <div className={`min-h-screen px-4 pt-10 ${styles.bgBackground}`}>
+        <div className="flex justify-center">
           <div
-            className="w-full sm:w-1/2 h-[300px] rounded-xl shadow flex items-center justify-center"
             style={{
               backgroundColor: cardBg,
               color: textColor,
@@ -163,18 +116,68 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData, em
               borderRadius: '0.75rem',
               padding: '1rem',
             }}
+            className="inline-block"
           >
-            <div className="mt-4 flex justify-center gap-4 text-3xl">
-              {Object.entries(playerItems).map(([slotStr, level]) => {
-                const slot = Number(slotStr)
-                if (level > 0) return <span key={slot}>{emojiMap[slot]?.[level] || '❓'}</span>
-                return null
-              })}
+            <p className="font-semibold">RabbitPoints : {rabbitPoints}</p>
+          </div>
+        </div>
+
+        {/* TRAITS SELECTOR */}
+        <div className="text-center pt-10">
+          <p className="font-semibold mb-4" style={{ color: textColor }}>
+            Choose a Trait:
+          </p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {slotLabels.map((label, index) => (
+              <button
+                key={index}
+                onClick={() => setSelectedSlot(index)}
+                className={`px-4 py-2 rounded-full border text-sm transition ${selectedSlot === index
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-white border-gray-300 dark:border-gray-600'
+                  }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* MAIN CONTENT */}
+        <div className="flex flex-col sm:flex-row gap-8 pt-10 items-start justify-center">
+          {/* LEFT : Digit Rabbit Canvas avec DynamicAvatar */}
+          <div className="w-full sm:w-1/2">
+            <h4 className="text-xs font-semibold mb-4 text-center" style={{ color: textColor }}>
+              Your Digit Rabbit
+            </h4>
+            <div
+              className="w-full h-[300px] rounded-xl shadow flex items-center justify-center relative"
+              style={{
+                backgroundColor: cardBg,
+                color: textColor,
+                borderColor,
+                boxShadow,
+                borderWidth: 1,
+                borderStyle: 'solid',
+                borderRadius: '0.75rem',
+                padding: '1rem',
+              }}
+            >
+              <DynamicAvatar
+                playerItems={playerItems}
+                size="w-full h-full"
+                showBorder={false}
+                width={300}
+                height={300}
+              />
             </div>
           </div>
 
-          {/* RIGHT : Slot Info */}
+          {/* RIGHT : Trait Info */}
           <div className="w-full sm:w-1/2 grid grid-cols-1 gap-4">
+            <h4 className="font-semibold text-center" style={{ color: textColor }}>
+              Trait Details
+            </h4>
             {(() => {
               const i = selectedSlot
               const selected = selectedLevels[i]
@@ -235,98 +238,128 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData, em
                     </button>
                   </div>
                 </>
-
               )
-            })()}
+            })()
+            }
 
-            {/* EMOJI PREVIEW */}
-            {emoji && (
-              <div className="mt-4 flex justify-center">
-                <div
-                  className="w-20 h-20 rounded-full flex items-center justify-center text-4xl"
-                  style={{
-                    backgroundColor: cardBg,
-                    color: textColor,
-                    borderColor,
-                    borderWidth: 1,
-                    borderStyle: 'solid',
-                    boxShadow,
-                  }}
-                >
-                  {emoji}
+            {/* IMAGE PREVIEW */}
+            {
+              selected > 0 && (
+                <div className="flex justify-center">
+                  <div
+                    className="w-28 h-28 rounded-full flex items-center justify-center overflow-hidden"
+                    style={{
+                      backgroundColor: cardBg,
+                      color: textColor,
+                      borderColor,
+                      borderWidth: 1,
+                      borderStyle: 'solid',
+                      boxShadow,
+                    }}
+                  >
+                    <Image
+                      src={getImagePath(selectedSlot, selected)}
+                      alt={`${slotLabels[selectedSlot]} level ${selected}`}
+                      width={160}
+                      height={160}
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        e.target.style.display = 'none'
+                      }}
+                    />
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        </div>
+              )
+            }
+          </div >
+        </div >
 
         {/* TX Feedback */}
-        {txResult && (
-          <div className="mt-6 mx-auto max-w-md p-4 text-center text-green-800 bg-green-100 border border-green-400 rounded-lg dark:bg-green-900 dark:text-green-300 dark:border-green-600 text-sm shadow-sm">
-            ✅ Transaction :{' '}
-            <a
-              className="underline hover:text-green-700 dark:hover:text-green-400"
-              target="_blank"
-              rel="noopener noreferrer"
-              href={`https://web3.okx.com/explorer/megaeth-testnet/tx/${txResult}`}
-            >
-              See on explorer
-            </a>
-          </div>
-        )}
+        {
+          txResult && (
+            <div className="mt-6 mx-auto max-w-md p-4 text-center text-green-800 bg-green-100 border border-green-400 rounded-lg dark:bg-green-900 dark:text-green-300 dark:border-green-600 text-sm shadow-sm">
+              ✅ Transaction :{' '}
+              <a
+                className="underline hover:text-green-700 dark:hover:text-green-400"
+                target="_blank"
+                rel="noopener noreferrer"
+                href={`https://web3.okx.com/explorer/megaeth-testnet/tx/${txResult}`}
+              >
+                See on explorer
+              </a>
+            </div>
+          )
+        }
 
-
-        {/* Error Message */}
-        {error && (
-          <div className="mb-6 mt-6 p-4 bg-red-100/70 dark:bg-red-900/70 rounded-lg max-w-2xl text-left backdrop-blur-sm">
+        {/* Confirmation Modal */}
+        {
+          modalVisible && (
+            <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
+              <div
+                style={{
+                  backgroundColor: cardBg,
+                  color: textColor,
+                  borderColor,
+                  borderWidth: 1,
+                  borderStyle: 'solid',
+                  boxShadow,
+                }}
+                className="rounded-xl p-6 w-[90%] max-w-sm"
+              >
+                <h2 className="text-lg font-bold mb-2 text-center">Confirm Purchase</h2>
+                <p className="text-sm text-center mb-4">
+                  Buy <span className="font-semibold">Level {pendingBuy.level}</span> item in{' '}
+                  <span className="font-semibold">{slotLabels[pendingBuy.slot]}</span>?
+                </p>
+                <div className="flex justify-center gap-4">
+                  <button
+                    onClick={() => {
+                      setModalVisible(false)
+                      handleBuyItem(pendingBuy.slot, pendingBuy.level)
+                    }}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    onClick={() => setModalVisible(false)}
+                    className="bg-gray-300 hover:bg-gray-400 dark:bg-gray-700 dark:hover:bg-gray-600 text-black dark:text-white px-4 py-2 rounded"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        }
+      </div >
+      {/* Error Message */}
+      {
+        error && (
+          <div className="mb-6 mt-4 p-4 bg-red-100/70 dark:bg-red-900/70 rounded-lg max-w-2xl text-left backdrop-blur-sm">
             <h4 className="text-red-700 dark:text-red-300 break-all">❌ Error :</h4>
             <p className="text-red-700 dark:text-red-300 break-all">{error}</p>
           </div>
-        )}
-
-        {/* Confirmation Modal */}
-        {modalVisible && (
-          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
-            <div
-              style={{
-                backgroundColor: cardBg,
-                color: textColor,
-                borderColor,
-                borderWidth: 1,
-                borderStyle: 'solid',
-                boxShadow,
-              }}
-              className="rounded-xl p-6 w-[90%] max-w-sm"
-            >
-              <h2 className="text-lg font-bold mb-2 text-center">Confirm Purchase</h2>
-              <p className="text-sm text-center mb-4">
-                Buy <span className="font-semibold">Level {pendingBuy.level}</span> item in{' '}
-                <span className="font-semibold">{slotLabels[pendingBuy.slot]}</span>?
-              </p>
-              <div className="flex justify-center gap-4">
-                <button
-                  onClick={() => {
-                    setModalVisible(false)
-                    handleBuyItem(pendingBuy.slot, pendingBuy.level)
-                  }}
-                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
-                >
-                  Confirm
-                </button>
-                <button
-                  onClick={() => setModalVisible(false)}
-                  className="bg-gray-300 hover:bg-gray-400 dark:bg-gray-700 dark:hover:bg-gray-600 text-black dark:text-white px-4 py-2 rounded"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        )
+      }
+    </Wrapper >
+  ) : (
+    <Wrapper>
+      <div
+        style={{
+          background: cardBg,
+          padding: '20px',
+          borderRadius: '10px',
+          border: `1px solid ${borderColor}`,
+          boxShadow,
+          textAlign: 'center',
+          margin: '20px'
+        }}
+      >
+        <p style={{ color: textColor, margin: 0 }}>
+          Please log in your <XLogo size={16} className={isNight ? 'text-white' : 'text-black'} /> account to access the shop and customize your Digit Rabbit.
+        </p>
       </div>
     </Wrapper>
-  ) : (
-    <Wrapper><p>Please connect your wallet</p></Wrapper>
   )
 }
-

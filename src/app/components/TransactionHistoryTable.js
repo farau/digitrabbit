@@ -161,8 +161,8 @@ export default function TransactionHistoryTable({ transactionHistory, clearHisto
                                         className={`px-3 py-2 rounded-lg text-xs font-medium border ${getTimeStyle(tx.time)}`}
                                     >
                                         <div className="flex items-center gap-2">
-                                            <div className={`w-2 h-2 rounded-full ${tx.time < 200 ? 'bg-green-500' :
-                                                tx.time < 500 ? 'bg-yellow-500' : 'bg-red-500'
+                                            <div className={`w-2 h-2 rounded-full ${tx.time < 400 ? 'bg-green-500' :
+                                                tx.time < 800 ? 'bg-yellow-500' : 'bg-red-500'
                                                 }`}></div>
                                             <span className="font-mono">{tx.time}ms</span>
                                         </div>

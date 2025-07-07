@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import {
-  Sun, Moon, Volume2, Copy, KeyRound, X, Check, EyeOff,
+  Sun, Moon, Volume2, Copy, KeyRound, X, Check, EyeOff, Sparkles,
 } from 'lucide-react';
 import { useTheme } from '@/context';
 import Wrapper from './Wrapper';
@@ -20,7 +20,7 @@ function AllLinkedWallets() {
   const subTextColor = isNight ? 'text-zinc-400' : 'text-gray-600';
 
   const allWallets = user?.linkedAccounts.filter(
-    (account) => account.type === 'wallet'
+    (account) => account.type === 'wallet' && account.walletClientType !== 'privy'
   ) || [];
 
   return (
@@ -34,7 +34,7 @@ function AllLinkedWallets() {
         border: `1px solid ${borderColor}`,
       }}
     >
-      <p className={`text-sm font-semibold mb-3 ${textColor}`}>All historically linked wallets</p>
+      <p className={`text-base font-semibold mb-3 ${textColor}`}>All historically linked wallets</p>
 
       {allWallets.length > 0 ? (
         <div>
@@ -43,101 +43,23 @@ function AllLinkedWallets() {
               key={wallet.address}
               className="mb-4 pb-2 border-b border-dashed border-gray-300 dark:border-zinc-700 last:border-none last:pb-0"
             >
-              <code className="block text-xs bg-gray-100 dark:bg-zinc-800 px-3 py-1 rounded-md text-gray-900 dark:text-white break-words select-none mb-1">
+              <code className="block text-base bg-gray-100 dark:bg-zinc-800 px-3 py-1 rounded-md text-gray-900 dark:text-white break-words select-none mb-1">
                 {wallet.address}
               </code>
-              <p className={`text-xs ${subTextColor}`}>Type: {wallet.walletClientType}</p>
-              <p className={`text-xs ${subTextColor}`}>First linked: {new Date(wallet.firstVerifiedAt).toLocaleDateString()}</p>
+              <p className={`text-base ${subTextColor}`}>Type: {wallet.walletClientType}</p>
+              <p className={`text-base ${subTextColor}`}>First linked: {new Date(wallet.firstVerifiedAt).toLocaleDateString()}</p>
               <UnlinkButton addressToUnlink={wallet.address} />
             </div>
           ))}
         </div>
       ) : (
-        <p className={`text-xs italic ${subTextColor}`}>No wallets have been linked to this account.</p>
+        <p className={`text-base italic ${subTextColor}`}>No wallets have been linked to this account.</p>
       )}
       <LinkButton />
-      <p className={`text-xs italic ${subTextColor}`}>Keep in mind that a user can only unlink an account if they have at least one other linked account remaining.</p>
+      <p className={`text-base italic ${subTextColor}`}>Keep in mind that a user can only unlink an account if they have at least one other linked account remaining.</p>
     </div>
   );
 }
-
-
-function TelegramAccount() {
-  const { user } = usePrivy();
-  const { themeMode } = useTheme();
-
-  const isNight = themeMode === 'dark';
-  const cardBg = isNight ? '#222' : '#f3f3f3';
-  const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)';
-  const borderColor = isNight ? '#444' : '#ddd';
-  const textColor = isNight ? 'text-white' : 'text-black';
-  const subTextColor = isNight ? 'text-zinc-400' : 'text-gray-600';
-
-  const telegramAccount = user?.telegram;
-
-  if (!telegramAccount) {
-    return (
-      <div
-        style={{
-          background: cardBg,
-          padding: '10px 15px',
-          borderRadius: '10px',
-          marginTop: 12,
-          boxShadow,
-          border: `1px solid ${borderColor}`,
-        }}
-      >
-        <p className={`text-sm font-semibold mb-2 ${textColor}`}>Telegram Account</p>
-        <p className={`text-xs italic ${subTextColor}`}>No Telegram account linked.</p>
-        <LinkSocials />
-      </div>
-    );
-  }
-
-  const {
-    first_name,
-    last_name,
-    username,
-    photo_url,
-    telegram_user_id,
-  } = telegramAccount;
-
-  return (
-    <div
-      style={{
-        background: cardBg,
-        padding: '10px 15px',
-        borderRadius: '10px',
-        marginTop: 12,
-        boxShadow,
-        border: `1px solid ${borderColor}`,
-      }}
-    >
-      <p className={`text-sm font-semibold mb-3 ${textColor}`}>Telegram Account</p>
-
-      <div className="flex items-center gap-3 mb-3">
-        {photo_url && (
-          <img
-            src={photo_url}
-            alt="Telegram Profile"
-            className="w-12 h-12 rounded-full border border-gray-300 dark:border-zinc-600"
-          />
-        )}
-        <div>
-          <p className={`text-sm font-medium ${textColor}`}>{first_name} {last_name}</p>
-          {username && (
-            <p className={`text-xs ${subTextColor}`}>@{username}</p>
-          )}
-        </div>
-      </div>
-
-      <p className={`text-xs ${subTextColor}`}>
-        Telegram User ID: <span className="font-mono">{telegram_user_id}</span>
-      </p>
-    </div>
-  );
-}
-
 
 function MyWalletList() {
   const { wallets } = useWallets();
@@ -163,7 +85,7 @@ function MyWalletList() {
         border: `1px solid ${borderColor}`,
       }}
     >
-      <p className={`text-sm font-semibold mb-3 ${textColor}`}>Active wallet</p>
+      <p className={`text-base font-semibold mb-3 ${textColor}`}>Active wallet</p>
 
       {wallets
         .filter((wallet) => wallet.walletClientType !== 'privy')
@@ -172,24 +94,13 @@ function MyWalletList() {
             key={wallet.address}
             className="mb-4 pb-2 border-b border-dashed border-gray-300 dark:border-zinc-700 last:border-none last:pb-0"
           >
-            <code className="block text-xs bg-gray-100 dark:bg-zinc-800 px-3 py-1 rounded-md text-gray-900 dark:text-white break-words select-none mb-1">
+            <code className="block text-base bg-gray-100 dark:bg-zinc-800 px-3 py-1 rounded-md text-gray-900 dark:text-white break-words select-none mb-1">
               {wallet.address}
             </code>
-            <p className={`text-xs ${subTextColor}`}>Chain ID: {wallet.chainId}</p>
-            <p className={`text-xs ${subTextColor}`}>Type: {wallet.walletClientType}</p>
+            <p className={`text-base ${subTextColor}`}>Chain ID: {wallet.chainId}</p>
+            <p className={`text-base ${subTextColor}`}>Type: {wallet.walletClientType}</p>
           </div>
         ))}
-    </div>
-  );
-}
-
-function LinkSocials() {
-  const { linkTelegram } = useLinkAccount();
-
-  return (
-    <div className="link-options mb-4">
-      <p className='text-xs'>You can link only one account. Choose wisely.</p>
-      <button onClick={linkTelegram}>Link Telegram</button>
     </div>
   );
 }
@@ -200,7 +111,7 @@ function LinkButton() {
 
   return (
     <div className="link-options mb-4">
-      <p className='text-xs'>Link wallets containing "partnerships" NFTs to get bonuses.</p>
+      <p className='text-base'>Link wallets containing "partnerships" NFTs to get bonuses.</p>
       <button onClick={linkWallet}>Link Wallet</button>
     </div>
   );
@@ -222,12 +133,16 @@ function UnlinkButton({ addressToUnlink }) {
   };
 
   return (
-    <div className="unlink-options text-xs mt-1">
-      <button onClick={handleUnlink} className="text-red-600 hover:underline">
+    <div className="unlink-options text-base mt-1">
+      <button
+        onClick={handleUnlink}
+        className="text-base text-red-600 hover:underline transition-colors"
+      >
         Unlink Wallet
       </button>
+
       {error && (
-        <p className="text-xs text-red-500 mt-1">
+        <p className="text-base text-red-500 mt-1">
           {error}
         </p>
       )}
@@ -242,7 +157,7 @@ function WalletBalance({ embeddedWallet, themeMode }) {
 
   if (!embeddedWallet?.address) {
     return (
-      <div className="mt-2 text-sm text-red-600 dark:text-red-400">
+      <div className="mt-2 text-base text-red-600 dark:text-red-400">
         ⚠️ No wallet connected
       </div>
     );
@@ -250,7 +165,7 @@ function WalletBalance({ embeddedWallet, themeMode }) {
 
   if (!balance) {
     return (
-      <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+      <div className="mt-2 text-base text-gray-500 dark:text-gray-400">
         Loading balance...
       </div>
     );
@@ -267,7 +182,7 @@ function WalletBalance({ embeddedWallet, themeMode }) {
 
       {!hasBalance && (
         <div className="space-y-2">
-          <p className="text-red-600 dark:text-red-400 text-sm font-medium">
+          <p className="text-red-600 dark:text-red-400 text-base font-medium">
             ⚠️ You need testnet tokens to interact
 
             <a
@@ -281,7 +196,7 @@ function WalletBalance({ embeddedWallet, themeMode }) {
 
             <button
               onClick={refetchBalance}
-              className="px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 text-sm font-medium ml-2"
+              className="px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 text-base font-medium ml-2"
             >
               Reload
             </button>
@@ -292,9 +207,8 @@ function WalletBalance({ embeddedWallet, themeMode }) {
   );
 }
 
-
 export default function Settings({ sound, setSound, embeddedWallet }) {
-  const { themeMode, toggleTheme } = useTheme();
+  const { themeMode, toggleTheme, show3DEffects, toggle3DEffects } = useTheme();
   const isNight = themeMode === 'dark';
   const textColor = isNight ? '#eee' : '#333';
   const cardBg = isNight ? '#222' : '#f3f3f3';
@@ -310,7 +224,6 @@ export default function Settings({ sound, setSound, embeddedWallet }) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [privateKey, setPrivateKey] = useState(null);
   const [showKey, setShowKey] = useState(false);
-
 
   if (!ready) return;
 
@@ -345,7 +258,7 @@ export default function Settings({ sound, setSound, embeddedWallet }) {
     <Wrapper>
       {/* Theme Switch */}
       <div className="flex items-center justify-between mb-6">
-        <div className="text-sm font-medium flex items-center gap-2">
+        <div className="text-base font-medium flex items-center gap-2">
           {themeMode === 'light' ? (
             <Sun className="w-5 h-5 text-yellow-500" />
           ) : (
@@ -357,15 +270,29 @@ export default function Settings({ sound, setSound, embeddedWallet }) {
         </div>
         <button
           onClick={toggleTheme}
-          className="px-4 py-2 rounded-md bg-indigo-500 text-white text-sm font-semibold shadow hover:bg-indigo-600 transition"
+          className="px-4 py-2 rounded-md bg-indigo-500 text-white text-base font-semibold shadow hover:bg-indigo-600 transition"
         >
           {themeMode === 'light' ? 'Switch to Night' : 'Switch to Day'}
         </button>
       </div>
 
+      {/* 3D Effects Toggle */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="text-base font-medium flex items-center gap-2">
+          <Sparkles className="w-5 h-5 text-purple-500" />
+          <span>3D Effects</span>
+        </div>
+        <button
+          onClick={toggle3DEffects}
+          className="px-4 py-2 rounded-md bg-indigo-500 text-white text-base font-semibold shadow hover:bg-indigo-600 transition"
+        >
+          {show3DEffects ? 'Disable 3D Effects' : 'Enable 3D Effects'}
+        </button>
+      </div>
+
       {/* Sound Selector */}
       <div className="mb-6">
-        <label className="block mb-2 text-sm font-semibold flex items-center gap-2">
+        <label className="block mb-2 text-base font-semibold flex items-center gap-2">
           <Volume2 className="w-4 h-4" /> Rabbitio Sound
         </label>
         <select
@@ -407,14 +334,14 @@ export default function Settings({ sound, setSound, embeddedWallet }) {
                   >
                     <p
                       className={
-                        "text-sm font-semibold mb-3 " +
+                        "text-base font-semibold mb-3 " +
                         (themeMode === "dark" ? "text-white" : "text-black")
                       }
                     >
                       {label}
                     </p>
                     <div className="flex items-center justify-between gap-3 flex-wrap">
-                      <code className="flex-1 min-w-0 text-xs bg-gray-100 dark:bg-zinc-800 px-3 py-1 rounded-md text-gray-900 dark:text-white break-words select-none">
+                      <code className="flex-1 min-w-0 text-base bg-gray-100 dark:bg-zinc-800 px-3 py-1 rounded-md text-gray-900 dark:text-white break-words select-none">
                         {wallet.address}
                       </code>
                       <button
@@ -438,18 +365,17 @@ export default function Settings({ sound, setSound, embeddedWallet }) {
                         <WalletBalance embeddedWallet={embeddedWallet} />
                         <button
                           onClick={() => setShowConfirm(true)}
-                          className="mt-4 inline-flex items-center text-xs font-semibold transition focus:outline-none focus:underline"
+                          className="mt-4 inline-flex items-center text-base font-semibold transition focus:outline-none focus:underline"
                         >
                           <KeyRound className="w-0 h-3.5" /> Export Private Key
                         </button>
 
                         {showKey && privateKey && (
-                          <div className="mt-3 p-3 rounded-md bg-red-50 dark:bg-red-900/30 text-xs text-red-800 dark:text-red-300 break-words relative shadow-inner">
+                          <div className="mt-3 p-3 rounded-md bg-red-50 dark:bg-red-900/30 text-base text-red-800 dark:text-red-300 break-words relative shadow-inner">
                             <EyeOff className="w-5 h-5 absolute top-3 right-3 opacity-60" />
                             {privateKey}
                           </div>
                         )}
-                        <MyWalletList />
                         <AllLinkedWallets />
                       </>
                     )}
@@ -468,20 +394,20 @@ export default function Settings({ sound, setSound, embeddedWallet }) {
                 Export Private Key
               </h4>
             </div>
-            <p className="text-sm text-gray-700 dark:text-gray-300 mb-5 leading-relaxed">
+            <p className="text-base text-gray-700 dark:text-gray-300 mb-5 leading-relaxed">
               Warning: your private key gives full access to your wallet. Do not share it with anyone.
               Are you sure you want to export it?
             </p>
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowConfirm(false)}
-                className="px-4 py-2 rounded-md bg-gray-200 text-gray-800 text-sm hover:bg-gray-300 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 transition"
+                className="px-4 py-2 rounded-md bg-gray-200 text-gray-800 text-base hover:bg-gray-300 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 transition"
               >
                 Cancel
               </button>
               <button
                 onClick={handleExportPrivateKey}
-                className="px-4 py-2 rounded-md bg-red-600 text-white text-sm hover:bg-red-700 transition"
+                className="px-4 py-2 rounded-md bg-red-600 text-white text-base hover:bg-red-700 transition"
               >
                 Export anyway
               </button>

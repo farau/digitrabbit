@@ -1,5 +1,23 @@
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 @import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+/* Comportements globaux sur la taille de la police en fonction de l'écran */
+p {
+  @apply text-base sm:text-sm md:text-xs;
+}
+
+h5 {
+  @apply text-base sm:text-sm md:text-xs;
+}
+
+h4 {
+  @apply text-base sm:text-sm md:text-xs;
+}
+
 
 :root {
   --background: #ffffff;
@@ -56,4 +74,13 @@ body {
 /* Firefox : cacher scrollbar */
 * {
   scrollbar-width: none; /* Firefox */
+}
+
+/* Agrandir tous les boutons en mode mobile */
+@media (max-width: 768px) {
+  button {
+    font-size: 1rem !important; /* Texte plus gros */
+    min-height: 30px; /* Hauteur minimale recommandée pour le touch */
+    min-width: 44px; /* Largeur minimale recommandée pour le touch */
+  }
 }

@@ -2,38 +2,21 @@
 'use client'
 
 import styles from './Game.module.css'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { megaethTestnet } from 'viem/chains'
 import { Loader2 } from 'lucide-react'
-import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, COOLDOWN_SECONDS, publicClient } from '@/constants'
-import { encodeFunctionData } from 'viem'
-
+import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, COOLDOWN_SECONDS } from '@/constants'
+import { XLogo } from '@/constants'
 import React from 'react'
 import Wrapper from './Wrapper'
-import { getWalletClient } from '@/utils/walletClient';
-// Rabbit 3D model
-import RabbitModel from './RabbitModel'
-
+import RabbitImage from './RabbitImage'
 import TransactionStack from './TransactionStack'
-import TransactionHistoryTable from './TransactionHistoryTable'
-
-const play = encodeFunctionData({
-  abi: DIGIT_RABBITS_ABI,
-  functionName: 'play',
-  args: []
-})
-
-const start = encodeFunctionData({
-  abi: DIGIT_RABBITS_ABI,
-  functionName: 'startGame',
-  args: []
-})
-
-const test = '0xa2e62045'
+import { useTheme } from '@/context'
+import { useWalletClient } from '../hooks/useWalletClient'
 
 function PlayerData({ refreshCounter, themeMode, seasonId, playerData, embeddedWallet }) {
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
-  const [columns, setColumns] = useState(2); // par défaut : mobile = 2 colonnes
+  const [columns, setColumns] = useState(2);
 
   const isNight = themeMode === 'dark';
   const textColor = isNight ? '#eee' : '#333';
@@ -41,14 +24,14 @@ function PlayerData({ refreshCounter, themeMode, seasonId, playerData, embeddedW
   const borderColor = isNight ? '#444' : '#ddd';
   const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)';
 
-  const { rabbitPoints, playerItems, totalClicks, sessionEndsAt, boost } = playerData;
+  const { rabbitPoints, totalClicks, sessionEndsAt, boost } = playerData;
 
   useEffect(() => {
     const handleResize = () => {
       const width = window.innerWidth;
-      if (width < 768) setColumns(2);      // mobile et petits écrans
-      else if (width < 1024) setColumns(3); // tablettes
-      else setColumns(4);                   // desktop
+      if (width < 768) setColumns(2);
+      else if (width < 1024) setColumns(4);
+      else setColumns(4);
     };
     handleResize();
     window.addEventListener('resize', handleResize);
@@ -87,14 +70,14 @@ function PlayerData({ refreshCounter, themeMode, seasonId, playerData, embeddedW
   };
 
   const labelStyle = {
-    fontSize: '11px',
     marginBottom: '4px',
     opacity: 0.7,
+    color: textColor,
   };
 
   const valueStyle = {
-    fontSize: '16px',
     fontWeight: 'bold',
+    color: textColor,
   };
 
   return (
@@ -107,377 +90,170 @@ function PlayerData({ refreshCounter, themeMode, seasonId, playerData, embeddedW
         }}
       >
         <div style={baseCardStyle}>
-          <div style={labelStyle}>RabbitPoints</div>
-          <div style={valueStyle}>{rabbitPoints}</div>
+          <div style={labelStyle} className="text-base sm:text-sm md:text-xs">RabbitPoints</div>
+          <div style={valueStyle} className="text-base sm:text-sm md:text-xs">{rabbitPoints}</div>
         </div>
 
         <div style={baseCardStyle}>
-          <div style={labelStyle}>Total Clicks</div>
-          <div style={valueStyle}>{totalClicks}</div>
+          <div style={labelStyle} className="text-base sm:text-sm md:text-xs">Total Clicks</div>
+          <div style={valueStyle} className="text-base sm:text-sm md:text-xs">{totalClicks}</div>
         </div>
 
         <div style={baseCardStyle}>
-          <div style={labelStyle}>Cooldown</div>
-          <div style={valueStyle}>
-            {cooldownRemaining > 0
-              ? new Date(cooldownRemaining * 1000).toISOString().substr(11, 8)
-              : 'Ready ✓'}
+          <div style={labelStyle} className="text-base sm:text-sm md:text-xs">
+            {cooldownRemaining > COOLDOWN_SECONDS ? 'Time remaining' : 'Cooldown'}
+          </div>
+          <div style={valueStyle} className="text-base sm:text-sm md:text-xs">
+            {cooldownRemaining > COOLDOWN_SECONDS
+              ? new Date((cooldownRemaining - COOLDOWN_SECONDS) * 1000)
+                .toISOString()
+                .substr(11, 8)
+              : cooldownRemaining > 0
+                ? new Date(cooldownRemaining * 1000).toISOString().substr(11, 8)
+                : 'Ready ✓'}
           </div>
         </div>
 
         <div style={baseCardStyle}>
-          <div style={labelStyle}>Boost</div>
-          <div style={valueStyle}>{boost}%</div>
+          <div style={labelStyle} className="text-base sm:text-sm md:text-xs">Boost</div>
+          <div style={valueStyle} className="text-base sm:text-sm md:text-xs">{boost}%</div>
         </div>
       </div>
     </div>
   );
 }
 
-
-export default function Game({ isTimeExpired, setIsTimeExpired, isGameStarted, setIsGameStarted, themeMode, refreshCounter, setRefreshCounter, playerData, embeddedWallet }) {
+export default function Game({ refreshCounter, setRefreshCounter, playerData, embeddedWallet, preSignedPool, isInitializing, error, initializePool, executeTransaction, getAvailableTransactions, isGameStarted, setIsGameStarted, onGameEnd }) {
   const [result, setResult] = useState('')
-  const [error, setError] = useState('')
+  const [errorStartGame, setErrorStartGame] = useState('')
   const [isExecuting, setIsExecuting] = useState(false)
-  const [transactionHistory, setTransactionHistory] = useState([])
   const [isWritingContract, setIsWritingContract] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
-  const [isInitializing, setIsInitializing] = useState(false)
-  const [preSignedPool, setPreSignedPool] = useState(null)
   const [signedTx, setSignedTx] = useState('')
   const [currentTransactionHash, setCurrentTransactionHash] = useState('')
-
-  const clientRef = useRef(null)
-  const extendingRef = useRef(false)
+  const { themeMode, show3DEffects, toggle3DEffects } = useTheme()
+  const [timer, setTimer] = useState(60)
 
   const isNight = themeMode === 'dark';
-
-  // Couleurs harmonisées avec Profile
   const textColor = isNight ? '#eee' : '#333'
   const cardBg = isNight ? '#222' : '#f3f3f3'
-  const labelColor = isNight ? '#ccc' : '#333'
   const borderColor = isNight ? '#444' : '#ddd'
   const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)'
 
+  const { walletClient } = useWalletClient(embeddedWallet)
 
-  // Initialiser et stocker le client à chaque fois que embeddedWallet change
-  // Réinitialiser les historiques de transactions, erreurs, results et créer les tx presigned
+  // Gestion de l'effet 3D
   useEffect(() => {
-    const init = async () => {
-      try {
-        setResult('');
-        setError('');
-        setTransactionHistory([]);
-        const client = await getWalletClient(); // Ajoute `await` si c'est une promesse
-        clientRef.current = client;
+    // Récupère l'état global enregistré dans sessionStorage (true, false ou null)
+    const previouslyManuallyDisabled = sessionStorage.getItem('show3DEffects') === 'true';
 
-        // On initialise le réseau avec les transactions pré-signées
-        await initializeNetwork();
-      } catch (err) {
-        console.warn('walletClient uninitialized', err);
+    // Si l'utilisateur n'a jamais désactivé manuellement, on laisse l'effet actif
+    if (!previouslyManuallyDisabled && show3DEffects) {
+      // On le désactive temporairement et on mémorise qu'on doit le restaurer
+      toggle3DEffects();
+      sessionStorage.setItem('3d_temp_disabled', 'true');
+    }
+
+    return () => {
+      // Si l'effet a été désactivé temporairement, on le réactive au démontage
+      const wasTempDisabled = sessionStorage.getItem('3d_temp_disabled') === 'true';
+      if (wasTempDisabled) {
+        toggle3DEffects();
+        sessionStorage.removeItem('3d_temp_disabled');
       }
     };
+  }, []);
 
-    init();
-  }, [embeddedWallet]);
+  // Timer durée jeu
+  useEffect(() => {
+    if (!isGameStarted) return
 
+    const interval = setInterval(() => {
+      setTimer((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval)
+          onGameEnd?.()  // 👈 Utilise le callback proprement
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
 
-  // Contract interaction
+    return () => clearInterval(interval)
+  }, [isGameStarted])
+
+  // Démarrage du jeu
   const handleStartGame = async () => {
     try {
-      const walletClient = clientRef.current
       if (!walletClient || !embeddedWallet || !embeddedWallet.address) {
-        setError('No embedded wallet or address')
-        return
+        throw new Error('No wallet client set')
       }
 
       console.log(`Starting game on MegaETH Testnet...`)
 
-      setError('')
       setIsWritingContract(true)
 
-      const startTime = performance.now()
-
-      // Get actual gas price from network and apply smart adjustments
-      const { gasPrice, gasLimit } = await defineGasPrice(walletClient)
-
-      const nonce = await walletClient.getTransactionCount({
-        address: embeddedWallet?.address,
-        state: 'pending'
-      })
-
-      const tx = await walletClient.signTransaction({
-        account: embeddedWallet?.address,
-        to: DIGIT_RABBITS_ADDRESS,
-        data: start,
-        nonce,
-        maxFeePerGas: gasPrice,
-        maxPriorityFeePerGas: gasPrice / 10n, // 10% tip
-        type: 'eip1559',
-        gas: gasLimit,
-      })
-
-      const result = await walletClient.request({
-        method: 'realtime_sendRawTransaction',
-        params: [tx],
+      const result = await walletClient.writeContract({
+        account: embeddedWallet.address,
+        address: DIGIT_RABBITS_ADDRESS,
+        abi: DIGIT_RABBITS_ABI,
+        functionName: 'startGame',
+        args: [],
+        chain: megaethTestnet
       })
 
       if (!result) {
         throw new Error('Failed to start game')
       }
-      const endTime = performance.now()
 
       console.log(`Game started with hash: ${result}`)
       setIsGameStarted(true)
+      setTimer(60)
+      setResult(`Hash: ${result.transactionHash || result}`)
 
-      const timeTaken = Math.round(endTime - startTime)
-
-      setResult(`Hash: ${result}\nTime: ${timeTaken}ms`)
-      setTransactionHistory(prev => [
-        {
-          network: 'MegaETH',
-          hash: result.transactionHash || result || 'N/A',
-          time: timeTaken
-        },
-        ...prev.slice(0, 9) // Keep only last 10
-      ])
-    } catch (error) {
-      console.error('Contract write failed:', error)
-      setError(error.message)
-      setIsGameStarted(false)
+    } catch (err) {
+      console.error('Contract write failed:', err)
+      setErrorStartGame(err.shortMessage)
+      throw err
     } finally {
       setIsWritingContract(false)
-      setIsTimeExpired(false)
       setRefreshCounter(c => c + 1)
     }
   }
 
-  const defineGasPrice = async (walletClient) => {
-    try {
-      const networkGasPrice = await walletClient.getGasPrice()
-      return {
-        gasPrice: networkGasPrice,
-        gasLimit: 100000n // Default gas limit for simple transactions
-      }
-    } catch (error) {
-      console.warn('⚠️ Failed to get gas price, using fallback:', error)
-      // Fallback to very low prices for testnets
-      return {
-        gasPrice: 1000000000n, // 1 gwei
-        gasLimit: 50000n // Lower limit for testnets
-      }
-    }
-  }
-
-  // Fixed execution with proper refill trigger
-  const executeTransaction = async () => {
-    if (!preSignedPool || preSignedPool.currentIndex >= preSignedPool.transactions.length) {
-      setError('No pre-signed transactions available')
+  // Exécution d'une transaction de jeu
+  const handleExecuteTransaction = async () => {
+    if (!preSignedPool || getAvailableTransactions() === 0) {
       return
     }
 
-    // Générer un ID unique pour cette transaction
     const currentTxId = `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
-    // Initialiser les états
     setIsExecuting(true)
-    setError('')
     setResult('')
     setShowSuccess(false)
-    setSignedTx(currentTxId) // Utiliser l'ID généré au lieu de la transaction signée
+    setSignedTx(currentTxId)
 
     try {
-      const walletClient = clientRef.current
-      if (!walletClient) return null
-      if (!embeddedWallet?.address) throw new Error('Wallet address missing')
+      const txResult = await executeTransaction()
 
-      const signedTx = preSignedPool.transactions[preSignedPool.currentIndex]
-      const startTime = performance.now()
-
-      // Envoyer la transaction signée avec realtime_sendRawTransaction
-      const result = await walletClient.request({
-        method: 'realtime_sendRawTransaction',
-        params: [signedTx],
-      })
-
-      if (!result) {
-        throw new Error('Failed to play the game')
+      if (txResult) {
+        setResult(`Hash: ${txResult.hash}\nTime: ${txResult.timeTaken}ms`)
+        setCurrentTransactionHash(txResult.hash)
+        setShowSuccess(true)
       }
-
-      const endTime = performance.now()
-      const timeTaken = Math.round(endTime - startTime)
-
-      // Mettre à jour le pool de transactions
-      setPreSignedPool(prev => {
-        if (!prev) return null
-
-        const newCurrentIndex = prev.currentIndex + 1
-
-        // Refill every 7 transactions (50% of initial 15), but only once per batch
-        if (newCurrentIndex % 7 === 0 && !prev.hasTriggeredRefill) {
-          console.log(`🔔 Triggering refill at ${newCurrentIndex} transactions used`)
-          setTimeout(() => extendPool(), 0)
-          return {
-            ...prev,
-            currentIndex: newCurrentIndex,
-            hasTriggeredRefill: true
-          }
-        }
-
-        return {
-          ...prev,
-          currentIndex: newCurrentIndex
-        }
-      })
-
-      // Mettre à jour les résultats
-      setResult(`Hash: ${result.transactionHash || result}\nTime: ${timeTaken}ms`)
-      // Stocker le hash de transaction
-      setCurrentTransactionHash(result.transactionHash || result)
-
-      setTransactionHistory(prev => [
-        {
-          network: 'MegaETH',
-          hash: result.transactionHash || result || 'N/A',
-          time: timeTaken
-        },
-        ...prev.slice(0, 9),
-      ])
-
-      // Marquer comme succès
-      setShowSuccess(true)
-      setError('') // S'assurer qu'il n'y a pas d'erreur
-
     } catch (err) {
-      console.error('❌ Error executing:', err)
-      setError(err.message)
-      setShowSuccess(false) // S'assurer que le succès est à false
+      console.error('❌ Error executing transaction:', err)
+      setShowSuccess(false)
     } finally {
-      // Finir l'exécution
       setIsExecuting(false)
       setRefreshCounter(c => c + 1)
 
-      // Nettoyer le txId après un délai pour permettre à la stack de se mettre à jour
       setTimeout(() => {
         setSignedTx('')
       }, 100)
     }
   }
-
-  const clearHistory = () => {
-    setTransactionHistory([])
-  }
-
-  const extendPool = async () => {
-    if (extendingRef.current) return
-    extendingRef.current = true
-
-    try {
-      const walletClient = clientRef.current
-      if (!walletClient || !embeddedWallet?.address) throw new Error('Wallet or client not ready')
-
-      const currentPool = preSignedPool
-      if (!currentPool) throw new Error("No pool available")
-
-      const baseNonce = currentPool.baseNonce
-      const existingTxs = currentPool.transactions
-      const nextNonce = baseNonce + existingTxs.length
-
-      console.log("➡️ Start extension at nonce:", nextNonce)
-
-      const { gasPrice, gasLimit } = await defineGasPrice(walletClient)
-
-      const signingPromises = Array.from({ length: 10 }, (_, i) => {
-        const nonce = nextNonce + i
-        return walletClient.signTransaction({
-          account: embeddedWallet.address,
-          to: DIGIT_RABBITS_ADDRESS,
-          data: play,
-          nonce,
-          maxFeePerGas: gasPrice,
-          maxPriorityFeePerGas: gasPrice / 10n,
-          type: 'eip1559',
-          gas: gasLimit,
-        })
-      })
-
-      const newTxs = await Promise.all(signingPromises)
-
-      setPreSignedPool(prev => {
-        if (!prev) return null
-        return {
-          ...prev,
-          transactions: [...prev.transactions, ...newTxs],
-          isRefilling: false,
-          hasTriggeredRefill: false
-        }
-      })
-
-      console.log(`✅ Extended pool from ${nextNonce} to ${nextNonce + 9}`)
-
-    } catch (err) {
-      console.error("❌ Error extending pool:", err)
-      setPreSignedPool(prev => prev ? { ...prev, isRefilling: false } : null)
-    } finally {
-      extendingRef.current = false
-    }
-  }
-
-  const initializeNetwork = async () => {
-
-    setIsInitializing(true)
-    setError('')
-    setPreSignedPool(null)
-
-    try {
-      const walletClient = clientRef.current
-      if (!walletClient) return null
-      if (!embeddedWallet?.address) throw new Error('Wallet address missing')
-
-      console.log(`🚀 Initializing MegaETH with pre-signed transactions...`)
-
-      let nonce = await walletClient.getTransactionCount({
-        address: embeddedWallet?.address,
-      })
-      nonce = nonce + 1; // On ajoute 1 car la 1ere transaction est pour le démarrage du jeu.
-
-      // Get actual gas price from network and apply smart adjustments
-      const { gasPrice, gasLimit } = await defineGasPrice(walletClient)
-
-      // Pre-sign 15 transactions initially
-      console.log(`Pre-signing 15 transactions...`)
-      const signingPromises = Array.from({ length: 15 }, async (_, i) => {
-        return await walletClient.signTransaction({
-          account: embeddedWallet?.address,
-          to: DIGIT_RABBITS_ADDRESS,
-          data: play,
-          nonce: nonce + i,
-          maxFeePerGas: gasPrice,
-          maxPriorityFeePerGas: gasPrice / 10n, // 10% tip
-          type: 'eip1559',
-          gas: gasLimit,
-        })
-      })
-
-      const transactions = await Promise.all(signingPromises)
-
-      setPreSignedPool({
-        transactions,
-        currentIndex: 0,
-        baseNonce: nonce,
-        isRefilling: false,
-        hasTriggeredRefill: false
-      })
-      console.log(`Pre-signed 10 transactions for MegaETH`)
-    } catch (err) {
-      console.error('Error initializing network:', err)
-      setError(`Failed to initialize MegaETH: ${err.message}`)
-    } finally {
-      setIsInitializing(false)
-    }
-  }
-
-  const availableTransactions = preSignedPool ? preSignedPool.transactions.length - preSignedPool.currentIndex : 0
 
   return embeddedWallet ? (
     <Wrapper>
@@ -496,14 +272,12 @@ export default function Game({ isTimeExpired, setIsTimeExpired, isGameStarted, s
         <div className="mb-6 relative w-full flex items-center justify-center">
           {/* 🐰 Le modèle interactif */}
           <div className="z-50 relative cursor-pointer">
-            <RabbitModel
+            <RabbitImage
               isClicked={() => {
-                if (isGameStarted && !isExecuting && !isInitializing && preSignedPool && availableTransactions > 0) {
-                  executeTransaction();
-                  setRefreshCounter(c => c + 1);
+                if (isGameStarted && !isExecuting && !isInitializing && preSignedPool && getAvailableTransactions() > 0) {
+                  handleExecuteTransaction();
                 }
               }}
-              sound="hit"
             />
             <TransactionStack
               isExecuting={isExecuting}
@@ -527,15 +301,12 @@ export default function Game({ isTimeExpired, setIsTimeExpired, isGameStarted, s
             }}
           >
             <Loader2 className="animate-spin" size={20} />
-            <span>Pre-signing transactions for MegaETH...</span>
+            <span>Loading...</span>
           </div>
         ) : (
           <div className="mb-10">
             <button
-              onClick={() => {
-                handleStartGame();
-                setRefreshCounter(c => c + 1);
-              }}
+              onClick={handleStartGame}
               disabled={isExecuting || isGameStarted}
               className="px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed z-10"
               style={{
@@ -545,32 +316,20 @@ export default function Game({ isTimeExpired, setIsTimeExpired, isGameStarted, s
                 boxShadow
               }}
             >
-              {isExecuting ? (
-                <>
-                  <Loader2 className="animate-spin inline mr-2" size={20} />
-                  Executing transaction...
-                </>
-              ) : (
-                `Start Game`
-              )}
+              Start Game
             </button>
           </div>
         )}
       </div>
 
-
       {/* Error Message */}
-      {error && (
+      {errorStartGame && (
         <div className="mb-6 p-4 bg-red-100/70 dark:bg-red-900/70 rounded-lg max-w-2xl text-left backdrop-blur-sm">
           <h4 className="text-red-700 dark:text-red-300 break-all">❌ Error :</h4>
-          <p className="text-red-700 dark:text-red-300 break-all">{error}</p>
+          <p className="text-red-700 dark:text-red-300 break-all">{errorStartGame}</p>
         </div>
       )}
 
-      <TransactionHistoryTable
-        transactionHistory={transactionHistory}
-        clearHistory={clearHistory}
-      />
     </Wrapper>
   ) : (
     <Wrapper>
@@ -585,7 +344,9 @@ export default function Game({ isTimeExpired, setIsTimeExpired, isGameStarted, s
           margin: '20px'
         }}
       >
-        <p style={{ color: textColor, margin: 0 }}>Please connect your wallet</p>
+        <p style={{ color: textColor, margin: 0 }}>
+          Please log in your <XLogo size={16} className={isNight ? 'text-white' : 'text-black'} /> account to enjoy the benefits of MegaETH in our game.
+        </p>
       </div>
     </Wrapper>
   )

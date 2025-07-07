@@ -21,11 +21,7 @@ export const initWalletClient = async (embeddedWallet) => {
   return client;
 };
 
-export const getWalletClient = () => {
-  if (!client) throw new Error('walletClient not initialized');
-  return client;
-};
-
 export function clearWalletClient() {
   client = null;
+
 }

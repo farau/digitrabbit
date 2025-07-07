@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import styles from "./MainPage.module.css";
 import Image from "next/image";
 import Icon from "./Icon";
@@ -15,12 +15,15 @@ import About from "./About";
 import { useTheme } from "@/context";
 import DraggableWindow from "./DraggableWindow";
 import Game from "./Game";
-import EventToast from './EventToast';
-import Nothing from "./Nothing";
+import Chill from "./Chill";
 import Shop from "./Shop";
 import Assets from "./Assets";
+import FAQ from "./FAQ";
 import { useWallets, getEmbeddedConnectedWallet } from '@privy-io/react-auth'
 import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, publicClient, NUM_SLOTS } from '@/constants'
+import { usePrivy } from "@privy-io/react-auth";
+import { usePreSignedPool } from "../hooks/usePreSignedPool";
+import { useWalletClient } from '../hooks/useWalletClient'
 
 export default function MainPage() {
 
@@ -31,7 +34,7 @@ export default function MainPage() {
   const [zCounter, setZCounter] = useState(1); // zIndex de départ
 
   const [sound, setSound] = useState("crying");
-  const { themeMode, toggleTheme } = useTheme();
+  const { themeMode, toggleTheme, show3DEffects, toggle3DEffects } = useTheme();
   const { width } = useWindowSize();
 
   // Setters pour memes
@@ -41,10 +44,6 @@ export default function MainPage() {
   // Setters pour assets
   const [selectedAssetsIndex, setSelectedAssetsIndex] = useState(null);
   const [assetsList, setAssetsList] = useState([]);
-
-  // Setter timer jeu
-  const [isTimeExpired, setIsTimeExpired] = useState(true);
-  const [isGameStarted, setIsGameStarted] = useState(false)
 
   // Refresher compteur pour réactualiser les valeurs du player
   const [refreshCounter, setRefreshCounter] = useState(0)
@@ -56,14 +55,42 @@ export default function MainPage() {
     totalClicks: 0,
     sessionEndsAt: null,
     boost: 0,
+    streak: 0,
+    hasClaimedPoints: false
   })
 
   // On récupère l'embedded wallet ici puis on propage ensuite
   const [embeddedWallet, setEmbeddedWallet] = useState(null);
-  const { wallets } = useWallets()
+  const { wallets } = useWallets();
+  const { logout, user, ready, authenticated } = usePrivy();
 
-  // On initialise embeddedwallet
+  // Setter game
+  const [isGameStarted, setIsGameStarted] = useState(false)
+
+  // Utilisation du hook usePreSignedPool
+  const {
+    preSignedPool,
+    isInitializing,
+    error,
+    initializePool,
+    executeTransaction,
+    incrementIndex,
+    getAvailableTransactions,
+    resetPool
+  } = usePreSignedPool({ embeddedWallet })
+
+
   useEffect(() => {
+    const wasTempDisabled = sessionStorage.getItem('3d_temp_disabled') === 'true';
+    if (wasTempDisabled) {
+      toggle3DEffects(); // Réactive l'effet 3D
+      sessionStorage.removeItem('3d_temp_disabled'); // Nettoie le flag
+    }
+  }, []);
+
+  // Initialisation de embeddedWallet (This part is correct and can stay)
+  useEffect(() => {
+    // The getEmbeddedConnectedWallet function should handle the case where wallets is empty
     const wallet = getEmbeddedConnectedWallet(wallets);
     setEmbeddedWallet(wallet);
   }, [wallets]);
@@ -71,6 +98,7 @@ export default function MainPage() {
   // 1. On récupère la saison une seule fois au montage
   useEffect(() => {
     async function fetchSeason() {
+
       console.log("📦 Fetching season ID...")
       const season = await publicClient.readContract({
         address: DIGIT_RABBITS_ADDRESS,
@@ -102,7 +130,7 @@ export default function MainPage() {
       })
 
       const rabbitPoints = result[0] !== undefined ? Number(result[0]) / 1_000_000 : -1
-      const [totalClicks, playerItems, sessionEndsAt, boost] = result.slice(1)
+      const [totalClicks, playerItems, sessionEndsAt, boost, streak, hasClaimedPoints] = result.slice(1)
 
       const data = {
         rabbitPoints,
@@ -110,12 +138,23 @@ export default function MainPage() {
         playerItems,
         sessionEndsAt,
         boost,
+        streak,
+        hasClaimedPoints
       }
       setPlayerData(data)
     }
 
     fetchPlayerData()
   }, [embeddedWallet?.address, seasonId, refreshCounter])
+
+
+  // MAJ du currentIndex de pool si refreshCounter est appelé en dehors du composant Game
+  useEffect(() => {
+    if (isGameStarted || !preSignedPool) return
+
+    incrementIndex()
+    console.log("On incrémente l'index de la pool initialisée car une tx a été effectuée ailleurs")
+  }, [refreshCounter])
 
 
   function BackgroundSwitcher() {
@@ -197,8 +236,6 @@ export default function MainPage() {
     });
   };
 
-
-
   const renderAppContent = (appName) => {
     switch (appName) {
       case "About":
@@ -208,17 +245,19 @@ export default function MainPage() {
       case "Assets":
         return <Assets assetsList={assetsList} setAssetsList={setAssetsList} setSelectedAssetsIndex={setSelectedAssetsIndex} />;
       case "Profile":
-        return <Profile embeddedWallet={embeddedWallet} playerData={playerData} />;
+        return <Profile embeddedWallet={embeddedWallet} playerData={playerData} setRefreshCounter={setRefreshCounter} />;
       case "Game":
-        return <Game isTimeExpired={isTimeExpired} setIsTimeExpired={setIsTimeExpired} isGameStarted={isGameStarted} setIsGameStarted={setIsGameStarted} themeMode={themeMode} refreshCounter={refreshCounter} setRefreshCounter={setRefreshCounter} playerData={playerData} embeddedWallet={embeddedWallet} />;
+        return <Game refreshCounter={refreshCounter} setRefreshCounter={setRefreshCounter} playerData={playerData} embeddedWallet={embeddedWallet} preSignedPool={preSignedPool} isInitializing={isInitializing} error={error} initializePool={initializePool} executeTransaction={executeTransaction} isGameStarted={isGameStarted} setIsGameStarted={setIsGameStarted} onGameEnd={() => setIsGameStarted(false)} getAvailableTransactions={getAvailableTransactions} />;
       case "Shop":
         return <Shop refreshCounter={refreshCounter} setRefreshCounter={setRefreshCounter} playerData={playerData} embeddedWallet={embeddedWallet} />;
       case "Leaderboard":
         return <Leaderboard />;
       case "Settings":
         return <Settings setSound={setSound} embeddedWallet={embeddedWallet} />;
-      case "Nothing":
-        return <Nothing />;
+      case "Chill":
+        return <Chill />;
+      case "FAQ":
+        return <FAQ />;
       default:
         return null;
     }
@@ -267,7 +306,7 @@ export default function MainPage() {
         src="/img/icons/leaderboard.png"
         label="Leaderboard"
         onClick={() => restoreApp("Leaderboard")}
-        position={{ x: -140, y: "70%" }} // Spécifie la position de l'icône
+        position={{ x: 250, y: "70%" }} // Spécifie la position de l'icône
       />
       <Icon
         name="Game"
@@ -278,13 +317,12 @@ export default function MainPage() {
       />
 
       <Icon
-        name="Nothing"
-        src="/img/icons/nothing.png"
+        name="Chill"
+        src="/img/icons/chill.png"
         label="Chill.mp4"
-        onClick={() => restoreApp("Nothing")}
-        position={{ x: -100, y: "75%" }} // Spécifie la position de l'icône
+        onClick={() => restoreApp("Chill")}
+        position={{ x: -40, y: "75%" }} // Spécifie la position de l'icône
       />
-
 
       <Icon
         name="Shop"
@@ -300,6 +338,7 @@ export default function MainPage() {
         sound={sound}
         themeMode={themeMode}
         position={{ x: `${width - 690}px`, y: "1%" }}
+        show3DEffects={show3DEffects}
       />
 
       <Icon
@@ -316,6 +355,14 @@ export default function MainPage() {
         src="/img/icons/assets.png"
         onClick={() => restoreApp("Assets")}
         position={{ x: "10%", y: "6%" }}
+      />
+
+      <Icon
+        name="faq"
+        label={"FAQ"}
+        src="/img/icons/faq.png"
+        onClick={() => restoreApp("FAQ")}
+        position={{ x: "12%", y: "26%" }}
       />
 
       {/* Affichage des memes plein écran*/}
@@ -410,7 +457,7 @@ export default function MainPage() {
           onFocus={() => bringToFront(appName)}
           theme={themeMode}
           visibleApps={visibleApps}
-          littleWindow={appName === 'Nothing' ? true : false}
+          littleWindow={appName === 'Chill' ? true : false}
           onMinimize={() => setMinimizedApps(prev => [...prev, appName])}
           isMinimized={Array.isArray(minimizedApps) && minimizedApps.includes(appName)}
         >
@@ -418,8 +465,7 @@ export default function MainPage() {
         </DraggableWindow>
       ))}
 
-      <EventToast isTimeExpired={isTimeExpired} setIsTimeExpired={setIsTimeExpired} setIsGameStarted={setIsGameStarted} />
-      <BackgroundSwitcher />
+      {show3DEffects && <BackgroundSwitcher />}
       <Footer visibleApps={visibleApps} setVisibleApps={setVisibleApps} appZIndices={appZIndices} setAppZIndices={setAppZIndices} openApp={restoreApp} />
     </div>
   );

@@ -65,6 +65,10 @@ export default function Footer({ visibleApps, setVisibleApps, appZIndices, setAp
               <Image src="/img/icons/about.png" alt="About icon" width={30} height={30} className={styles.menuIcon} />
               About
             </div>
+            <div className={styles.menuItem} onClick={() => { openApp("FAQ"); setStartOpen(false); }}>
+              <Image src="/img/icons/faq.png" alt="FAQ icon" width={30} height={30} className={styles.menuIcon} />
+              FAQ
+            </div>
             <div className={styles.menuItem} onClick={() => { openApp("Memes"); setStartOpen(false); }}>
               <Image src="/img/icons/memes.png" alt="Meme icon" width={30} height={30} className={styles.menuIcon} />
               Memes
@@ -73,8 +77,8 @@ export default function Footer({ visibleApps, setVisibleApps, appZIndices, setAp
               <Image src="/img/icons/assets.png" alt="Assets icon" width={30} height={30} className={styles.menuIcon} />
               Assets
             </div>
-            <div className={styles.menuItem} onClick={() => { openApp("Nothing"); setStartOpen(false); }}>
-              <Image src="/img/icons/nothing.png" alt="Nothing icon" width={30} height={30} className={styles.menuIcon} />
+            <div className={styles.menuItem} onClick={() => { openApp("Chill"); setStartOpen(false); }}>
+              <Image src="/img/icons/chill.png" alt="Nothing icon" width={30} height={30} className={styles.menuIcon} />
               Chill
             </div>
             <hr className={styles.menuDivider} />

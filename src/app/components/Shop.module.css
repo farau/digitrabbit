@@ -1,8 +1,17 @@
 .bgBackground {
-  z-index: 0;
+  z-index: 1;
   background-image: url('/img/background_game.png');
   background-repeat: repeat-x;
   background-size: auto 100%;
   background-position: 0 0;
   will-change: background-position;
+
+  /* Dégradé progressif sur tous les côtés - effet réduit */
+  mask-image: linear-gradient(to top, transparent 0%, black 5%, black 95%, transparent 100%),
+              linear-gradient(to left, transparent 0%, black 5%, black 95%, transparent 100%);
+  mask-composite: intersect;
+
+  -webkit-mask-image: linear-gradient(to top, transparent 0%, black 5%, black 95%, transparent 100%),
+                      linear-gradient(to left, transparent 0%, black 5%, black 95%, transparent 100%);
+  -webkit-mask-composite: destination-in;
 }

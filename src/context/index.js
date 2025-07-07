@@ -11,7 +11,6 @@ import { WagmiProvider } from '@privy-io/wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { wagmiConfig } from '@/wagmi-config';
 
-
 if (!appId) throw new Error('App ID is not defined');
 
 const ThemeContext = createContext();
@@ -19,6 +18,7 @@ export const useTheme = () => useContext(ThemeContext);
 
 export function ContextProvider({ children }) {
   const [themeMode, setThemeMode] = useState('light');
+  const [show3DEffects, setShow3DEffects] = useState(true);
   const queryClient = new QueryClient();
 
   // Initialiser le thème depuis localStorage ou système
@@ -26,18 +26,24 @@ export function ContextProvider({ children }) {
     const saved = localStorage.getItem('theme');
     if (saved === 'light' || saved === 'dark') {
       setThemeMode(saved);
-      //modal.setThemeMode(saved);
     } else {
       const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
       const mode = prefersDark ? 'dark' : 'light';
       setThemeMode(mode);
-      //modal.setThemeMode(mode);
     }
   }, []);
 
-  // AJOUT : Synchroniser avec les classes Tailwind
+  // Initialiser les effets 3D depuis localStorage
   useEffect(() => {
-    const root = document.documentElement; // ou document.body
+    const saved = localStorage.getItem('show3DEffects');
+    if (saved !== null) {
+      setShow3DEffects(JSON.parse(saved));
+    }
+  }, []);
+
+  // Synchroniser avec les classes Tailwind
+  useEffect(() => {
+    const root = document.documentElement;
     if (themeMode === 'dark') {
       root.classList.add('dark');
     } else {
@@ -49,15 +55,28 @@ export function ContextProvider({ children }) {
     setThemeMode((prev) => {
       const newMode = prev === 'light' ? 'dark' : 'light';
       localStorage.setItem('theme', newMode);
-      //modal.setThemeMode(newMode);
       return newMode;
+    });
+  };
+
+  const toggle3DEffects = () => {
+    setShow3DEffects((prev) => {
+      const newValue = !prev;
+      localStorage.setItem('show3DEffects', JSON.stringify(newValue));
+      return newValue;
     });
   };
 
   const theme = themeMode === 'light' ? lightTheme : darkTheme;
 
   return (
-    <ThemeContext.Provider value={{ themeMode, toggleTheme }}>
+    <ThemeContext.Provider value={{
+      themeMode,
+      toggleTheme,
+      show3DEffects,
+      toggle3DEffects,
+      setShow3DEffects
+    }}>
       <StyledThemeProvider theme={theme}>
         <PrivyProvider
           appId={appId}
@@ -68,16 +87,16 @@ export function ContextProvider({ children }) {
               supportedChains: [megaethTestnet],
               embeddedWallets: {
                 ethereum: {
-                  createOnLogin: 'all-users', // Create embedded wallets for all users
+                  createOnLogin: 'users-without-wallets', // Create embedded wallets for all users
                 }
               },
               ...(themeMode === 'dark' ? darkModeConfig : lightModeConfig),
-              
-          }}
+
+            }}
         >
           <QueryClientProvider client={queryClient}>
             <WagmiProvider config={wagmiConfig}>{children}</WagmiProvider>
-          </QueryClientProvider>      
+          </QueryClientProvider>
         </PrivyProvider>
       </StyledThemeProvider>
     </ThemeContext.Provider>
