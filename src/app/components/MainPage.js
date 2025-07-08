@@ -251,7 +251,7 @@ export default function MainPage() {
       case "Shop":
         return <Shop refreshCounter={refreshCounter} setRefreshCounter={setRefreshCounter} playerData={playerData} embeddedWallet={embeddedWallet} />;
       case "Leaderboard":
-        return <Leaderboard />;
+        return <Leaderboard embeddedWallet={embeddedWallet} />;
       case "Settings":
         return <Settings setSound={setSound} embeddedWallet={embeddedWallet} />;
       case "Chill":

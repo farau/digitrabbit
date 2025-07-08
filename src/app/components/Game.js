@@ -95,8 +95,8 @@ function PlayerData({ refreshCounter, themeMode, seasonId, playerData, embeddedW
         </div>
 
         <div style={baseCardStyle}>
-          <div style={labelStyle} className="text-base sm:text-sm md:text-xs">Total Clicks</div>
-          <div style={valueStyle} className="text-base sm:text-sm md:text-xs">{totalClicks}</div>
+          <div style={labelStyle} className="text-base sm:text-sm md:text-xs">Clicks</div>
+          <div style={valueStyle} className="text-base sm:text-sm md:text-xs">{totalClicks - totalClicks}</div>
         </div>
 
         <div style={baseCardStyle}>

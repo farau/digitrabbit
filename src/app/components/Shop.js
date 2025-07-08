@@ -49,6 +49,13 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData, em
     }
   }, [walletClient])
 
+  // Initialise les niveaux sélectionnés au niveau suivant disponible
+  useEffect(() => {
+    if (playerItems) {
+      setSelectedLevels(playerItems.map(owned => Math.max(1, owned + 1)))
+    }
+  }, [playerItems])
+
   const handleBuyItem = async (slot, level) => {
     try {
       if (!walletClient || !embeddedWallet || !embeddedWallet.address) {
@@ -84,7 +91,11 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData, em
   const changeLevel = (slot, delta) => {
     setSelectedLevels((prev) => {
       const next = [...prev]
-      next[slot] = Math.max(1, Math.min(MAX_LEVEL, next[slot] + delta))
+      const owned = playerItems[slot]
+      const maxAvailable = Math.min(MAX_LEVEL, owned + 1)
+      const minAvailable = Math.max(1, owned + 1)
+
+      next[slot] = Math.max(minAvailable, Math.min(maxAvailable, next[slot] + delta))
       return next
     })
   }
@@ -96,6 +107,18 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData, em
   const getImagePath = (slotIndex, level) => {
     const folder = slotFolders[slotIndex]
     return `/img/shop/${folder}/${level}.png`
+  }
+
+  // Vérifie si un niveau est disponible à l'achat
+  const isLevelAvailable = (slot, level) => {
+    const owned = playerItems[slot]
+    return level === owned + 1
+  }
+
+  // Vérifie si un niveau peut être visualisé
+  const isLevelViewable = (slot, level) => {
+    const owned = playerItems[slot]
+    return level <= owned + 1
   }
 
   // Niveau sélectionné pour la preview
@@ -183,6 +206,9 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData, em
               const selected = selectedLevels[i]
               const owned = playerItems[i]
               const price = getItemPrice(selected)
+              const canBuy = isLevelAvailable(i, selected)
+              const canView = isLevelViewable(i, selected)
+              const nextLevel = owned + 1
 
               return (
                 <>
@@ -202,39 +228,55 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData, em
                     >
                       <div className="flex items-center gap-4">
                         <ArrowLeft
-                          className="cursor-pointer hover:scale-110 transition"
-                          onClick={() => changeLevel(i, -1)}
+                          className={`cursor-pointer hover:scale-110 transition ${selected <= nextLevel ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
+                          onClick={() => selected > nextLevel && changeLevel(i, -1)}
                         />
                         <div className="text-center">
                           <div className="font-bold">{slotLabels[i]}</div>
                           <div className="text-xs text-gray-500 dark:text-gray-400">
                             Owned: {owned > 0 ? `Lv ${owned}` : 'None'}
                           </div>
-                          <div className="text-sm">Selected: Lv {selected}</div>
-                          <div className="text-sm text-yellow-600 dark:text-yellow-400">
-                            Price: {price}
+                          <div className={`text-sm ${!canView ? 'opacity-50' : ''}`}>
+                            {canView ? `Selected: Lv ${selected}` : `Next: Lv ${nextLevel}`}
                           </div>
+                          <div className={`text-sm text-yellow-600 dark:text-yellow-400 ${!canView ? 'opacity-50' : ''}`}>
+                            Price: {canView ? price : getItemPrice(nextLevel)}
+                          </div>
+                          {!canBuy && canView && (
+                            <div className="text-xs text-red-500 dark:text-red-400 mt-1">
+                              {selected > nextLevel ? `Buy Lv ${nextLevel} first` : ''}
+                            </div>
+                          )}
                         </div>
                         <ArrowRight
-                          className="cursor-pointer hover:scale-110 transition"
-                          onClick={() => changeLevel(i, 1)}
+                          className={`cursor-pointer hover:scale-110 transition ${selected >= nextLevel ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
+                          onClick={() => selected < nextLevel && changeLevel(i, 1)}
                         />
                       </div>
                     </div>
 
                     <button
-                      disabled={isWriting || selected <= owned || selected === 0}
+                      disabled={isWriting || !canBuy || selected === 0}
                       onClick={() => {
-                        setPendingBuy({ slot: i, level: selected })
-                        setModalVisible(true)
+                        if (canBuy) {
+                          setPendingBuy({ slot: i, level: selected })
+                          setModalVisible(true)
+                        }
                       }}
-                      className={`mt-4 w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm disabled:opacity-50 ${selected <= owned || selected === 0 ? 'cursor-not-allowed' : ''
+                      className={`mt-4 w-full px-4 py-2 rounded-lg text-sm transition ${canBuy && selected > 0 && !isWriting
+                          ? 'bg-green-600 hover:bg-green-700 text-white'
+                          : 'bg-gray-400 text-gray-200 cursor-not-allowed'
                         }`}
                     >
                       {isWriting && (
                         <Loader2 size={16} className="animate-spin inline mr-2" />
                       )}
-                      Buy Lv {selected}
+                      {canBuy ? `Buy Lv ${selected}` :
+                        selected > nextLevel ? `Buy Lv ${nextLevel} first` :
+                          owned >= MAX_LEVEL ? 'Max Level' :
+                            `Buy Lv ${nextLevel}`}
                     </button>
                   </div>
                 </>
@@ -244,7 +286,7 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData, em
 
             {/* IMAGE PREVIEW */}
             {
-              selected > 0 && (
+              selected > 0 && isLevelViewable(selectedSlot, selected) && (
                 <div className="flex justify-center">
                   <div
                     className="w-28 h-28 rounded-full flex items-center justify-center overflow-hidden"
@@ -271,6 +313,28 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData, em
                 </div>
               )
             }
+
+            {/* Message si niveau non disponible */}
+            {selected > 0 && !isLevelViewable(selectedSlot, selected) && (
+              <div className="flex justify-center">
+                <div
+                  className="w-28 h-28 rounded-full flex items-center justify-center"
+                  style={{
+                    backgroundColor: cardBg,
+                    color: textColor,
+                    borderColor,
+                    borderWidth: 1,
+                    borderStyle: 'solid',
+                    boxShadow,
+                  }}
+                >
+                  <div className="text-center text-sm opacity-50">
+                    <div>🔒</div>
+                    <div>Locked</div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div >
         </div >
 
@@ -294,42 +358,68 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData, em
         {/* Confirmation Modal */}
         {
           modalVisible && (
-            <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
+            <>
               <div
+                className="fixed top-160 md:top-50 inset-0 z-50 bg-black/90"
                 style={{
-                  backgroundColor: cardBg,
-                  color: textColor,
-                  borderColor,
-                  borderWidth: 1,
-                  borderStyle: 'solid',
-                  boxShadow,
+                  position: 'fixed',
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  zIndex: 9999
                 }}
-                className="rounded-xl p-6 w-[90%] max-w-sm"
+                onClick={() => setModalVisible(false)}
+              />
+              <div
+                className="fixed z-50"
+                style={{
+                  position: 'fixed',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  zIndex: 10000,
+                  width: '90%',
+                  maxWidth: '384px'
+                }}
               >
-                <h2 className="text-lg font-bold mb-2 text-center">Confirm Purchase</h2>
-                <p className="text-sm text-center mb-4">
-                  Buy <span className="font-semibold">Level {pendingBuy.level}</span> item in{' '}
-                  <span className="font-semibold">{slotLabels[pendingBuy.slot]}</span>?
-                </p>
-                <div className="flex justify-center gap-4">
-                  <button
-                    onClick={() => {
-                      setModalVisible(false)
-                      handleBuyItem(pendingBuy.slot, pendingBuy.level)
-                    }}
-                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
-                  >
-                    Confirm
-                  </button>
-                  <button
-                    onClick={() => setModalVisible(false)}
-                    className="bg-gray-300 hover:bg-gray-400 dark:bg-gray-700 dark:hover:bg-gray-600 text-black dark:text-white px-4 py-2 rounded"
-                  >
-                    Cancel
-                  </button>
+                <div
+                  className='relative top-160 md:top-50'
+                  style={{
+                    backgroundColor: cardBg,
+                    color: textColor,
+                    borderColor,
+                    borderWidth: 1,
+                    borderStyle: 'solid',
+                    boxShadow,
+                    borderRadius: '12px',
+                    padding: '24px'
+                  }}
+                >
+                  <h2 className="text-lg font-bold mb-2 text-center">Confirm Purchase</h2>
+                  <p className="text-sm text-center mb-4">
+                    Buy <span className="font-semibold">Level {pendingBuy.level}</span> item in{' '}
+                    <span className="font-semibold">{slotLabels[pendingBuy.slot]}</span>?
+                  </p>
+                  <div className="flex justify-center gap-4">
+                    <button
+                      onClick={() => {
+                        setModalVisible(false)
+                        handleBuyItem(pendingBuy.slot, pendingBuy.level)
+                      }}
+                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+                    >
+                      Confirm
+                    </button>
+                    <button
+                      onClick={() => setModalVisible(false)}
+                      className="bg-gray-300 hover:bg-gray-400 dark:bg-gray-700 dark:hover:bg-gray-600 text-black dark:text-white px-4 py-2 rounded"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
+            </>
           )
         }
       </div >
