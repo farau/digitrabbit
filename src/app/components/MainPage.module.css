@@ -38,29 +38,27 @@
   transition: background-color 0.3s, color 0.3s, border-color 0.3s;
 }
   
-/* Background jour */
 .bgDay {
   position: relative;
   width: 100vw;
   height: 100vh;
-  background: url('/img/light.png') no-repeat center center fixed;
-  background-size: cover;
-  background-attachment: fixed; /* Fait en sorte que l'image reste fixe lors du défilement */
+  background: url('/img/light.jpeg') no-repeat center center;
+  background-size: 100% 100%; /* Force l'image à occuper exactement 100% de la largeur et hauteur */
+  background-attachment: fixed;
   display: flex;
   flex-wrap: wrap;
   color: white;
-  --windows-background: #f0f0f0; /* clair */
-  --windows-text: #000000;       /* sombre */
+  --windows-background: #f0f0f0;
+  --windows-text: #000000;
 }
 
-/* Background nuit */
 .bgNight {
   position: relative;
   width: 100vw;
   height: 100vh;
-  background: url('/img/night.png') no-repeat center center fixed;
-  background-size: cover;
-  background-attachment: fixed; /* Fait en sorte que l'image reste fixe lors du défilement */
+  background: url('/img/night.jpeg') no-repeat center center;
+  background-size: 100% 100%; /* Force l'image à occuper exactement 100% de la largeur et hauteur */
+  background-attachment: fixed;
   display: flex;
   flex-wrap: wrap;
   color: white;

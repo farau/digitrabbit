@@ -1,5 +1,5 @@
 // app/api/leaderboard/route.js
-import { getUserRank, getTopPlayers, getLeaderboard } from "../../../../lib/leaderboard"; // Changement du chemin
+import { getUserRank, getTopPlayers, getLeaderboard } from "@/lib/leaderboard"; // Changement du chemin
 import { NextResponse } from 'next/server';
 
 export async function GET(request) {

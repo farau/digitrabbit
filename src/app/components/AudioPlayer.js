@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Volume2, VolumeX } from 'lucide-react';
+import Image from 'next/image';
 
 function AudioPlayer({ src }) {
   const [isPlaying, setIsPlaying] = useState(true);
@@ -25,7 +25,7 @@ function AudioPlayer({ src }) {
     if (isPlaying) {
       audio.pause();
     } else {
-      audio.play().catch(() => {});
+      audio.play().catch(() => { });
     }
 
     setIsPlaying(!isPlaying);
@@ -38,11 +38,13 @@ function AudioPlayer({ src }) {
         onClick={toggleAudio}
         className="cursor-pointer w-6 h-6 text-white hover:text-gray-400 transition"
       >
-      <img
-        src={isPlaying ? "img/icons/loudspeaker_on.png" : "img/icons/loudspeaker_off.png"}
-        alt="Volume"
-        className="w-full h-full"
-      />
+        <Image
+          src={isPlaying ? "/img/icons/loudspeaker_on.png" : "/img/icons/loudspeaker_off.png"}
+          alt="Volume"
+          width={24}  // Remplace par la taille réelle
+          height={24} // Remplace par la taille réelle
+          className="w-full h-full"
+        />
       </div>
     </div>
   );

@@ -1,17 +1,17 @@
 'use client';
 import { useState } from 'react';
 import {
-  Sun, Moon, Volume2, Copy, KeyRound, X, Check, EyeOff, Sparkles,
+  Sun, Moon, Volume2, Sparkles,
 } from 'lucide-react';
 import { useTheme } from '@/context';
 import Wrapper from './Wrapper';
 import { useWallets, useLinkAccount, usePrivy } from '@privy-io/react-auth';
-import { useAccount, useBalance } from 'wagmi';
+import { useBalance } from 'wagmi';
+import { useGame } from '@/context';
 
 function AllLinkedWallets() {
-  const { user } = usePrivy();
-  const { themeMode } = useTheme();
 
+  const { themeMode } = useTheme();
   const isNight = themeMode === 'dark';
   const cardBg = isNight ? '#222' : '#f3f3f3';
   const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)';
@@ -19,11 +19,61 @@ function AllLinkedWallets() {
   const textColor = isNight ? 'text-white' : 'text-black';
   const subTextColor = isNight ? 'text-zinc-400' : 'text-gray-600';
 
+  const { embeddedWallet, isValidating, validationError } = useGame()
+  const { user } = usePrivy();
+
+  // Error and loading states
+  if (isValidating) {
+    return (
+      <Wrapper>
+        <div style={{
+          background: cardBg,
+          padding: '20px',
+          borderRadius: '10px',
+          border: `1px solid ${borderColor}`,
+          boxShadow,
+          textAlign: 'center',
+          margin: '20px'
+        }}>
+          <div className="flex items-center justify-center gap-3">
+            <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+            <p className="break-all">
+              Validating your wallet... Please wait.
+            </p>
+          </div>
+        </div>
+      </Wrapper>
+    )
+  }
+
+  if (validationError) {
+    return (
+      <Wrapper>
+        <div style={{
+          background: cardBg,
+          padding: '20px',
+          borderRadius: '10px',
+          border: `1px solid ${borderColor}`,
+          boxShadow,
+          textAlign: 'center',
+          margin: '20px'
+        }}>
+          <div className="flex items-center justify-center gap-3 text-red-700">
+            <p className="break-all">
+              {validationError}
+            </p>
+          </div>
+        </div>
+      </Wrapper>
+    )
+  }
+
+
   const allWallets = user?.linkedAccounts.filter(
     (account) => account.type === 'wallet' && account.walletClientType !== 'privy'
   ) || [];
 
-  return (
+  return embeddedWallet && (
     <div
       style={{
         background: cardBg,
@@ -43,7 +93,7 @@ function AllLinkedWallets() {
               key={wallet.address}
               className="mb-4 pb-2 border-b border-dashed border-gray-300 dark:border-zinc-700 last:border-none last:pb-0"
             >
-              <code className="block text-base bg-gray-100 dark:bg-zinc-800 px-3 py-1 rounded-md text-gray-900 dark:text-white break-words select-none mb-1">
+              <code className="block text-xs bg-gray-100 dark:bg-zinc-800 px-3 py-1 rounded-md text-gray-900 dark:text-white break-words select-none mb-1">
                 {wallet.address}
               </code>
               <p className={`text-base ${subTextColor}`}>Type: {wallet.walletClientType}</p>
@@ -61,57 +111,12 @@ function AllLinkedWallets() {
   );
 }
 
-function MyWalletList() {
-  const { wallets } = useWallets();
-  const { themeMode } = useTheme();
-
-  const isNight = themeMode === 'dark';
-  const cardBg = isNight ? '#222' : '#f3f3f3';
-  const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)';
-  const borderColor = isNight ? '#444' : '#ddd';
-  const textColor = isNight ? 'text-white' : 'text-black';
-  const subTextColor = isNight ? 'text-zinc-400' : 'text-gray-600';
-
-  if (!wallets || wallets.length === 0) return null;
-
-  return (
-    <div
-      style={{
-        background: cardBg,
-        padding: '10px 15px',
-        borderRadius: '10px',
-        marginTop: 12,
-        boxShadow,
-        border: `1px solid ${borderColor}`,
-      }}
-    >
-      <p className={`text-base font-semibold mb-3 ${textColor}`}>Active wallet</p>
-
-      {wallets
-        .filter((wallet) => wallet.walletClientType !== 'privy')
-        .map((wallet) => (
-          <div
-            key={wallet.address}
-            className="mb-4 pb-2 border-b border-dashed border-gray-300 dark:border-zinc-700 last:border-none last:pb-0"
-          >
-            <code className="block text-base bg-gray-100 dark:bg-zinc-800 px-3 py-1 rounded-md text-gray-900 dark:text-white break-words select-none mb-1">
-              {wallet.address}
-            </code>
-            <p className={`text-base ${subTextColor}`}>Chain ID: {wallet.chainId}</p>
-            <p className={`text-base ${subTextColor}`}>Type: {wallet.walletClientType}</p>
-          </div>
-        ))}
-    </div>
-  );
-}
-
-
 function LinkButton() {
   const { linkWallet } = useLinkAccount();
 
   return (
     <div className="link-options mb-4">
-      <p className='text-base'>Link wallets containing "partnerships" NFTs to get bonuses.</p>
+      <p className='text-base'>Link wallets containing &quot;partnerships&quot; NFTs to get bonuses.</p>
       <button onClick={linkWallet}>Link Wallet</button>
     </div>
   );
@@ -207,7 +212,7 @@ function WalletBalance({ embeddedWallet, themeMode }) {
   );
 }
 
-export default function Settings({ sound, setSound, embeddedWallet }) {
+export default function Settings({ sound, setSound }) {
   const { themeMode, toggleTheme, show3DEffects, toggle3DEffects } = useTheme();
   const isNight = themeMode === 'dark';
   const textColor = isNight ? '#eee' : '#333';
@@ -215,15 +220,9 @@ export default function Settings({ sound, setSound, embeddedWallet }) {
   const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)'
   const borderColor = isNight ? '#444' : '#ddd'
 
-  const { ready, authenticated, exportWallet } = usePrivy();
-
-  const { wallets } = useWallets();
-  const { user } = usePrivy();
-
   const [copied, setCopied] = useState(null);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [privateKey, setPrivateKey] = useState(null);
-  const [showKey, setShowKey] = useState(false);
+  const { ready, authenticated } = usePrivy();
+  const { embeddedWallet, isValidating, validationError } = useGame();
 
   if (!ready) return;
 
@@ -233,24 +232,6 @@ export default function Settings({ sound, setSound, embeddedWallet }) {
     setTimeout(() => setCopied(null), 2000);
   };
 
-  const handleExportPrivateKey = async () => {
-    try {
-      const key = await exportWallet();
-      setPrivateKey(key);
-      setShowKey(true);
-      setTimeout(() => {
-        setShowKey(false);
-      }, 8000);
-    } catch (e) {
-      console.error('Error exporting private key:', e);
-    } finally {
-      setShowConfirm(false);
-    }
-  };
-
-  const embeddedWallet_ = wallets.find(
-    (w) => w.walletClientType === 'privy' && w.address
-  );
 
   const sounds = ['crying', 'robot', 'bird', 'cat', 'sheep', 'cow', 'rooster'];
 
@@ -313,12 +294,30 @@ export default function Settings({ sound, setSound, embeddedWallet }) {
       </div>
 
       {/* Wallet Section */}
-      {ready && authenticated && (
-        <div className="mt-8 border-t border-gray-200 dark:border-zinc-700 pt-6">
-          <h4 className="text-md font-semibold mb-4">Wallets</h4>
 
+      {isValidating && (
+        <div className="flex items-center justify-center gap-3">
+          <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+          <p className="break-all">
+            Validating your wallet... Please wait.
+          </p>
+        </div>
+      )
+      }
+
+      {validationError && (
+        <div className="flex items-center justify-center gap-3 text-red-700">
+          <p className="break-all">
+            {validationError}
+          </p>
+        </div>
+      )
+      }
+
+      {ready && authenticated && embeddedWallet && (
+        <div className="mt-8 border-t border-gray-200 dark:border-zinc-700 pt-6">
           {[
-            { label: 'Embedded Wallet', wallet: embeddedWallet_, type: 'embedded' }].map(
+            { label: 'Embedded Wallet', wallet: embeddedWallet, type: 'embedded' }].map(
               ({ label, wallet, type }) =>
                 wallet && (
                   <div
@@ -341,7 +340,7 @@ export default function Settings({ sound, setSound, embeddedWallet }) {
                       {label}
                     </p>
                     <div className="flex items-center justify-between gap-3 flex-wrap">
-                      <code className="flex-1 min-w-0 text-base bg-gray-100 dark:bg-zinc-800 px-3 py-1 rounded-md text-gray-900 dark:text-white break-words select-none">
+                      <code className="flex-1 min-w-0 text-xs bg-gray-100 dark:bg-zinc-800 px-3 py-1 rounded-md text-gray-900 dark:text-white break-words select-none">
                         {wallet.address}
                       </code>
                       <button
@@ -363,19 +362,8 @@ export default function Settings({ sound, setSound, embeddedWallet }) {
                     {type === 'embedded' && (
                       <>
                         <WalletBalance embeddedWallet={embeddedWallet} />
-                        <button
-                          onClick={() => setShowConfirm(true)}
-                          className="mt-4 inline-flex items-center text-base font-semibold transition focus:outline-none focus:underline"
-                        >
-                          <KeyRound className="w-0 h-3.5" /> Export Private Key
-                        </button>
+                        {/* No export for embedded wallets */}
 
-                        {showKey && privateKey && (
-                          <div className="mt-3 p-3 rounded-md bg-red-50 dark:bg-red-900/30 text-base text-red-800 dark:text-red-300 break-words relative shadow-inner">
-                            <EyeOff className="w-5 h-5 absolute top-3 right-3 opacity-60" />
-                            {privateKey}
-                          </div>
-                        )}
                         <AllLinkedWallets />
                       </>
                     )}
@@ -385,36 +373,6 @@ export default function Settings({ sound, setSound, embeddedWallet }) {
         </div>
       )}
 
-      {/* Confirmation Modal */}
-      {showConfirm && (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 w-[90%] max-w-sm shadow-2xl">
-            <div className="flex justify-between items-center mb-4">
-              <h4 className="text-md font-semibold text-red-600 dark:text-red-400">
-                Export Private Key
-              </h4>
-            </div>
-            <p className="text-base text-gray-700 dark:text-gray-300 mb-5 leading-relaxed">
-              Warning: your private key gives full access to your wallet. Do not share it with anyone.
-              Are you sure you want to export it?
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowConfirm(false)}
-                className="px-4 py-2 rounded-md bg-gray-200 text-gray-800 text-base hover:bg-gray-300 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 transition"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleExportPrivateKey}
-                className="px-4 py-2 rounded-md bg-red-600 text-white text-base hover:bg-red-700 transition"
-              >
-                Export anyway
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </Wrapper>
   );
 }

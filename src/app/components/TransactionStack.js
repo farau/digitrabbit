@@ -1,13 +1,20 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 
 const getExplorerUrl = (tx) => `https://web3.okx.com/explorer/megaeth-testnet/tx/${tx}`
 
-export default function TransactionStack({ isExecuting, showSuccess, error, txId, transactionHash }) {
+export default function TransactionStack({
+    isExecuting,
+    showSuccess,
+    error,
+    transactionHash,
+    gameState // Nouvel prop pour accéder à l'état complet du jeu
+}) {
     const [stack, setStack] = useState([])
     const timeoutsRef = useRef(new Map())
+    const transactionCounterRef = useRef(0)
 
     // Fonction pour nettoyer les timeouts
     const clearTimeoutForTx = (txId) => {
@@ -18,34 +25,38 @@ export default function TransactionStack({ isExecuting, showSuccess, error, txId
         }
     }
 
-    // Fonction pour programmer la suppression d'une transaction après 3 secondes
-    const scheduleRemoval = (txId, delay = 3000) => {
-        clearTimeoutForTx(txId) // Nettoyer l'ancien timeout s'il existe
+    // Fonction pour programmer la suppression d'une transaction après un délai
+    // Fonction stable avec useCallback
+    const scheduleRemoval = useCallback((txId, delay = 3000) => {
+        clearTimeoutForTx(txId)
 
         const timeout = setTimeout(() => {
             setStack((prev) => {
-                const updated = prev.filter((tx) => tx.id !== txId)
+                const currentStack = prev || []
+                const updated = currentStack.filter((tx) => tx.id !== txId)
                 return updated
             })
             timeoutsRef.current.delete(txId)
         }, delay)
 
         timeoutsRef.current.set(txId, timeout)
-    }
+    }, []) // Vide car toutes les dépendances sont stables
 
+    // Effet principal pour gérer les transactions
     useEffect(() => {
-        // Ne pas traiter si txId est vide
-        if (!txId) return
+        // Générer un ID unique pour chaque transaction
+        const txId = `tx_${Date.now()}_${transactionCounterRef.current++}`
 
         if (isExecuting) {
-            // Nouvelle transaction lancée - supprimer toutes les transactions en cours
-            // car elles seront invalidées par le nonce blockchain
+            // Nouvelle transaction en cours - nettoyer les anciennes transactions en cours
             setStack((prev) => {
-                // Supprimer toutes les transactions en isExecuting
-                const withoutExecuting = prev.filter(tx => !tx.isExecuting)
+                const currentStack = prev || []
+
+                // Supprimer toutes les transactions en cours d'exécution
+                const withoutExecuting = currentStack.filter(tx => !tx.isExecuting)
 
                 // Nettoyer les timeouts des transactions supprimées
-                prev.forEach(tx => {
+                currentStack.forEach(tx => {
                     if (tx.isExecuting) {
                         clearTimeoutForTx(tx.id)
                     }
@@ -61,21 +72,22 @@ export default function TransactionStack({ isExecuting, showSuccess, error, txId
                     timestamp: Date.now()
                 }
 
-                // Ajouter en haut, pas de limite dans le state (limitée seulement à l'affichage)
                 return [newTransaction, ...withoutExecuting]
             })
 
-            // Programmer un timeout de sécurité pour cette nouvelle transaction
-            scheduleRemoval(txId, 3000)
+            // Timeout de sécurité pour éviter les transactions qui restent bloquées
+            scheduleRemoval(txId, 10000) // 10 secondes max pour une transaction
 
-        } else {
-            // Transaction terminée - nettoyer le timeout de sécurité
-            clearTimeoutForTx(txId)
-
-            // Mettre à jour le statut
+        } else if (showSuccess || error) {
+            // Transaction terminée - mettre à jour le statut
             setStack((prev) => {
-                return prev.map((tx) => {
-                    if (tx.id === txId) {
+                const currentStack = prev || []
+
+                const updated = currentStack.map((tx) => {
+                    // Mettre à jour la transaction la plus récente en cours d'exécution
+                    if (tx.isExecuting) {
+                        clearTimeoutForTx(tx.id) // Nettoyer le timeout de sécurité
+
                         return {
                             ...tx,
                             isExecuting: false,
@@ -86,32 +98,62 @@ export default function TransactionStack({ isExecuting, showSuccess, error, txId
                     }
                     return tx
                 })
+
+                return updated
             })
 
-            // Programmer la suppression après 2 secondes
-            scheduleRemoval(txId, 2000)
+            // Programmer la suppression après 1 secondes pour les succès, 5 secondes pour les erreurs
+            const delay = error ? 5000 : 1000
+            setTimeout(() => {
+                setStack((prev) => {
+                    const currentStack = prev || []
+                    const mostRecentCompleted = currentStack.find(tx => !tx.isExecuting)
+                    if (mostRecentCompleted) {
+                        scheduleRemoval(mostRecentCompleted.id, 100)
+                    }
+                    return currentStack
+                })
+            }, delay)
         }
 
-    }, [isExecuting, showSuccess, error, txId, transactionHash])
+    }, [isExecuting, showSuccess, error, transactionHash, scheduleRemoval])
 
     // Nettoyage lors du démontage du composant
     useEffect(() => {
+        // Capturer la référence actuelle dans une variable locale
+        const timeouts = timeoutsRef.current
+
         return () => {
             // Nettoyer tous les timeouts lors du démontage
+            timeouts.forEach(timeout => clearTimeout(timeout))
+            timeouts.clear()
+        }
+    }, [])
+
+    // Nettoyage lors des changements d'état de jeu
+    useEffect(() => {
+        if (gameState && !gameState.isGameStarted) {
+            // Nettoyer la stack quand le jeu se termine
+            setStack([])
             timeoutsRef.current.forEach(timeout => clearTimeout(timeout))
             timeoutsRef.current.clear()
         }
-    }, [])
+    }, [gameState?.isGameStarted, gameState])
+
+    // Protection contre les valeurs undefined
+    if (!Array.isArray(stack)) {
+        return null
+    }
 
     return (
         <div className="fixed top-80 md:top-50 right-4 flex flex-col gap-2 w-32 md:w-48 z-50 pointer-events-none">
             <AnimatePresence mode="popLayout" initial={false}>
-                {stack.slice(0, 3).map((item, index) => (
+                {(stack || []).slice(0, 3).map((item, index) => (
                     <motion.div
                         key={item.id}
                         layout
                         initial={{
-                            y: 0,
+                            y: -20,
                             opacity: 0,
                             scale: 0.8,
                         }}

@@ -9,16 +9,17 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from 'recharts'
-import { Download, Gift, Loader2, Trophy } from 'lucide-react'
-import { XLogo } from '@/constants'
+import { Download, Gift, Loader2, Trophy, Copy, Check } from 'lucide-react'
+import { XLogo } from '@/utils/constants.js'
 import Wrapper from '@/app/components/Wrapper'
-import { useTheme } from '@/context'
+import { useGame, useTheme } from '@/context'
 import DynamicAvatar from '@/app/components/DynamicAvatar'
 import { useState } from 'react'
-import { useWallets, usePrivy } from '@privy-io/react-auth'
+import { usePrivy } from '@privy-io/react-auth'
 import { useWalletClient } from '../hooks/useWalletClient'
-import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS } from '@/constants'
-
+import { usePlayerData } from '../hooks/usePlayerData';
+import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS } from '@/utils/constants.js'
+import Image from 'next/image'
 
 function XProfileDisplay() {
   const { user } = usePrivy();
@@ -63,10 +64,20 @@ function XProfileDisplay() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           {profilePictureUrl && (
-            <img
+            <Image
               src={profilePictureUrl}
               alt={name || 'X profile picture'}
-              style={{ width: '50px', height: '50px', borderRadius: '50%' }}
+              width={50}
+              height={50}
+              style={{
+                borderRadius: '50%',
+                objectFit: 'cover'
+              }}
+              unoptimized={true} // Si c'est une URL externe (Twitter, etc.)
+              onError={(e) => {
+                // Fallback en cas d'erreur
+                e.target.src = '/img/default-avatar.png';
+              }}
             />
           )}
           <div>
@@ -154,7 +165,6 @@ function TweetAvatarButton({ isNight }) {
 }
 
 function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCounter }) {
-  const { wallets } = useWallets();
   const { walletClient } = useWalletClient(embeddedWallet);
   const [isChecking, setIsChecking] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
@@ -170,19 +180,10 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
     setClaimSuccess(false);
 
     try {
-      // Get all linked wallets from the user's linked accounts
-      const linkedWallets = user.linkedAccounts
-        .filter(account => account.type === 'wallet')
-        .map(account => account.address); // Fixed: removed object wrapper
 
-      if (linkedWallets.length === 0) {
-        setError('No linked wallets found');
-        return;
-      }
-
-      // Fixed: properly encode the array
-      const linkedWalletsJson = JSON.stringify(linkedWallets);
-      const response = await fetch(`/api/users/claim?linkedWallets=${encodeURIComponent(linkedWalletsJson)}`);
+      const response = await fetch('/api/users/claim', {
+        method: 'GET',
+      });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -214,20 +215,8 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
         throw new Error('Embedded wallet not found');
       }
 
-      // Fixed: Get linked wallets properly
-      const linkedWallets = user.linkedAccounts
-        .filter(account => account.type === 'wallet')
-        .map(account => account.address);
-
       const claimResponse = await fetch('/api/users/claim', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          linkedWallets: linkedWallets, // Fixed: send array directly
-          address: embeddedWallet.address
-        }),
       });
 
       if (!claimResponse.ok) {
@@ -252,8 +241,8 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
           claimData.signature
         ],
       });
-
       console.log('Transaction hash:', hash);
+
       setClaimSuccess(true);
       setRefreshCounter(c => c + 1)
       setPointsData(null); // Reset pour cacher le bouton claim
@@ -397,7 +386,7 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
   );
 }
 
-export default function Profile({ embeddedWallet, playerData, setRefreshCounter }) {
+export default function Profile({ refreshCounter, setRefreshCounter }) {
   const { user } = usePrivy();
   const { themeMode } = useTheme();
   const isNight = themeMode === 'dark';
@@ -409,7 +398,11 @@ export default function Profile({ embeddedWallet, playerData, setRefreshCounter 
   const borderColor = isNight ? '#444' : '#ddd'
   const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)'
 
-  const { rabbitPoints, playerItems, totalClicks, sessionEndsAt, boost, streak, hasClaimedPoints } = playerData
+  const { embeddedWallet, validationError, isValidating } = useGame()
+
+  const { playerData } = usePlayerData(embeddedWallet, refreshCounter);
+
+  const { rabbitPoints, totalClicks, gameClicks, playerItems, sessionEndsAt, boost, streak, hasClaimedPoints } = playerData;
 
   const rawStats = {
     clothes: playerItems.reduce((count, val) => count + (val > 0 ? 1 : 0), 0),
@@ -440,6 +433,37 @@ export default function Profile({ embeddedWallet, playerData, setRefreshCounter 
       real: `${rawStats.streak ?? 0} days`
     }
   ];
+
+  function CopyWalletButton({ address, isNight }) {
+    const [isCopied, setIsCopied] = useState(false);
+
+    const handleCopy = async () => {
+      try {
+        await navigator.clipboard.writeText(address);
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+      } catch (err) {
+        console.error('Failed to copy address:', err);
+      }
+    };
+
+    return (
+      <button
+        onClick={handleCopy}
+        aria-label={`Copy wallet address`}
+        className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-zinc-700 transition focus:outline-none focus:ring-2 focus:ring-indigo-400"
+      >
+        {isCopied ? (
+          <>
+            Copied!
+          </>
+        ) : (
+          'Copy'
+        )}
+      </button>
+    );
+  }
+
 
   const renderVerticalLabels = ({ payload, x, y }) => {
     const angle = payload.coordinate?.angle ?? 0
@@ -502,6 +526,53 @@ export default function Profile({ embeddedWallet, playerData, setRefreshCounter 
           </RadarChart>
         </ResponsiveContainer>
       </div>
+    )
+  }
+
+
+  // Error and loading states
+  if (isValidating) {
+    return (
+      <Wrapper>
+        <div style={{
+          background: cardBg,
+          padding: '20px',
+          borderRadius: '10px',
+          border: `1px solid ${borderColor}`,
+          boxShadow,
+          textAlign: 'center',
+          margin: '20px'
+        }}>
+          <div className="flex items-center justify-center gap-3">
+            <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+            <p className="break-all">
+              Validating your wallet... Please wait.
+            </p>
+          </div>
+        </div>
+      </Wrapper>
+    )
+  }
+
+  if (validationError) {
+    return (
+      <Wrapper>
+        <div style={{
+          background: cardBg,
+          padding: '20px',
+          borderRadius: '10px',
+          border: `1px solid ${borderColor}`,
+          boxShadow,
+          textAlign: 'center',
+          margin: '20px'
+        }}>
+          <div className="flex items-center justify-center gap-3 text-red-700">
+            <p className="break-all">
+              {validationError}
+            </p>
+          </div>
+        </div>
+      </Wrapper>
     )
   }
 
@@ -595,8 +666,13 @@ export default function Profile({ embeddedWallet, playerData, setRefreshCounter 
               boxShadow,
             }}
           >
-            <strong>Wallet Address: </strong>
-            <span style={{ wordBreak: 'break-all' }}>{displayAddress}</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <strong>Wallet Address: </strong>
+                <span style={{ wordBreak: 'break-all' }}>{displayAddress}</span>
+              </div>
+              <CopyWalletButton address={userAddress} isNight={isNight} />
+            </div>
           </div>
           <div
             style={{

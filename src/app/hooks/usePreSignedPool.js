@@ -1,9 +1,10 @@
-// hooks/usePreSignedPool.js - Version améliorée avec auto-initialisation
+// hooks/usePreSignedPool.js - Version centralisée avec gestion complète du jeu
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { encodeFunctionData } from 'viem'
 import { megaethTestnet } from 'viem/chains'
-import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS } from '@/constants'
+import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS } from '@/utils/constants.js'
 import { useWalletClient } from './useWalletClient'
+
 
 const play = encodeFunctionData({
     abi: DIGIT_RABBITS_ABI,
@@ -11,13 +12,40 @@ const play = encodeFunctionData({
     args: []
 })
 
-export const usePreSignedPool = ({ embeddedWallet }) => {
+export const usePreSignedPool = ({ embeddedWallet, isWalletReady }) => {
     const [preSignedPool, setPreSignedPool] = useState(null)
     const [isInitializing, setIsInitializing] = useState(false)
     const [error, setError] = useState('')
+    const [isGameStarted, setIsGameStarted] = useState(false)
+    const [isWritingContract, setIsWritingContract] = useState(false)
+    const [errorStartGame, setErrorStartGame] = useState('')
+    const [timer, setTimer] = useState(60)
+    const [isExecuting, setIsExecuting] = useState(false)
+    const [showSuccess, setShowSuccess] = useState(false)
+    const [currentTransactionHash, setCurrentTransactionHash] = useState('')
+    const [signedTx, setSignedTx] = useState('')
+    const [showTwitterShare, setShowTwitterShare] = useState(false)
+    const [finalScore, setFinalScore] = useState(0)
+    const [walletStatus, setWalletStatus] = useState('waiting') // 'waiting', 'ready', 'unavailable'
+
     const extendingRef = useRef(false)
-    const hasInitialized = useRef(false) // Pour éviter les re-initialisations
+    const hasInitialized = useRef(false)
+    const timerRef = useRef(null)
     const { walletClient } = useWalletClient(embeddedWallet)
+
+    // Gestion du statut du wallet
+    useEffect(() => {
+        if (!isWalletReady) {
+            setWalletStatus('waiting')
+            return
+        }
+
+        if (embeddedWallet && walletClient) {
+            setWalletStatus('ready')
+        } else {
+            setWalletStatus('unavailable')
+        }
+    }, [isWalletReady, embeddedWallet, walletClient])
 
     const defineGasPrice = async (walletClient) => {
         try {
@@ -37,6 +65,8 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
 
     const extendPool = useCallback(async () => {
         if (extendingRef.current) return
+        if (walletStatus !== 'ready') return
+
         extendingRef.current = true
 
         try {
@@ -87,9 +117,14 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
         } finally {
             extendingRef.current = false
         }
-    }, [walletClient, embeddedWallet?.address, preSignedPool])
+    }, [walletClient, embeddedWallet?.address, preSignedPool, walletStatus])
 
     const initializePool = useCallback(async () => {
+        if (walletStatus !== 'ready') {
+            console.log('⏳ Wallet not ready, skipping pool initialization')
+            return null
+        }
+
         setIsInitializing(true)
         setError('')
         setPreSignedPool(null)
@@ -104,7 +139,9 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
                 address: embeddedWallet?.address,
                 blockTag: 'pending'
             })
-            nonce = nonce + 1 // On ajoute 1 car la 1ere transaction est pour le démarrage du jeu
+
+            ///////////// ON AJOUTE + 1 CAR IL FAUT PRENDRE EN COMPTE LA TRANSACTION POUR DEMARRER LA PARTIE /////////////
+            nonce = nonce + 1
 
             const { gasPrice, gasLimit } = await defineGasPrice(walletClient)
 
@@ -141,32 +178,136 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
         } finally {
             setIsInitializing(false)
         }
-    }, [walletClient, embeddedWallet?.address])
+    }, [walletClient, embeddedWallet?.address, walletStatus])
 
     // Auto-initialisation quand le wallet est prêt
     useEffect(() => {
+        if (walletStatus !== 'ready') return
+        if (hasInitialized.current) return
         if (!walletClient || !embeddedWallet?.address) return
-        if (hasInitialized.current) return // Évite les re-initialisations
 
         console.log('🔄 Auto-initializing pool...')
         initializePool()
-    }, [walletClient, embeddedWallet?.address, initializePool])
+    }, [walletClient, embeddedWallet?.address, initializePool, walletStatus])
+
+    // Timer du jeu
+    useEffect(() => {
+        if (!isGameStarted) return
+
+        timerRef.current = setInterval(() => {
+            setTimer((prev) => {
+                if (prev <= 1) {
+                    clearInterval(timerRef.current)
+                    // Fin du jeu
+                    setIsGameStarted(false)
+                    setShowTwitterShare(true)
+                    setTimer(60)
+                    console.log('⏰ Game ended by timer')
+                    return 0
+                }
+                return prev - 1
+            })
+        }, 1000)
+
+        return () => {
+            if (timerRef.current) {
+                clearInterval(timerRef.current)
+            }
+        }
+    }, [isGameStarted])
 
     // Reset de l'état d'initialisation si le wallet change
     useEffect(() => {
         hasInitialized.current = false
         setPreSignedPool(null)
         setError('')
+        setIsGameStarted(false)
+        setErrorStartGame('')
+        setTimer(60)
+        setIsExecuting(false)
+        setShowSuccess(false)
+        setCurrentTransactionHash('')
+        setSignedTx('')
+        setShowTwitterShare(false)
+        setFinalScore(0)
     }, [embeddedWallet?.address])
+
+    // Fonction pour démarrer le jeu (basée sur le composant Game)
+    const startGame = useCallback(async () => {
+        try {
+            if (walletStatus !== 'ready') {
+                throw new Error('Wallet not ready. Please wait for wallet initialization.')
+            }
+
+            if (!walletClient || !embeddedWallet || !embeddedWallet.address) {
+                throw new Error('No wallet client set')
+            }
+
+            console.log(`Starting game on MegaETH Testnet...`)
+
+            setIsWritingContract(true)
+            setErrorStartGame('')
+
+            const result = await walletClient.writeContract({
+                account: embeddedWallet.address,
+                address: DIGIT_RABBITS_ADDRESS,
+                abi: DIGIT_RABBITS_ABI,
+                functionName: 'startGame',
+                args: [],
+                chain: megaethTestnet
+            })
+
+            if (!result) {
+                throw new Error('Failed to start game')
+            }
+
+            console.log(`Game started with hash: ${result}`)
+            setIsGameStarted(true)
+            setPreSignedPool(prev => {
+                if (!prev) return null
+                return {
+                    ...prev,
+                    currentIndex: prev.currentIndex + 1
+                }
+            }) // Incrémenter l'index pour la première transaction
+            setTimer(60)
+            setFinalScore(0) // Sauvegarder le score initial
+
+            return result
+
+        } catch (err) {
+            console.error('Contract write failed:', err)
+            setErrorStartGame(err.shortMessage || err.message)
+            throw err
+        } finally {
+            setIsWritingContract(false)
+        }
+    }, [walletClient, embeddedWallet, walletStatus])
 
     const executeTransaction = useCallback(async () => {
 
-        console.log("TEST EXECUTE TX")
+        if (walletStatus !== 'ready') {
+            setError('Wallet not ready')
+            return null
+        }
+
+        // Vérification que le jeu a débuté
+        if (!isGameStarted) {
+            setError('Game not started')
+            return null
+        }
 
         if (!preSignedPool || preSignedPool.currentIndex >= preSignedPool.transactions.length) {
             setError('No pre-signed transactions available')
             return null
         }
+
+        const currentTxId = `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+        setIsExecuting(true)
+        setError('')
+        setShowSuccess(false)
+        setSignedTx(currentTxId)
 
         try {
             if (!walletClient) return null
@@ -210,6 +351,9 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
                 }
             })
 
+            setCurrentTransactionHash(result.transactionHash || result)
+            setShowSuccess(true)
+
             return {
                 hash: result.transactionHash || result,
                 timeTaken
@@ -218,11 +362,65 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
         } catch (err) {
             console.error('❌ Error executing:', err)
             setError(err.message)
+            setShowSuccess(false)
             throw err
+        } finally {
+            console.log('🏁 Fin executeTransaction')
+            setIsExecuting(false)
         }
-    }, [walletClient, embeddedWallet?.address, preSignedPool, extendPool])
+    }, [walletClient, embeddedWallet?.address, preSignedPool, extendPool, isGameStarted, walletStatus])
+
+    const syncPoolWithBlockchain = useCallback(async () => {
+        if (!preSignedPool || !walletClient || !embeddedWallet?.address) {
+            console.log('Cannot sync pool: missing requirements')
+            return
+        }
+
+        try {
+            const currentNonce = await walletClient.getTransactionCount({
+                address: embeddedWallet.address,
+                blockTag: 'pending'
+            })
+
+            // Calculer l'index attendu 
+            const expectedIndex = currentNonce - preSignedPool.baseNonce + 1 // +1 pour inclure la transaction de démarrage du jeu
+
+
+            if (expectedIndex !== preSignedPool.currentIndex) {
+                console.log('Syncing pool with blockchain:', {
+                    currentNonce,
+                    baseNonce: preSignedPool.baseNonce,
+                    expectedIndex,
+                    currentIndex: preSignedPool.currentIndex
+                })
+                setPreSignedPool(prev => {
+                    if (!prev) return null
+
+                    const newIndex = Math.max(0, Math.min(expectedIndex, prev.transactions.length))
+
+                    console.log(`🔄 Syncing pool index from ${prev.currentIndex} to ${newIndex}`)
+
+                    return {
+                        ...prev,
+                        currentIndex: newIndex,
+                        hasTriggeredRefill: newIndex < prev.currentIndex ? false : prev.hasTriggeredRefill
+                    }
+                })
+            }
+
+        } catch (err) {
+            console.error('❌ Error syncing pool with blockchain:', err)
+            setError(`Failed to sync pool: ${err.message}`)
+        }
+    }, [preSignedPool, walletClient, embeddedWallet?.address])
 
     const incrementIndex = useCallback(() => {
+        // Vérification que le jeu a débuté avant d'incrémenter
+        if (!isGameStarted) {
+            setError('Game not started')
+            return
+        }
+
         setPreSignedPool(prev => {
             if (!prev) return null
             return {
@@ -230,7 +428,7 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
                 currentIndex: prev.currentIndex + 1
             }
         })
-    }, [])
+    }, [isGameStarted])
 
     const getAvailableTransactions = useCallback(() => {
         return preSignedPool ? preSignedPool.transactions.length - preSignedPool.currentIndex : 0
@@ -239,16 +437,68 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
     const resetPool = useCallback(() => {
         setPreSignedPool(null)
         setError('')
+        setIsGameStarted(false)
+        setErrorStartGame('')
+        setTimer(60)
+        setIsExecuting(false)
+        setShowSuccess(false)
+        setCurrentTransactionHash('')
+        setSignedTx('')
+        setShowTwitterShare(false)
+        setFinalScore(0)
         hasInitialized.current = false
+
+        if (timerRef.current) {
+            clearInterval(timerRef.current)
+        }
+    }, [])
+
+    // Fonction pour fermer le modal Twitter
+    const closeTwitterShare = useCallback(() => {
+        setShowTwitterShare(false)
+    }, [])
+
+    // Fonction pour mettre à jour le score final
+    const updateFinalScore = useCallback((score) => {
+        setFinalScore(score)
     }, [])
 
     return {
+        // États du wallet
+        walletStatus,
+        isWalletReady: walletStatus === 'ready',
+
+        // États du pool
         preSignedPool,
         isInitializing,
         error,
-        initializePool, // Garde la fonction pour une initialisation manuelle si nécessaire
+
+        // États du jeu
+        isGameStarted,
+        isWritingContract,
+        errorStartGame,
+        timer,
+
+        // États des transactions
+        isExecuting,
+        showSuccess,
+        currentTransactionHash,
+        signedTx,
+
+        // États du partage
+        showTwitterShare,
+        finalScore,
+
+        // Fonctions du jeu
+        startGame,
+        updateFinalScore,
+        closeTwitterShare,
+
+        // Fonctions du pool
+        initializePool,
         executeTransaction,
         incrementIndex,
+        syncPoolWithBlockchain,
         getAvailableTransactions,
         resetPool,
         extendPool

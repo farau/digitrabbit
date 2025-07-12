@@ -82,7 +82,7 @@ export default function DraggableWindow({
 
     window.addEventListener('resize', handleResize, { passive: true });
     return () => window.removeEventListener('resize', handleResize);
-  }, [screenSize, constrainPosition]);
+  }, [screenSize]);
 
   // Positionnement initial
   useEffect(() => {

@@ -1,7 +1,7 @@
 import "98.css";
 import "./globals.css";
 import { ContextProvider } from '@/context'
-import LeaderboardProvider from '@/app/components/LeaderboardProvider';
+import LeaderboardProvider from '@/context/LeaderboardProvider';
 
 export const metadata = {
   title: "Digit Rabbits",

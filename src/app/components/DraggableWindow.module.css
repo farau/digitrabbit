@@ -38,11 +38,6 @@
   background-color: #c0c0c0; /* Windows 98 style */
 }
 
-:global(body) {
-  margin: 0;
-  overflow: hidden; /* Pour éviter les scrolls non voulus */
-}
-
 .titleBar {
   display: flex;
   align-items: center;

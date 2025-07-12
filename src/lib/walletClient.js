@@ -1,6 +1,8 @@
 // utils/walletClient.js
 import { createWalletClient, custom, publicActions } from 'viem';
 import { megaethTestnet } from 'viem/chains';
+
+
 let client = null;
 
 export const initWalletClient = async (embeddedWallet) => {

@@ -6,6 +6,7 @@ import { encodePacked, keccak256, hashMessage } from 'viem';
 
 import { recoverAddress } from 'viem'
 
+
 // Singleton pattern for wallet clients
 let backendWalletClient = null;
 let backendPublicClient = null;
@@ -21,6 +22,7 @@ function createMegaETHAccount(privateKey) {
 // Initialize backend wallet client (singleton)
 function initializeBackendWallet() {
   if (backendWalletClient && backendPublicClient) {
+    console.log('Using existing backend wallet client');
     return { walletClient: backendWalletClient, publicClient: backendPublicClient };
   }
 

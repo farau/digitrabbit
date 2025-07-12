@@ -3,12 +3,12 @@ import { megaethTestnet, mainnet } from "viem/chains"
 
 export const publicClient = createPublicClient({
   chain: megaethTestnet,
-  transport: http(), // Utilise l’URL par défaut ou ajoute une RPC custom ici
+  transport: http(),
 })
 
 export const publicClientEth = createPublicClient({
   chain: mainnet,
-  transport: http(), // Utilise l’URL par défaut ou ajoute une RPC custom ici
+  transport: http(),
 })
 
 // Logo X officiel
@@ -31,7 +31,7 @@ export const MEGALIO_ADDRESS_ETH = "0x851b728e568c9e10ab8007f27a525fbbed29b259"
 
 
 // Digit Rabbits smart contract on MegaETH Testnet
-export const DIGIT_RABBITS_ADDRESS = "0x4E564D0c6eb0d5207Eb51599732eeD3F33ab6fEa"
+export const DIGIT_RABBITS_ADDRESS = process.env.NEXT_PUBLIC_DIGIT_RABBITS_ADDRESS
 export const NUM_SLOTS = 5
 export const MAX_LEVEL = 5
 export const COOLDOWN_SECONDS = 5 * 60 * 60; // 5h
@@ -114,7 +114,7 @@ export const DIGIT_RABBITS_ABI = [
       {
         "indexed": false,
         "internalType": "uint256",
-        "name": "points",
+        "name": "clicks",
         "type": "uint256"
       }
     ],
@@ -425,6 +425,11 @@ export const DIGIT_RABBITS_ABI = [
         "type": "uint256"
       },
       {
+        "internalType": "uint256",
+        "name": "gameClicks",
+        "type": "uint256"
+      },
+      {
         "internalType": "uint8[5]",
         "name": "items",
         "type": "uint8[5]"
@@ -476,6 +481,11 @@ export const DIGIT_RABBITS_ABI = [
       {
         "internalType": "uint256",
         "name": "totalClicks",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "gameClicks",
         "type": "uint256"
       },
       {
@@ -704,6 +714,11 @@ export const DIGIT_RABBITS_ABI = [
       {
         "internalType": "uint256",
         "name": "totalClicks",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "gameClicks",
         "type": "uint256"
       },
       {

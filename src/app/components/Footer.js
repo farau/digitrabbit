@@ -6,12 +6,13 @@ import { useEffect } from "react";
 import { useRef } from "react";
 import WalletButton from "./WalletButton";
 import AudioPlayer from "./AudioPlayer";
+import { useTheme } from "@/context"; // Ajout de l'import pour le thème
 
 export default function Footer({ visibleApps, setVisibleApps, appZIndices, setAppZIndices, openApp }) {
 
   const [startOpen, setStartOpen] = useState(false);
   const menuRef = useRef(null);
-
+  const { themeMode } = useTheme(); // Récupération du thème
 
   // Met à jour l'heure toutes les secondes
   const [time, setTime] = useState("");
@@ -48,10 +49,8 @@ export default function Footer({ visibleApps, setVisibleApps, appZIndices, setAp
     };
   }, [startOpen]);
 
-
-
   return (
-    <div className={styles.Footer}>
+    <div className={styles.Footer} data-theme={themeMode}>
       <div className={styles.taskbarLeft}>
         {/* Logo sur la gauche */}
         <button className={styles.startButton} onClick={() => setStartOpen(!startOpen)}>
@@ -65,9 +64,9 @@ export default function Footer({ visibleApps, setVisibleApps, appZIndices, setAp
               <Image src="/img/icons/about.png" alt="About icon" width={30} height={30} className={styles.menuIcon} />
               About
             </div>
-            <div className={styles.menuItem} onClick={() => { openApp("FAQ"); setStartOpen(false); }}>
-              <Image src="/img/icons/faq.png" alt="FAQ icon" width={30} height={30} className={styles.menuIcon} />
-              FAQ
+            <div className={styles.menuItem} onClick={() => { openApp("DREAM"); setStartOpen(false); }}>
+              <Image src="/img/icons/dream.png" alt="DREAM icon" width={30} height={30} className={styles.menuIcon} />
+              DREAM
             </div>
             <div className={styles.menuItem} onClick={() => { openApp("Memes"); setStartOpen(false); }}>
               <Image src="/img/icons/memes.png" alt="Meme icon" width={30} height={30} className={styles.menuIcon} />

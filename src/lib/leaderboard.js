@@ -1,13 +1,6 @@
 // lib/leaderboard.js
-import { PrivyClient } from '@privy-io/server-auth';
-import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, publicClient } from '@/constants';
-
-// Configuration
-const PRIVY_APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
-const PRIVY_APP_SECRET = process.env.PRIVY_APP_SECRET;
-
-// Client Privy
-const privy = new PrivyClient(PRIVY_APP_ID, PRIVY_APP_SECRET);
+import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, publicClient } from '@/utils/constants.js';
+import { privy } from './privyClient';
 
 // Cache pour éviter les appels répétés
 let leaderboardCache = {

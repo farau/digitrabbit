@@ -9,7 +9,7 @@ import MemeGallery from "./MemeGallery";
 import BackgroundEffect from "./BackgroundEffect";
 import Profile from "./Profile";
 import Settings from "./Settings";
-import { useWindowSize } from "../hooks/useWindowSize"; // Assurez-vous d'importer le bon hook
+import { useWindowSize } from "../hooks/useWindowSize";
 import Leaderboard from "./Leaderboard";
 import About from "./About";
 import { useTheme } from "@/context";
@@ -19,22 +19,16 @@ import Chill from "./Chill";
 import Shop from "./Shop";
 import Assets from "./Assets";
 import FAQ from "./FAQ";
-import { useWallets, getEmbeddedConnectedWallet } from '@privy-io/react-auth'
-import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, publicClient, NUM_SLOTS } from '@/constants'
-import { usePrivy } from "@privy-io/react-auth";
-import { usePreSignedPool } from "../hooks/usePreSignedPool";
-import { useWalletClient } from '../hooks/useWalletClient'
+import DREAM from "./DREAM";
+import { useGame } from '@/context/'; // Contexte pour le jeu
 
 export default function MainPage() {
-
   const [visibleApps, setVisibleApps] = useState([]);
   const [minimizedApps, setMinimizedApps] = useState([]);
   const [appZIndices, setAppZIndices] = useState({});
-  const [focusedApp, setFocusedApp] = useState(null);
-  const [zCounter, setZCounter] = useState(1); // zIndex de départ
 
   const [sound, setSound] = useState("crying");
-  const { themeMode, toggleTheme, show3DEffects, toggle3DEffects } = useTheme();
+  const { themeMode, show3DEffects, toggle3DEffects } = useTheme();
   const { width } = useWindowSize();
 
   // Setters pour memes
@@ -45,120 +39,56 @@ export default function MainPage() {
   const [selectedAssetsIndex, setSelectedAssetsIndex] = useState(null);
   const [assetsList, setAssetsList] = useState([]);
 
-  // Refresher compteur pour réactualiser les valeurs du player
-  const [refreshCounter, setRefreshCounter] = useState(0)
-  const [seasonId, setSeasonId] = useState(null)
+  // Setter pour increment des transactions sur les composants
+  const [refreshCounter, setRefreshCounter] = useState(0);
 
-  const [playerData, setPlayerData] = useState({
-    rabbitPoints: 0,
-    playerItems: Array(NUM_SLOTS).fill(0),
-    totalClicks: 0,
-    sessionEndsAt: null,
-    boost: 0,
-    streak: 0,
-    hasClaimedPoints: false
-  })
-
-  // On récupère l'embedded wallet ici puis on propage ensuite
-  const [embeddedWallet, setEmbeddedWallet] = useState(null);
-  const { wallets } = useWallets();
-  const { logout, user, ready, authenticated } = usePrivy();
-
-  // Setter game
-  const [isGameStarted, setIsGameStarted] = useState(false)
-
-  // Utilisation du hook usePreSignedPool
+  // Appel du contexte pour le jeu - TOUTES les fonctions sont disponibles
   const {
+    // États du jeu
+    isGameStarted,
+    // États du pool
     preSignedPool,
-    isInitializing,
-    error,
-    initializePool,
-    executeTransaction,
-    incrementIndex,
-    getAvailableTransactions,
-    resetPool
-  } = usePreSignedPool({ embeddedWallet })
+    syncPoolWithBlockchain,
+    //Embedded wallet
+    embeddedWallet,
+    isWalletReady
+  } = useGame();
 
-
+  // Récupération de la liste des assets et des memes
   useEffect(() => {
-    const wasTempDisabled = sessionStorage.getItem('3d_temp_disabled') === 'true';
-    if (wasTempDisabled) {
-      toggle3DEffects(); // Réactive l'effet 3D
-      sessionStorage.removeItem('3d_temp_disabled'); // Nettoie le flag
-    }
+    fetch("/api/assets")
+      .then((res) => res.json())
+      .then((data) => setAssetsList(data))
+      .catch((err) => console.error("Erreur de chargement des assets.", err));
   }, []);
 
-  // Initialisation de embeddedWallet (This part is correct and can stay)
   useEffect(() => {
-    // The getEmbeddedConnectedWallet function should handle the case where wallets is empty
-    const wallet = getEmbeddedConnectedWallet(wallets);
-    setEmbeddedWallet(wallet);
-  }, [wallets]);
+    fetch("/api/memes")
+      .then((res) => res.json())
+      .then((data) => setMemeList(data))
+      .catch((err) => console.error("Erreur de chargement des memes", err));
+  }, []);
 
-  // 1. On récupère la saison une seule fois au montage
   useEffect(() => {
-    async function fetchSeason() {
+    const currentToggle3DEffects = toggle3DEffects;
 
-      console.log("📦 Fetching season ID...")
-      const season = await publicClient.readContract({
-        address: DIGIT_RABBITS_ADDRESS,
-        abi: DIGIT_RABBITS_ABI,
-        functionName: 'currentSeasonId',
-      })
-      setSeasonId(Number(season))
+    const wasTempDisabled = sessionStorage.getItem('3d_temp_disabled') === 'true';
+    if (wasTempDisabled) {
+      currentToggle3DEffects();
+      sessionStorage.removeItem('3d_temp_disabled');
     }
-
-    if (embeddedWallet?.address) {
-      fetchSeason()
-    }
-  }, [embeddedWallet])
-
-
-  // On charge playerData au démarrage et à chaque refresh
-  useEffect(() => {
-    if (!embeddedWallet?.address || seasonId === null) {
-      return
-    }
-
-    async function fetchPlayerData() {
-      console.log("📥 Fetching player data for", embeddedWallet.address, "Season:", seasonId)
-      const result = await publicClient.readContract({
-        address: DIGIT_RABBITS_ADDRESS,
-        abi: DIGIT_RABBITS_ABI,
-        functionName: 'getPlayerData',
-        args: [embeddedWallet.address, seasonId],
-      })
-
-      const rabbitPoints = result[0] !== undefined ? Number(result[0]) / 1_000_000 : -1
-      const [totalClicks, playerItems, sessionEndsAt, boost, streak, hasClaimedPoints] = result.slice(1)
-
-      const data = {
-        rabbitPoints,
-        totalClicks,
-        playerItems,
-        sessionEndsAt,
-        boost,
-        streak,
-        hasClaimedPoints
-      }
-      setPlayerData(data)
-    }
-
-    fetchPlayerData()
-  }, [embeddedWallet?.address, seasonId, refreshCounter])
-
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // MAJ du currentIndex de pool si refreshCounter est appelé en dehors du composant Game
   useEffect(() => {
-    if (isGameStarted || !preSignedPool) return
-
-    incrementIndex()
-    console.log("On incrémente l'index de la pool initialisée car une tx a été effectuée ailleurs")
-  }, [refreshCounter])
+    if (!isGameStarted && preSignedPool && isWalletReady) {
+      syncPoolWithBlockchain();
+    }
+  }, [refreshCounter, preSignedPool, syncPoolWithBlockchain, isGameStarted, isWalletReady]);
 
 
   function BackgroundSwitcher() {
-
     return (
       <>
         {themeMode === 'light' ? <BackgroundEffect /> : <BackgroundEffect mode="moon" />}
@@ -169,14 +99,10 @@ export default function MainPage() {
   const restoreApp = (appName) => {
     setVisibleApps((apps) => {
       if (apps.includes(appName)) {
-        // L'app est déjà visible : on ne change pas l'ordre, on met simplement le zIndex à jour
         bringToFront(appName, apps);
-        return apps; // on ne modifie pas la liste visibleApps
+        return apps;
       } else {
-        // L'app n'est pas visible, on l'ajoute à la fin
         const newApps = [...apps, appName];
-
-        // On met aussi le zIndex de cette nouvelle app au plus haut
         setAppZIndices((oldZ) => {
           const allApps = Array.from(new Set([...newApps, ...Object.keys(oldZ)]));
           const appsWithZ = allApps.map(app => [app, oldZ[app] || 0]);
@@ -188,27 +114,22 @@ export default function MainPage() {
           newZ[appName] = appsWithZ.length + 1;
           return newZ;
         });
-
         return newApps;
       }
     });
 
-    // On traite le cas des app minimized
     setMinimizedApps((prev) => {
       if (prev.includes(appName)) {
         return prev.filter((app) => app !== appName);
       }
-      return prev; // <-- ici manquait un return
+      return prev;
     });
-
 
     setTimeout(() => {
       const event = new CustomEvent('recenterApp', { detail: { appName } });
       window.dispatchEvent(event);
     }, 0);
-
   };
-
 
   const bringToFront = (appName, visibleAppsRaw) => {
     const visibleApps = Array.isArray(visibleAppsRaw) ? visibleAppsRaw : [];
@@ -226,7 +147,6 @@ export default function MainPage() {
     });
   };
 
-
   const handleClose = (appName) => {
     setVisibleApps((apps) => apps.filter((app) => app !== appName));
     setAppZIndices((prev) => {
@@ -241,106 +161,122 @@ export default function MainPage() {
       case "About":
         return <About />;
       case "Memes":
-        return <MemeGallery memeList={memeList} setMemeList={setMemeList} setSelectedMemeIndex={setSelectedMemeIndex} />;
+        return <MemeGallery
+          memeList={memeList}
+          setSelectedMemeIndex={setSelectedMemeIndex}
+        />;
       case "Assets":
-        return <Assets assetsList={assetsList} setAssetsList={setAssetsList} setSelectedAssetsIndex={setSelectedAssetsIndex} />;
+        return <Assets
+          assetsList={assetsList}
+          setSelectedAssetsIndex={setSelectedAssetsIndex}
+        />;
       case "Profile":
-        return <Profile embeddedWallet={embeddedWallet} playerData={playerData} setRefreshCounter={setRefreshCounter} />;
+        return <Profile
+          refreshCounter={refreshCounter}
+          setRefreshCounter={setRefreshCounter}
+        />;
       case "Game":
-        return <Game refreshCounter={refreshCounter} setRefreshCounter={setRefreshCounter} playerData={playerData} embeddedWallet={embeddedWallet} preSignedPool={preSignedPool} isInitializing={isInitializing} error={error} initializePool={initializePool} executeTransaction={executeTransaction} isGameStarted={isGameStarted} setIsGameStarted={setIsGameStarted} onGameEnd={() => setIsGameStarted(false)} getAvailableTransactions={getAvailableTransactions} />;
+        // Plus besoin de passer toutes les props, le contexte s'en charge
+        return <Game
+          refreshCounter={refreshCounter}
+          setRefreshCounter={setRefreshCounter}
+        />;
       case "Shop":
-        return <Shop refreshCounter={refreshCounter} setRefreshCounter={setRefreshCounter} playerData={playerData} embeddedWallet={embeddedWallet} />;
+        return <Shop
+          refreshCounter={refreshCounter}
+          setRefreshCounter={setRefreshCounter}
+        />;
       case "Leaderboard":
-        return <Leaderboard embeddedWallet={embeddedWallet} />;
+        return <Leaderboard />;
       case "Settings":
-        return <Settings setSound={setSound} embeddedWallet={embeddedWallet} />;
+        return <Settings
+          setSound={setSound}
+        />;
       case "Chill":
         return <Chill />;
       case "FAQ":
         return <FAQ />;
+      case "DREAM":
+        return <DREAM
+          embeddedWallet={embeddedWallet}
+          refreshCounter={refreshCounter} />;
+
       default:
         return null;
     }
   };
 
-
-  // Styles pour les boutons de navigation
-  // (gauche et droite) pour la visualisation des memes  
   const navButtonStyle = {
     background: "none",
     color: "white",
-    fontSize: "clamp(1rem, 2vw, 2rem)", // taille entre 1rem et 2rem selon la largeur d’écran
+    fontSize: "clamp(1rem, 2vw, 2rem)",
     border: "none",
     cursor: "pointer",
-    margin: "0 clamp(10px, 2vw, 20px)", // marge latérale responsive
+    margin: "0 clamp(10px, 2vw, 20px)",
   };
-
 
   return (
     <div className={`${themeMode === 'light' ? styles.bgDay : styles.bgNight}`}>
       <Image src="/img/bg-img-mobile.png" alt="Mobile image" fill className={styles.mobileImage} />
+
       {/* Icônes interactives */}
       <Icon
         name="About"
         src="/img/icons/about.png"
         label="About"
         onClick={() => restoreApp("About")}
-        position={{ x: "1%", y: "1%" }} // Spécifie la position de l'icône
+        position={{ x: "1%", y: "1%" }}
       />
       <Icon
         name="Memes"
         src="/img/icons/memes.png"
         label="Memes"
         onClick={() => restoreApp("Memes")}
-        position={{ x: "1%", y: "2%" }} // Spécifie la position de l'icône
+        position={{ x: "1%", y: "2%" }}
       />
       <Icon
         name="Profile"
         src="/img/icons/profile.png"
         label="Profile"
         onClick={() => restoreApp("Profile")}
-        position={{ x: -140, y: "40%" }} // Spécifie la position de l'icône
+        position={{ x: -140, y: "40%" }}
       />
       <Icon
         name="Leaderboard"
         src="/img/icons/leaderboard.png"
         label="Leaderboard"
         onClick={() => restoreApp("Leaderboard")}
-        position={{ x: 250, y: "70%" }} // Spécifie la position de l'icône
+        position={{ x: 280, y: "60%" }}
       />
       <Icon
         name="Game"
         src="/img/icons/game.png"
         label="Game.exe"
         onClick={() => restoreApp("Game")}
-        position={{ x: -100, y: "35%" }} // Spécifie la position de l'icône
+        position={{ x: -100, y: "35%" }}
       />
-
       <Icon
         name="Chill"
         src="/img/icons/chill.png"
         label="Chill.mp4"
         onClick={() => restoreApp("Chill")}
-        position={{ x: -40, y: "75%" }} // Spécifie la position de l'icône
+        position={{ x: 30, y: "75%" }}
       />
-
       <Icon
         name="Shop"
         src="/img/icons/shop.png"
         label="Shop"
         onClick={() => restoreApp("Shop")}
-        position={{ x: -100, y: "50%" }} // Spécifie la position de l'icône
+        position={{ x: -100, y: "50%" }}
       />
-
       <Icon
         name="digit-head"
-        src="/3d/head" // déclenche l'affichage 3D
+        src="/3d/head"
         sound={sound}
         themeMode={themeMode}
         position={{ x: `${width - 690}px`, y: "1%" }}
         show3DEffects={show3DEffects}
       />
-
       <Icon
         name="settings"
         label={"Settings"}
@@ -348,7 +284,6 @@ export default function MainPage() {
         onClick={() => restoreApp("Settings")}
         position={{ x: "1%", y: "26%" }}
       />
-
       <Icon
         name="assets"
         label={"Assets.png"}
@@ -356,7 +291,6 @@ export default function MainPage() {
         onClick={() => restoreApp("Assets")}
         position={{ x: "10%", y: "6%" }}
       />
-
       <Icon
         name="faq"
         label={"FAQ"}
@@ -365,7 +299,15 @@ export default function MainPage() {
         position={{ x: "12%", y: "26%" }}
       />
 
-      {/* Affichage des memes plein écran*/}
+      <Icon
+        name="dream"
+        label={"DREAM"}
+        src="/img/icons/dream.png"
+        onClick={() => restoreApp("DREAM")}
+        position={{ x: "12%", y: "26%" }}
+      />
+
+      {/* Affichage des memes plein écran */}
       {selectedMemeIndex !== null && (
         <div
           style={{
@@ -383,7 +325,20 @@ export default function MainPage() {
           onClick={() => setSelectedMemeIndex(null)}
         >
           <button onClick={(e) => { e.stopPropagation(); setSelectedMemeIndex((prev) => (prev > 0 ? prev - 1 : memeList.length - 1)); }} style={navButtonStyle}>◀</button>
-          <img src={`img/memes/${encodeURIComponent(memeList[selectedMemeIndex])}`} alt="Full meme" style={{ maxHeight: "70%", maxWidth: "70%", borderRadius: "10px", boxShadow: "0 0 20px black" }} />
+          <Image
+            src={`/img/memes/${encodeURIComponent(memeList[selectedMemeIndex])}`}
+            alt="Full meme"
+            width={500}
+            height={400}
+            style={{
+              maxHeight: "70%",
+              maxWidth: "70%",
+              borderRadius: "10px",
+              boxShadow: "0 0 20px black",
+              objectFit: "contain"
+            }}
+            priority={true} // Si c'est une image importante à charger rapidement
+          />
           <a
             href={`img/memes/${encodeURIComponent(memeList[selectedMemeIndex])}`}
             download
@@ -406,7 +361,7 @@ export default function MainPage() {
         </div>
       )}
 
-      {/* Affichage des assets plein écran*/}
+      {/* Affichage des assets plein écran */}
       {selectedAssetsIndex !== null && (
         <div
           style={{
@@ -424,7 +379,20 @@ export default function MainPage() {
           onClick={() => setSelectedAssetsIndex(null)}
         >
           <button onClick={(e) => { e.stopPropagation(); setSelectedAssetsIndex((prev) => (prev > 0 ? prev - 1 : assetsList.length - 1)); }} style={navButtonStyle}>◀</button>
-          <img src={`img/assets/${encodeURIComponent(assetsList[selectedAssetsIndex])}`} alt="Full asset" style={{ maxHeight: "70%", maxWidth: "70%", borderRadius: "10px", boxShadow: "0 0 20px black" }} />
+          <Image
+            src={`/img/assets/${encodeURIComponent(assetsList[selectedAssetsIndex])}`}
+            alt="Full asset"
+            width={500}
+            height={400}
+            style={{
+              maxHeight: "70%",
+              maxWidth: "70%",
+              borderRadius: "10px",
+              boxShadow: "0 0 20px black",
+              objectFit: "contain"
+            }}
+            priority={true} // Si c'est une image importante à charger rapidement
+          />
           <a
             href={`img/assets/${encodeURIComponent(assetsList[selectedAssetsIndex])}`}
             download
@@ -447,13 +415,12 @@ export default function MainPage() {
         </div>
       )}
 
-
       {visibleApps.map((appName) => (
         <DraggableWindow
           key={appName}
           title={appName}
           onClose={() => handleClose(appName)}
-          zIndex={appZIndices[appName] || 1}  // <-- ici !
+          zIndex={appZIndices[appName] || 1}
           onFocus={() => bringToFront(appName)}
           theme={themeMode}
           visibleApps={visibleApps}
