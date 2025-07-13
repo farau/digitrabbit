@@ -6,6 +6,7 @@ import LeaderboardProvider from '@/context/LeaderboardProvider';
 export const metadata = {
   title: "Digit Rabbits",
   description: "Explore the wonderful world of Digit Rabbits!",
+  manifest: '/manifest.json',
   icons: {
     icon: 'img/favicon.ico',
   },

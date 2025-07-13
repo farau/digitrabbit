@@ -42,14 +42,12 @@
   position: relative;
   width: 100vw;
   height: 100vh;
-  background: url('/img/light.jpeg') no-repeat center center;
-  background-size: 100% 100%; /* Force l'image à occuper exactement 100% de la largeur et hauteur */
+  background: linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.1)), url('/img/light.jpeg') no-repeat center center;
+  background-size: 100% 100%; /* Changé de contain à cover */
   background-attachment: fixed;
   display: flex;
   flex-wrap: wrap;
   color: white;
-  --windows-background: #f0f0f0;
-  --windows-text: #000000;
 }
 
 .bgNight {

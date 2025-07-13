@@ -257,8 +257,8 @@ export default function Settings({ sound, setSound }) {
         </button>
       </div>
 
-      {/* 3D Effects Toggle */}
-      <div className="flex items-center justify-between mb-6">
+      {/* 3D Effects Toggle hidden on Mobile  */}
+      <div className="hidden md:flex items-center justify-between mb-6">
         <div className="text-base font-medium flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-purple-500" />
           <span>3D Effects</span>

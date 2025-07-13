@@ -1,6 +1,6 @@
 'use client';
 
-import { appId } from '@/config';
+import { appId, clientId } from '@/config';
 import { megaethTestnet } from 'viem/chains';
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
@@ -208,13 +208,6 @@ export function ContextProvider({ children }) {
     }
   }, []);
 
-  // Initialiser les effets 3D depuis localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem('show3DEffects');
-    if (saved !== null) {
-      setShow3DEffects(JSON.parse(saved));
-    }
-  }, []);
 
   // Synchroniser avec les classes Tailwind
   useEffect(() => {
@@ -226,21 +219,19 @@ export function ContextProvider({ children }) {
     }
   }, [themeMode]);
 
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     setThemeMode((prev) => {
       const newMode = prev === 'light' ? 'dark' : 'light';
       localStorage.setItem('theme', newMode);
       return newMode;
     });
-  };
+  }, []);
 
-  const toggle3DEffects = () => {
-    setShow3DEffects((prev) => {
-      const newValue = !prev;
-      localStorage.setItem('show3DEffects', JSON.stringify(newValue));
-      return newValue;
-    });
-  };
+  // 1. PREMIÈRE ÉTAPE : Ajouter des logs pour identifier la source du problème
+  const toggle3DEffects = useCallback(() => {
+    setShow3DEffects(!show3DEffects);
+
+  }, [show3DEffects]);
 
   const theme = themeMode === 'light' ? lightTheme : darkTheme;
 
@@ -255,6 +246,7 @@ export function ContextProvider({ children }) {
       <StyledThemeProvider theme={theme}>
         <PrivyProvider
           appId={appId}
+          clientId={clientId}
           config={
             {
               // Create embedded wallets for users who don't have a wallet
