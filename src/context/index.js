@@ -246,7 +246,7 @@ export function ContextProvider({ children }) {
       <StyledThemeProvider theme={theme}>
         <PrivyProvider
           appId={appId}
-          clientId={clientId}
+          {...(clientId && { clientId })}
           config={
             {
               // Create embedded wallets for users who don't have a wallet

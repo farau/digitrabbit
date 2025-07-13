@@ -8,13 +8,17 @@ export const metadata = {
   description: "Explore the wonderful world of Digit Rabbits!",
   manifest: '/manifest.json',
   icons: {
-    icon: 'img/favicon.ico',
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
   },
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+      </head>
       <body className={`antialiased`}>
         <ContextProvider>
           <LeaderboardProvider>
