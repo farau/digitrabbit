@@ -65,7 +65,6 @@ export default function MainPage() {
   // On récupère l'embedded wallet ici puis on propage ensuite
   const [embeddedWallet, setEmbeddedWallet] = useState(null);
   const { wallets } = useWallets();
-  const { logout, user, ready, authenticated } = usePrivy();
 
   // Setter game
   const [isGameStarted, setIsGameStarted] = useState(false)
@@ -82,6 +81,21 @@ export default function MainPage() {
     resetPool
   } = usePreSignedPool({ embeddedWallet })
 
+
+  // Récupération de la liste des assets et des memes
+  useEffect(() => {
+    fetch("/api/assets")
+      .then((res) => res.json())
+      .then((data) => setAssetsList(data))
+      .catch((err) => console.error("Erreur de chargement des assets.", err));
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/memes")
+      .then((res) => res.json())
+      .then((data) => setMemeList(data))
+      .catch((err) => console.error("Erreur de chargement des memes", err));
+  }, []);
 
   useEffect(() => {
     const wasTempDisabled = sessionStorage.getItem('3d_temp_disabled') === 'true';
@@ -245,9 +259,9 @@ export default function MainPage() {
       case "About":
         return <About />;
       case "Memes":
-        return <MemeGallery memeList={memeList} setMemeList={setMemeList} setSelectedMemeIndex={setSelectedMemeIndex} />;
+        return <MemeGallery memeList={memeList} setSelectedMemeIndex={setSelectedMemeIndex} />;
       case "Assets":
-        return <Assets assetsList={assetsList} setAssetsList={setAssetsList} setSelectedAssetsIndex={setSelectedAssetsIndex} />;
+        return <Assets assetsList={assetsList} setSelectedAssetsIndex={setSelectedAssetsIndex} />;
       case "Profile":
         return <Profile embeddedWallet={embeddedWallet} playerData={playerData} setRefreshCounter={setRefreshCounter} />;
       case "Game":

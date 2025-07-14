@@ -2,21 +2,13 @@
 
 import Image from "next/image"
 import Wrapper from '@/app/components/Wrapper';
-import { useState, useEffect } from "react";
 
-export default function Assets({ assetsList, setAssetsList, setSelectedAssetsIndex }) {
+export default function Assets({ assetsList, setSelectedAssetsIndex }) {
 
   function testSetSelectedAssetsIndex(index) {
     setSelectedAssetsIndex(index)
   }
 
-  // Récupération de la liste des assets
-  useEffect(() => {
-    fetch("/api/assets")
-      .then((res) => res.json())
-      .then((data) => setAssetsList(data))
-      .catch((err) => console.error("Erreur de chargement des assets.", err));
-  }, []);
 
   return (
     <Wrapper>
