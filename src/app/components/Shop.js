@@ -266,8 +266,8 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData, em
                         }
                       }}
                       className={`mt-4 w-full px-4 py-2 rounded-lg text-sm transition ${canBuy && selected > 0 && !isWriting
-                          ? 'bg-green-600 hover:bg-green-700 text-white'
-                          : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                        ? 'bg-green-600 hover:bg-green-700 text-white'
+                        : 'bg-gray-400 text-gray-200 cursor-not-allowed'
                         }`}
                     >
                       {isWriting && (
@@ -360,7 +360,7 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData, em
           modalVisible && (
             <>
               <div
-                className="fixed top-160 md:top-50 inset-0 z-50 bg-black/90"
+                className="fixed top-160 md:top-50 inset-0 z-50"
                 style={{
                   position: 'fixed',
                   left: 0,
