@@ -19,6 +19,24 @@
   box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #000;
 }
 
+/* Thème sombre */
+.Footer[data-theme="dark"] {
+  background: linear-gradient(to bottom, #2a2a2a, #1a1a1a);
+  border-top: 2px solid #444;
+  border-bottom: 2px solid #000;
+  color: #eee;
+  box-shadow: inset 1px 1px 0 #444, inset -1px -1px 0 #000;
+}
+
+/* Thème clair */
+.Footer[data-theme="light"] {
+  background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
+  border-top: 2px solid #e2e8f0;
+  border-bottom: 2px solid #cbd5e1;
+  color: #333;
+  box-shadow: inset 1px 1px 0 #e2e8f0, inset -1px -1px 0 #cbd5e1;
+}
+
 .startButton {
   background: linear-gradient(to bottom, #e0e0e0, #a0a0a0);
   border: 0.5px outset #fff;
@@ -26,6 +44,20 @@
   font-weight: bold;
   cursor: pointer;
   margin-right: 8px;
+}
+
+/* Bouton start thème sombre */
+.Footer[data-theme="dark"] .startButton {
+  background: linear-gradient(to bottom, #333, #222);
+  border: 0.5px outset #555;
+  color: #eee;
+}
+
+/* Bouton start thème clair */
+.Footer[data-theme="light"] .startButton {
+  background: linear-gradient(to bottom, #f8fafc, #e2e8f0);
+  border: 0.5px outset #cbd5e1;
+  color: #333;
 }
 
 .startMenu {
@@ -44,9 +76,32 @@
   max-height: 300px;
   overflow-y: auto;
   overflow-x: hidden;
-  /* Pour les navigateurs modernes */
   scrollbar-width: thin;
   scrollbar-color: #888 #1e1e1e;
+}
+
+/* Menu start thème sombre */
+.Footer[data-theme="dark"] .startMenu {
+  background-color: #222;
+  border-top: 2px solid #444;
+  border-left: 2px solid #444;
+  border-bottom: 2px solid #000;
+  border-right: 2px solid #000;
+  box-shadow: inset 1px 1px 0 #444, inset -1px -1px 0 #000;
+  color: #eee;
+  scrollbar-color: #666 #222;
+}
+
+/* Menu start thème clair */
+.Footer[data-theme="light"] .startMenu {
+  background-color: #f8fafc;
+  border-top: 2px solid #e2e8f0;
+  border-left: 2px solid #e2e8f0;
+  border-bottom: 2px solid #cbd5e1;
+  border-right: 2px solid #cbd5e1;
+  box-shadow: inset 1px 1px 0 #e2e8f0, inset -1px -1px 0 #cbd5e1;
+  color: #333;
+  scrollbar-color: #cbd5e1 #f8fafc;
 }
 
 /* Pour Chrome, Edge, Safari */
@@ -64,6 +119,28 @@
   background-color: #888;
 }
 
+/* Scrollbar thème sombre */
+.Footer[data-theme="dark"] .startMenu::-webkit-scrollbar-track {
+  background: #222;
+}
+.Footer[data-theme="dark"] .startMenu::-webkit-scrollbar-thumb {
+  background-color: #666;
+}
+.Footer[data-theme="dark"] .startMenu::-webkit-scrollbar-thumb:hover {
+  background-color: #888;
+}
+
+/* Scrollbar thème clair */
+.Footer[data-theme="light"] .startMenu::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+.Footer[data-theme="light"] .startMenu::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+}
+.Footer[data-theme="light"] .startMenu::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8;
+}
+
 .menuItem {
   display: flex;
   align-items: center;
@@ -79,6 +156,16 @@
   border-bottom: 1px solid #444;
 }
 
+/* Divider thème sombre */
+.Footer[data-theme="dark"] .menuDivider {
+  border-bottom: 1px solid #444;
+}
+
+/* Divider thème clair */
+.Footer[data-theme="light"] .menuDivider {
+  border-bottom: 1px solid #cbd5e1;
+}
+
 .menuItem:last-child {
   border-bottom: none;
 }
@@ -88,27 +175,37 @@
   color: white;
 }
 
+/* Hover thème sombre */
+.Footer[data-theme="dark"] .menuItem:hover {
+  background-color: #4f46e5;
+  color: white;
+}
+
+/* Hover thème clair */
+.Footer[data-theme="light"] .menuItem:hover {
+  background-color: #4f46e5;
+  color: white;
+}
+
 /* Mode mobile */
 @media (max-width: 640px) {
   .startMenu {
-    width: 150px;         /* Moins large en mobile */
-    max-height: 320px;    /* Hauteur limitée pour éviter de cacher l'écran */
-    overflow-y: auto;     /* Scroll vertical visible */
+    width: 150px;         
+    max-height: 320px;    
+    overflow-y: auto;     
     overflow-x: hidden;
   }
   
   .menuItem {
-    gap: 6px;             /* Réduction de l'espace entre icône et texte */
-    padding: 6px 8px;     /* Réduction du padding pour des éléments plus compacts */
-    font-size: 12px;      /* Texte plus petit */
+    gap: 6px;             
+    padding: 6px 8px;     
+    font-size: 12px;      
   }
   
-  /* Classe pour les icônes en mode mobile */
   .menuIcon {
     width: 20px !important;
     height: 20px !important;
   }
-
 }
 
 .taskbarLeft {
@@ -127,17 +224,25 @@
   font-size: 14px;
 }
 
+/* Clock thème sombre */
+.Footer[data-theme="dark"] .clock {
+  color: #eee;
+}
+
+/* Clock thème clair */
+.Footer[data-theme="light"] .clock {
+  color: #333;
+}
+
 .socialIcons {
   display: flex;
-  gap: 10px; /* espace entre les deux icônes */
+  gap: 10px; 
   align-items: center;
   margin-left: 0px;
 }
 
 /* Mode mobile pour les icones socials */
 @media (max-width: 370px) {
-
-  /* On masque les icones socials en mode mobile*/
   .socialIcons {
     display: none !important;
   }
@@ -161,13 +266,41 @@
   box-shadow: inset -1px -1px #808080, inset 1px 1px #ffffff;
 }
 
-
-.taskbarAppButton:active {
-  background: linear-gradient(to bottom, #a0a0a0, #e0e0e0); /* inversé */
-  border: 1px inset #fff; /* inverse border outset → inset */
-  box-shadow: inset 1px 1px 0 #000, inset -1px -1px 0 #fff; /* inversé */
+/* Boutons taskbar thème sombre */
+.Footer[data-theme="dark"] .taskbarAppButton {
+  background-color: #333;
+  border: 1px outset #555;
+  color: #eee;
+  box-shadow: inset -1px -1px #222, inset 1px 1px #555;
 }
 
+/* Boutons taskbar thème clair */
+.Footer[data-theme="light"] .taskbarAppButton {
+  background-color: #f8fafc;
+  border: 1px outset #cbd5e1;
+  color: #333;
+  box-shadow: inset -1px -1px #e2e8f0, inset 1px 1px #cbd5e1;
+}
+
+.taskbarAppButton:active {
+  background: linear-gradient(to bottom, #a0a0a0, #e0e0e0); 
+  border: 1px inset #fff; 
+  box-shadow: inset 1px 1px 0 #000, inset -1px -1px 0 #fff; 
+}
+
+/* Boutons taskbar active thème sombre */
+.Footer[data-theme="dark"] .taskbarAppButton:active {
+  background: linear-gradient(to bottom, #222, #444);
+  border: 1px inset #555;
+  box-shadow: inset 1px 1px 0 #000, inset -1px -1px 0 #555;
+}
+
+/* Boutons taskbar active thème clair */
+.Footer[data-theme="light"] .taskbarAppButton:active {
+  background: linear-gradient(to bottom, #e2e8f0, #f8fafc);
+  border: 1px inset #cbd5e1;
+  box-shadow: inset 1px 1px 0 #94a3b8, inset -1px -1px 0 #cbd5e1;
+}
 
 /* Cacher les boutons taskbar en dessous de 768px de large */
 @media (max-width: 768px) {

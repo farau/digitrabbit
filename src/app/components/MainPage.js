@@ -19,6 +19,8 @@ import Chill from "./Chill";
 import Shop from "./Shop";
 import Assets from "./Assets";
 import FAQ from "./FAQ";
+import DREAM from "./DREAM";
+
 import { useWallets, getEmbeddedConnectedWallet } from '@privy-io/react-auth'
 import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, publicClient, NUM_SLOTS } from '@/constants'
 import { usePrivy } from "@privy-io/react-auth";
@@ -260,6 +262,12 @@ export default function MainPage() {
         return <Chill />;
       case "FAQ":
         return <FAQ />;
+      case "DREAM":
+        return <DREAM
+          embeddedWallet={embeddedWallet}
+          refreshCounter={refreshCounter}
+          playerData={playerData}
+        />;
       default:
         return null;
     }
@@ -287,62 +295,58 @@ export default function MainPage() {
         src="/img/icons/about.png"
         label="About"
         onClick={() => restoreApp("About")}
-        position={{ x: "1%", y: "1%" }} // Spécifie la position de l'icône
+        position={{ x: "1%", y: "1%" }}
       />
       <Icon
         name="Memes"
         src="/img/icons/memes.png"
         label="Memes"
         onClick={() => restoreApp("Memes")}
-        position={{ x: "1%", y: "2%" }} // Spécifie la position de l'icône
+        position={{ x: "1%", y: "2%" }}
       />
       <Icon
         name="Profile"
         src="/img/icons/profile.png"
         label="Profile"
         onClick={() => restoreApp("Profile")}
-        position={{ x: -140, y: "40%" }} // Spécifie la position de l'icône
+        position={{ x: -140, y: "40%" }}
       />
       <Icon
         name="Leaderboard"
         src="/img/icons/leaderboard.png"
         label="Leaderboard"
         onClick={() => restoreApp("Leaderboard")}
-        position={{ x: 250, y: "70%" }} // Spécifie la position de l'icône
+        position={{ x: 280, y: "60%" }}
       />
       <Icon
         name="Game"
         src="/img/icons/game.png"
         label="Game.exe"
         onClick={() => restoreApp("Game")}
-        position={{ x: -100, y: "35%" }} // Spécifie la position de l'icône
+        position={{ x: -100, y: "35%" }}
       />
-
       <Icon
         name="Chill"
         src="/img/icons/chill.png"
         label="Chill.mp4"
         onClick={() => restoreApp("Chill")}
-        position={{ x: -40, y: "75%" }} // Spécifie la position de l'icône
+        position={{ x: 30, y: "75%" }}
       />
-
       <Icon
         name="Shop"
         src="/img/icons/shop.png"
         label="Shop"
         onClick={() => restoreApp("Shop")}
-        position={{ x: -100, y: "50%" }} // Spécifie la position de l'icône
+        position={{ x: -100, y: "50%" }}
       />
-
       <Icon
         name="digit-head"
-        src="/3d/head" // déclenche l'affichage 3D
+        src="/3d/head"
         sound={sound}
         themeMode={themeMode}
         position={{ x: `${width - 690}px`, y: "1%" }}
         show3DEffects={show3DEffects}
       />
-
       <Icon
         name="settings"
         label={"Settings"}
@@ -350,7 +354,6 @@ export default function MainPage() {
         onClick={() => restoreApp("Settings")}
         position={{ x: "1%", y: "26%" }}
       />
-
       <Icon
         name="assets"
         label={"Assets.png"}
@@ -358,12 +361,19 @@ export default function MainPage() {
         onClick={() => restoreApp("Assets")}
         position={{ x: "10%", y: "6%" }}
       />
-
       <Icon
         name="faq"
         label={"FAQ"}
         src="/img/icons/faq.png"
         onClick={() => restoreApp("FAQ")}
+        position={{ x: "12%", y: "26%" }}
+      />
+
+      <Icon
+        name="dream"
+        label={"DREAM"}
+        src="/img/icons/dream.png"
+        onClick={() => restoreApp("DREAM")}
         position={{ x: "12%", y: "26%" }}
       />
 
