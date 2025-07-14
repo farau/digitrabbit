@@ -30,6 +30,37 @@ export const BADBUNNZ_ADDRESS_ETH = "0xbdb13add477e76c1df52192d4f5f4dd67f6a40d8"
 export const MEGALIO_ADDRESS_ETH = "0x851b728e568c9e10ab8007f27a525fbbed29b259"
 
 
+
+export const COMMON_SETTER_ABI = [
+  {
+    "type": "function",
+    "name": "setValue",
+    "inputs": [
+      {
+        "name": "_newValue",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "value",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  }
+]
+export const MEGA_SETTER_ADDRESS = "0x764Bc185a6f6eFb739AEf3dF05F307A9d7B6E604"
+
 // Digit Rabbits smart contract on MegaETH Testnet
 export const DIGIT_RABBITS_ADDRESS = process.env.NEXT_PUBLIC_DIGIT_RABBITS_ADDRESS
 export const NUM_SLOTS = 5

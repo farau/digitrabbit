@@ -10,11 +10,21 @@ export default function TransactionStack({
     showSuccess,
     error,
     transactionHash,
-    gameState // Nouvel prop pour accéder à l'état complet du jeu
+    gameState
 }) {
     const [stack, setStack] = useState([])
     const timeoutsRef = useRef(new Map())
     const transactionCounterRef = useRef(0)
+    const gameCleanupTimeoutRef = useRef(null) // Nouveau ref pour le timeout de nettoyage
+
+    // Debug : Afficher les props reçues
+    /*console.log('TransactionStack props:', {
+        isExecuting,
+        showSuccess,
+        error,
+        transactionHash,
+        gameState
+    })*/
 
     // Fonction pour nettoyer les timeouts
     const clearTimeoutForTx = (txId) => {
@@ -25,7 +35,6 @@ export default function TransactionStack({
         }
     }
 
-    // Fonction pour programmer la suppression d'une transaction après un délai
     // Fonction stable avec useCallback
     const scheduleRemoval = useCallback((txId, delay = 3000) => {
         clearTimeoutForTx(txId)
@@ -34,20 +43,31 @@ export default function TransactionStack({
             setStack((prev) => {
                 const currentStack = prev || []
                 const updated = currentStack.filter((tx) => tx.id !== txId)
+                //console.log('Removing transaction from stack:', txId, 'Updated stack:', updated)
                 return updated
             })
             timeoutsRef.current.delete(txId)
         }, delay)
 
         timeoutsRef.current.set(txId, timeout)
-    }, []) // Vide car toutes les dépendances sont stables
+    }, [])
 
     // Effet principal pour gérer les transactions
     useEffect(() => {
+        //console.log('useEffect triggered with:', { isExecuting, showSuccess, error, transactionHash })
+
         // Générer un ID unique pour chaque transaction
         const txId = `tx_${Date.now()}_${transactionCounterRef.current++}`
 
         if (isExecuting) {
+            //console.log('Adding new executing transaction:', txId)
+
+            // Annuler le nettoyage de fin de jeu si une nouvelle transaction commence
+            if (gameCleanupTimeoutRef.current) {
+                clearTimeout(gameCleanupTimeoutRef.current)
+                gameCleanupTimeoutRef.current = null
+            }
+
             // Nouvelle transaction en cours - nettoyer les anciennes transactions en cours
             setStack((prev) => {
                 const currentStack = prev || []
@@ -72,34 +92,58 @@ export default function TransactionStack({
                     timestamp: Date.now()
                 }
 
-                return [newTransaction, ...withoutExecuting]
+                const newStack = [newTransaction, ...withoutExecuting]
+                //console.log('New stack with executing transaction:', newStack)
+                return newStack
             })
 
             // Timeout de sécurité pour éviter les transactions qui restent bloquées
             scheduleRemoval(txId, 10000) // 10 secondes max pour une transaction
 
-        } else if (showSuccess || error) {
-            // Transaction terminée - mettre à jour le statut
+        } else if ((showSuccess || error) && !isExecuting) {
+            //console.log('Updating transaction status:', { showSuccess, error, transactionHash })
+
+            // Si on a un succès ou erreur mais pas de transaction en cours, créer une transaction terminée
             setStack((prev) => {
                 const currentStack = prev || []
+                //console.log('Current stack before update:', currentStack)
 
-                const updated = currentStack.map((tx) => {
-                    // Mettre à jour la transaction la plus récente en cours d'exécution
-                    if (tx.isExecuting) {
-                        clearTimeoutForTx(tx.id) // Nettoyer le timeout de sécurité
+                // Chercher une transaction en cours d'exécution
+                const executingTx = currentStack.find(tx => tx.isExecuting)
 
-                        return {
-                            ...tx,
-                            isExecuting: false,
-                            isSuccess: showSuccess && !error,
-                            isError: !!error,
-                            transactionHash: transactionHash || tx.transactionHash
+                if (executingTx) {
+                    // Mettre à jour la transaction existante
+                    const updated = currentStack.map((tx) => {
+                        if (tx.isExecuting) {
+                            clearTimeoutForTx(tx.id)
+                            const updatedTx = {
+                                ...tx,
+                                isExecuting: false,
+                                isSuccess: showSuccess && !error,
+                                isError: !!error,
+                                transactionHash: transactionHash || tx.transactionHash
+                            }
+                            //console.log('Updated existing transaction:', updatedTx)
+                            return updatedTx
                         }
+                        return tx
+                    })
+                    return updated
+                } else {
+                    // Créer une nouvelle transaction déjà terminée (cas où isExecuting n'a pas été vu)
+                    //console.log('Creating completed transaction directly')
+                    const newTransaction = {
+                        id: txId,
+                        isExecuting: false,
+                        isSuccess: showSuccess && !error,
+                        isError: !!error,
+                        transactionHash: transactionHash,
+                        timestamp: Date.now()
                     }
-                    return tx
-                })
-
-                return updated
+                    const newStack = [newTransaction, ...currentStack]
+                    //console.log('New stack with completed transaction:', newStack)
+                    return newStack
+                }
             })
 
             // Programmer la suppression après 1 secondes pour les succès, 5 secondes pour les erreurs
@@ -118,25 +162,49 @@ export default function TransactionStack({
 
     }, [isExecuting, showSuccess, error, transactionHash, scheduleRemoval])
 
+    // Debug : Afficher la stack actuelle
+    useEffect(() => {
+        //console.log('Stack updated:', stack)
+    }, [stack])
+
     // Nettoyage lors du démontage du composant
     useEffect(() => {
-        // Capturer la référence actuelle dans une variable locale
         const timeouts = timeoutsRef.current
 
         return () => {
-            // Nettoyer tous les timeouts lors du démontage
             timeouts.forEach(timeout => clearTimeout(timeout))
             timeouts.clear()
+            if (gameCleanupTimeoutRef.current) {
+                clearTimeout(gameCleanupTimeoutRef.current)
+            }
         }
     }, [])
 
-    // Nettoyage lors des changements d'état de jeu
+    // Nettoyage lors des changements d'état de jeu avec délai
     useEffect(() => {
         if (gameState && !gameState.isGameStarted) {
-            // Nettoyer la stack quand le jeu se termine
-            setStack([])
-            timeoutsRef.current.forEach(timeout => clearTimeout(timeout))
-            timeoutsRef.current.clear()
+            //console.log('Game ended, scheduling stack cleanup in 2 seconds')
+
+            // Annuler le timeout précédent s'il existe
+            if (gameCleanupTimeoutRef.current) {
+                clearTimeout(gameCleanupTimeoutRef.current)
+            }
+
+            // Programmer le nettoyage avec un délai de 2 secondes
+            gameCleanupTimeoutRef.current = setTimeout(() => {
+                //console.log('Executing delayed stack cleanup')
+                setStack([])
+                timeoutsRef.current.forEach(timeout => clearTimeout(timeout))
+                timeoutsRef.current.clear()
+                gameCleanupTimeoutRef.current = null
+            }, 2000) // 2 secondes de délai
+        } else if (gameState && gameState.isGameStarted) {
+            // Si le jeu recommence, annuler le nettoyage programmé
+            if (gameCleanupTimeoutRef.current) {
+                //console.log('Game started, canceling scheduled cleanup')
+                clearTimeout(gameCleanupTimeoutRef.current)
+                gameCleanupTimeoutRef.current = null
+            }
         }
     }, [gameState?.isGameStarted, gameState])
 
@@ -145,8 +213,16 @@ export default function TransactionStack({
         return null
     }
 
+    // Debug : Afficher ce qui va être rendu
+    //console.log('Rendering stack with', stack.length, 'items:', stack)
+
     return (
         <div className="fixed top-80 md:top-50 right-4 flex flex-col gap-2 w-32 md:w-48 z-50 pointer-events-none">
+            {/* Retirer le debug en prod */}
+            {/* <div className="bg-red-500 text-white p-2 text-xs rounded">
+                Debug: Stack has {stack.length} items
+            </div> */}
+
             <AnimatePresence mode="popLayout" initial={false}>
                 {(stack || []).slice(0, 3).map((item, index) => (
                     <motion.div
@@ -182,7 +258,7 @@ export default function TransactionStack({
                             }`}
                         onClick={item.isSuccess && item.transactionHash ? () => window.open(getExplorerUrl(item.transactionHash), '_blank') : undefined}
                         style={{
-                            zIndex: 1000 - index // Les nouvelles transactions apparaissent au-dessus
+                            zIndex: 1000 - index
                         }}
                     >
                         <div className="flex items-center space-x-2">
@@ -200,30 +276,21 @@ export default function TransactionStack({
                                         ✓
                                     </div>
                                     <div>
-                                        {/* Texte desktop */}
                                         <p className="text-xs font-medium hidden sm:block">Tx Successful</p>
-                                        {/* Texte mobile */}
                                         <p className="text-xs font-medium sm:hidden">Success</p>
-
                                         {item.transactionHash && (
-                                            <>
-                                                {/* Texte desktop */}
-                                                <p className="text-xs opacity-70 font-mono hidden sm:block">Click to view</p>
-                                            </>
+                                            <p className="text-xs opacity-70 font-mono hidden sm:block">Click to view</p>
                                         )}
                                     </div>
                                 </>
                             )}
-
                             {item.isError && (
                                 <>
                                     <div className="w-4 h-4 flex items-center justify-center bg-red-500 text-white rounded-full text-xs font-bold flex-shrink-0">
                                         ✕
                                     </div>
                                     <div>
-                                        {/* Texte desktop */}
                                         <p className="text-xs font-medium hidden sm:block">Tx Failed</p>
-                                        {/* Texte mobile */}
                                         <p className="text-xs font-medium sm:hidden">Failed</p>
                                     </div>
                                 </>

@@ -83,7 +83,7 @@ export default function MainPage() {
   // MAJ du currentIndex de pool si refreshCounter est appelé en dehors du composant Game
   useEffect(() => {
     if (!isGameStarted && preSignedPool && isWalletReady) {
-      syncPoolWithBlockchain();
+      //syncPoolWithBlockchain();
     }
   }, [refreshCounter, preSignedPool, syncPoolWithBlockchain, isGameStarted, isWalletReady]);
 

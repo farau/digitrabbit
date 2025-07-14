@@ -11,17 +11,21 @@ export default function RabbitImage({ isClicked }) {
     const containerRef = useRef(null);
 
     const handleClick = (e) => {
+        // Empêcher la propagation pour éviter les doubles événements
+        e.preventDefault();
+        e.stopPropagation();
+
         // Vérifier si les clics sont temporairement désactivés
         if (isClickDisabled) return;
 
         setClick(true);
         isClicked();
 
-        // Désactiver les clics pendant 100ms pour éviter le spam
+        // Désactiver les clics pendant 150ms pour éviter le spam (augmenté pour le tactile)
         setIsClickDisabled(true);
         setTimeout(() => {
             setIsClickDisabled(false);
-        }, 100);
+        }, 150);
 
         // Jouer le son
         if (soundRef.current) {
@@ -29,10 +33,24 @@ export default function RabbitImage({ isClicked }) {
             soundRef.current.play().catch(() => { });
         }
 
-        // Créer un effet de ripple à la position du clic
+        // Créer un effet de ripple à la position du clic/touch
         const rect = containerRef.current.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        let x, y;
+
+        // Gérer les coordonnées pour les événements tactiles et souris
+        if (e.touches && e.touches.length > 0) {
+            // Événement tactile
+            x = e.touches[0].clientX - rect.left;
+            y = e.touches[0].clientY - rect.top;
+        } else if (e.changedTouches && e.changedTouches.length > 0) {
+            // Événement tactile (fin de touch)
+            x = e.changedTouches[0].clientX - rect.left;
+            y = e.changedTouches[0].clientY - rect.top;
+        } else {
+            // Événement souris
+            x = e.clientX - rect.left;
+            y = e.clientY - rect.top;
+        }
 
         const newRipple = {
             id: Date.now(),
@@ -51,6 +69,37 @@ export default function RabbitImage({ isClicked }) {
         }, 800);
     };
 
+    // Gérer le hover pour les appareils non tactiles uniquement
+    const handleMouseEnter = () => {
+        // Vérifier si c'est un appareil tactile
+        if (!('ontouchstart' in window)) {
+            setIsHovered(true);
+        }
+    };
+
+    const handleMouseLeave = () => {
+        if (!('ontouchstart' in window)) {
+            setIsHovered(false);
+        }
+    };
+
+    // Gérer les événements tactiles spécifiques
+    const handleTouchStart = (e) => {
+        // Simuler un hover léger pour le feedback tactile
+        setIsHovered(true);
+    };
+
+    const handleTouchEnd = (e) => {
+        // Déclencher le clic
+        handleClick(e);
+        // Enlever l'effet hover après un délai
+        setTimeout(() => setIsHovered(false), 200);
+    };
+
+    const handleTouchCancel = () => {
+        setIsHovered(false);
+    };
+
     useEffect(() => {
         // Initialize sound
         soundRef.current = new Audio(`/sounds/hit.mp3`);
@@ -60,6 +109,31 @@ export default function RabbitImage({ isClicked }) {
         // Initialize image source once
         const index = Math.round(Math.random() * 10) % 4 + 1;
         setImageSrc(`/img/game/head${index}_.png`);
+
+        // Ajouter des event listeners avec { passive: false } pour preventDefault
+        const container = containerRef.current;
+        if (container) {
+            const handleTouchStartPassive = (e) => {
+                e.preventDefault(); // Empêche le zoom sur double tap
+                setIsHovered(true);
+            };
+
+            const handleTouchEndPassive = (e) => {
+                e.preventDefault();
+                handleClick(e);
+                setTimeout(() => setIsHovered(false), 200);
+            };
+
+            // Ajouter les event listeners avec passive: false
+            container.addEventListener('touchstart', handleTouchStartPassive, { passive: false });
+            container.addEventListener('touchend', handleTouchEndPassive, { passive: false });
+
+            // Cleanup
+            return () => {
+                container.removeEventListener('touchstart', handleTouchStartPassive);
+                container.removeEventListener('touchend', handleTouchEndPassive);
+            };
+        }
     }, []);
 
     return (
@@ -152,11 +226,22 @@ export default function RabbitImage({ isClicked }) {
                         transform: translateY(-3px) scale(1.06) rotate(1deg);
                     }
                 }
+
+                /* Styles spécifiques pour les appareils tactiles */
+                @media (hover: none) and (pointer: coarse) {
+                    .rabbit-container {
+                        -webkit-tap-highlight-color: transparent;
+                        -webkit-touch-callout: none;
+                        -webkit-user-select: none;
+                        user-select: none;
+                    }
+                }
             `}</style>
 
             <div
                 ref={containerRef}
                 className={`
+                    rabbit-container
                     w-64 h-64 relative z-10 select-none overflow-hidden
                     transition-all duration-300 ease-out
                     ${click
@@ -167,13 +252,20 @@ export default function RabbitImage({ isClicked }) {
                     }
                     hover:brightness-110
                     ${isClickDisabled ? 'cursor-wait' : 'cursor-pointer'}
+                    active:scale-95
                 `}
-                onPointerDown={handleClick}
-                onMouseEnter={() => setIsHovered(true)}
-                onMouseLeave={() => setIsHovered(false)}
+                // Événements souris (pour desktop)
+                onMouseDown={handleClick}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
+
+                // Événements tactiles de fallback (si les listeners natifs échouent)
+                onTouchCancel={handleTouchCancel}
+
                 style={{
                     filter: click ? 'brightness(1.2) contrast(1.1)' : 'none',
-                    animation: click ? 'bounce 0.3s ease-out' : 'none'
+                    animation: click ? 'bounce 0.3s ease-out' : 'none',
+                    touchAction: 'manipulation' // Améliore les performances tactiles
                 }}
             >
                 {/* Image principale */}
@@ -183,12 +275,12 @@ export default function RabbitImage({ isClicked }) {
                         alt="Rabbit"
                         fill
                         className={`
-    object-contain pointer-events-none
-    transition-all duration-300 ease-out
-    ${click ? 'animate-pulse' : ''}
-  `}
+                            object-contain pointer-events-none
+                            transition-all duration-300 ease-out
+                            ${click ? 'animate-pulse' : ''}
+                        `}
                         draggable={false}
-                        priority={true} // Image principale du jeu, importante à charger rapidement
+                        priority={true}
                     />
                 )}
 

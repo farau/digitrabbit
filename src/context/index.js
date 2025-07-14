@@ -123,16 +123,6 @@ function GameProvider({ children }) {
     isWalletReady: isWalletReady && isWalletValidated
   });
 
-  // Wrapper sécurisé pour les fonctions sensibles
-  // Option 2: Extract just the method you need (if gameState changes frequently)
-  const { executeTransaction } = gameState;
-  const secureExecuteTransaction = useCallback(async (...args) => {
-    if (!isWalletValidated) {
-      throw new Error('Wallet not validated. Please reconnect.');
-    }
-
-    return executeTransaction(...args);
-  }, [isWalletValidated, executeTransaction]);
 
   // Retourner toutes les propriétés à plat pour faciliter l'usage
   return (
@@ -172,7 +162,7 @@ function GameProvider({ children }) {
 
       // Fonctions du pool avec sécurité
       initializePool: gameState.initializePool,
-      executeTransaction: secureExecuteTransaction, // Version sécurisée
+      executeTransaction: gameState.executeTransaction, // Version sécurisée
       incrementIndex: gameState.incrementIndex,
       getAvailableTransactions: gameState.getAvailableTransactions,
       resetPool: gameState.resetPool,
@@ -246,7 +236,7 @@ export function ContextProvider({ children }) {
       <StyledThemeProvider theme={theme}>
         <PrivyProvider
           appId={appId}
-          clientId={clientId}
+          {...(clientId && { clientId })}
           config={
             {
               // Create embedded wallets for users who don't have a wallet

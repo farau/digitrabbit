@@ -232,6 +232,7 @@ export default function Game({ refreshCounter, setRefreshCounter }) {
     getAvailableTransactions,
     closeTwitterShare,
     updateFinalScore,
+    incrementIndex,
 
     // Embedded Wallet
     embeddedWallet,
@@ -277,6 +278,7 @@ export default function Game({ refreshCounter, setRefreshCounter }) {
     }
   }, [showTwitterShare, playerData?.gameClicks, updateFinalScore])
 
+
   // ✅ VARIABLES DÉRIVÉES ET CONSTANTES
   const isNight = themeMode === 'dark'
   const textColor = isNight ? '#eee' : '#333'
@@ -302,16 +304,27 @@ export default function Game({ refreshCounter, setRefreshCounter }) {
   // Exécution d'une transaction de jeu
   const handleExecuteTransaction = async () => {
     if (!executeTransaction || !preSignedPool || !getAvailableTransactions || getAvailableTransactions() === 0) {
+      console.log('❌ Cannot execute transaction:', {
+        executeTransaction: !!executeTransaction,
+        preSignedPool: !!preSignedPool,
+        availableTransactions: getAvailableTransactions ? getAvailableTransactions() : 0
+      })
       return
     }
 
     try {
+      console.log('🎯 Starting transaction execution...')
       await executeTransaction()
+
+      // ✅ IMPORTANT: Refresh seulement après succès
       setRefreshCounter(c => c + 1)
+
     } catch (err) {
-      console.error('Failed to execute transaction:', err)
+      console.error('❌ Failed to execute transaction:', err)
+      // Ne pas rafraîchir en cas d'erreur
     }
   }
+
 
   // ✅ RENDU CONDITIONNEL APRÈS TOUS LES HOOKS
   // Si le hook useGame n'est pas disponible (pas de wallet), on affiche un message
@@ -426,19 +439,22 @@ export default function Game({ refreshCounter, setRefreshCounter }) {
             <RabbitImage
               isClicked={() => {
                 if (/*isGameStarted && */!isExecuting && !isInitializing && preSignedPool && getAvailableTransactions && getAvailableTransactions() > 0) {
+                  console.log('Rabbit clicked, executing transaction...')
                   handleExecuteTransaction()
                 }
               }}
             />
-            <TransactionStack
-              isExecuting={isExecuting}
-              showSuccess={showSuccess}
-              error={error}
-              transactionHash={currentTransactionHash}
-              gameState={gameState}
-            />
           </div>
         </div>
+
+        {/* TransactionStack en dehors du conteneur relatif */}
+        <TransactionStack
+          isExecuting={isExecuting}
+          showSuccess={showSuccess}
+          error={error}
+          transactionHash={currentTransactionHash}
+          gameState={gameState}
+        />
 
         {/* X Share Modal */}
         {showTwitterShare && (
@@ -485,8 +501,16 @@ export default function Game({ refreshCounter, setRefreshCounter }) {
         {/* Error Message */}
         {errorStartGame && (
           <div className="mb-6 p-4 bg-red-100/70 dark:bg-red-900/70 rounded-lg max-w-2xl text-left backdrop-blur-sm">
-            <h4 className="text-red-700 dark:text-red-300 break-all">❌ Error :</h4>
+            <h4 className="text-red-700 dark:text-red-300 break-all">❌ Error during initialization of the game :</h4>
             <p className="text-red-700 dark:text-red-300 break-all">{errorStartGame}</p>
+          </div>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-100/70 dark:bg-red-900/70 rounded-lg max-w-2xl text-left backdrop-blur-sm">
+            <h4 className="text-red-700 dark:text-red-300 break-all">❌ Error :</h4>
+            <p className="text-red-700 dark:text-red-300 break-all">{error}</p>
           </div>
         )}
       </div>

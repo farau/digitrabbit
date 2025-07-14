@@ -8,8 +8,7 @@ export const metadata = {
   description: "Explore the wonderful world of Digit Rabbits!",
   manifest: '/manifest.json',
   icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon.ico',
+    icon: '/icon-192x192.png',
   },
 };
 
@@ -18,6 +17,8 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <head>
         <link rel="manifest" href="/manifest.json" />
+        <link rel="icon" href="/icon-192x192.png" />
+        <link rel="apple-touch-icon" href="/icon-192x192.png" />
       </head>
       <body className={`antialiased`}>
         <ContextProvider>
