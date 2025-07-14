@@ -51,8 +51,9 @@ export default function MainPage() {
 
   const [playerData, setPlayerData] = useState({
     rabbitPoints: 0,
-    playerItems: Array(NUM_SLOTS).fill(0),
     totalClicks: 0,
+    gameClicks: 0,
+    playerItems: Array(NUM_SLOTS).fill(0),
     sessionEndsAt: null,
     boost: 0,
     streak: 0,
@@ -130,11 +131,12 @@ export default function MainPage() {
       })
 
       const rabbitPoints = result[0] !== undefined ? Number(result[0]) / 1_000_000 : -1
-      const [totalClicks, playerItems, sessionEndsAt, boost, streak, hasClaimedPoints] = result.slice(1)
+      const [totalClicks, gameClicks, playerItems, sessionEndsAt, boost, streak, hasClaimedPoints] = result.slice(1)
 
       const data = {
         rabbitPoints,
         totalClicks,
+        gameClicks,
         playerItems,
         sessionEndsAt,
         boost,

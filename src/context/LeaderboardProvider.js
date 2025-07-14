@@ -1,4 +1,4 @@
-// app/components/LeaderboardProvider.js
+// app/context/LeaderboardProvider.js
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
