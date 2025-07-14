@@ -29,7 +29,15 @@ export default function DraggableWindow({
     return { width, height };
   }, [littleWindow, screenSize.width]);
 
-  const isMobile = useMemo(() => screenSize.width < 768, [screenSize.width]);
+  const isMobile = useMemo(() => {
+    // Détection combinée : taille d'écran ET capacité tactile
+    const isSmallScreen = screenSize.width < 768;
+    const hasTouchCapability = typeof window !== 'undefined' &&
+      ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+
+    // On considère comme mobile seulement si c'est un petit écran ET qu'il y a du tactile
+    return isSmallScreen && hasTouchCapability;
+  }, [screenSize.width]);
 
   // Position centrée calculée
   const getCenteredPosition = useCallback(() => {
@@ -82,7 +90,7 @@ export default function DraggableWindow({
 
     window.addEventListener('resize', handleResize, { passive: true });
     return () => window.removeEventListener('resize', handleResize);
-  }, [screenSize, constrainPosition]);
+  }, [screenSize]);
 
   // Positionnement initial
   useEffect(() => {
@@ -166,6 +174,87 @@ export default function DraggableWindow({
     isDragging
   ]);
 
+  // Styles des boutons adaptés au mobile
+  const getButtonStyles = useCallback((isCloseButton = false) => {
+    const baseStyles = {
+      padding: '2px 6px',
+      fontSize: '12px',
+      fontWeight: 'bold',
+      border: '1px outset #c0c0c0',
+      background: animationState === 'minimizing' ? '#a0a0a0' : '#c0c0c0',
+      cursor: animationState === 'minimizing' ? 'default' : 'pointer',
+      fontFamily: 'Pixelated MS Sans Serif, sans-serif',
+      lineHeight: '1',
+      minWidth: '16px',
+      height: '16px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: animationState === 'minimizing' ? '#666' : 'black',
+      opacity: animationState === 'minimizing' ? 0.6 : 1,
+      // Styles spécifiques mobile
+      ...(isMobile && {
+        touchAction: 'manipulation',
+        userSelect: 'none',
+        WebkitTapHighlightColor: 'transparent'
+      })
+    };
+
+    // Ajustement spécifique pour le bouton de fermeture
+    if (isCloseButton) {
+      return {
+        ...baseStyles,
+        background: animationState === 'minimizing' ? '#a0a0a0' : '#c0c0c0'
+      };
+    }
+
+    return {
+      ...baseStyles,
+      background: animationState !== 'normal' ? '#a0a0a0' : '#c0c0c0',
+      cursor: animationState !== 'normal' ? 'default' : 'pointer',
+      color: animationState !== 'normal' ? '#666' : 'black',
+      opacity: animationState !== 'normal' ? 0.6 : 1
+    };
+  }, [isMobile, animationState]);
+
+  // Gestionnaires d'événements améliorés pour mobile
+  const handleButtonPress = useCallback((e, isActive) => {
+    if (isActive) {
+      e.target.style.border = '1px inset #c0c0c0';
+    }
+  }, []);
+
+  const handleButtonRelease = useCallback((e, isActive) => {
+    if (isActive) {
+      e.target.style.border = '1px outset #c0c0c0';
+    }
+  }, []);
+
+  // Gestionnaires tactiles pour mobile
+  const handleTouchMinimize = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (animationState === 'normal') {
+      handleMinimize();
+    }
+  }, [animationState, handleMinimize]);
+
+  const handleTouchClose = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (animationState !== 'minimizing') {
+      onClose();
+    }
+  }, [animationState, onClose]);
+
+  // Détection si l'événement vient d'un touch ou d'une souris
+  const isTouchEvent = useCallback((e) => {
+    return e.type.startsWith('touch') || (e.nativeEvent && e.nativeEvent.sourceCapabilities && e.nativeEvent.sourceCapabilities.firesTouchEvents);
+  }, []);
+
+  // État pour éviter les doubles actions (touch + click)
+  const [touchHandled, setTouchHandled] = useState(false);
+
   // Éviter le rendu si pas encore initialisé
   if (screenSize.width === 0) {
     return null;
@@ -189,83 +278,57 @@ export default function DraggableWindow({
       >
         <div className={`titleBar ${styles.titleBar} ${styles.stickyTop}`}>
           <span>{title}</span>
-          <div className={styles.titleBarControls}>
+          <div className={styles.titleBarControls} style={{ gap: isMobile ? '8px' : '2px' }}>
             {onMinimize && (
               <button
-                onClick={handleMinimize}
+                onClick={(e) => {
+                  // Éviter l'action si déjà gérée par touch
+                  if (!touchHandled) {
+                    handleMinimize();
+                  }
+                  setTouchHandled(false);
+                }}
                 aria-label="Minimize the window"
                 disabled={animationState !== 'normal'}
-                style={{
-                  padding: '2px 6px',
-                  fontSize: '12px',
-                  fontWeight: 'bold',
-                  border: '1px outset #c0c0c0',
-                  background: animationState !== 'normal' ? '#a0a0a0' : '#c0c0c0',
-                  cursor: animationState !== 'normal' ? 'default' : 'pointer',
-                  fontFamily: 'Pixelated MS Sans Serif, sans-serif',
-                  lineHeight: '1',
-                  minWidth: '16px',
-                  height: '16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: animationState !== 'normal' ? '#666' : 'black',
-                  opacity: animationState !== 'normal' ? 0.6 : 1
+                style={getButtonStyles()}
+                onMouseDown={(e) => handleButtonPress(e, animationState === 'normal')}
+                onMouseUp={(e) => handleButtonRelease(e, animationState === 'normal')}
+                onMouseLeave={(e) => handleButtonRelease(e, animationState === 'normal')}
+                onTouchStart={(e) => {
+                  handleButtonPress(e, animationState === 'normal');
                 }}
-                onMouseDown={(e) => {
-                  if (animationState === 'normal') {
-                    e.target.style.border = '1px inset #c0c0c0';
-                  }
-                }}
-                onMouseUp={(e) => {
-                  if (animationState === 'normal') {
-                    e.target.style.border = '1px outset #c0c0c0';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (animationState === 'normal') {
-                    e.target.style.border = '1px outset #c0c0c0';
-                  }
+                onTouchEnd={(e) => {
+                  handleButtonRelease(e, animationState === 'normal');
+                  // Toujours gérer le touch, marquer comme traité
+                  setTouchHandled(true);
+                  handleTouchMinimize(e);
                 }}
               >
                 −
               </button>
             )}
             <button
-              onClick={onClose}
+              onClick={(e) => {
+                // Éviter l'action si déjà gérée par touch
+                if (!touchHandled) {
+                  onClose();
+                }
+                setTouchHandled(false);
+              }}
               aria-label="Close the window"
               disabled={animationState === 'minimizing'}
-              style={{
-                padding: '2px 6px',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                border: '1px outset #c0c0c0',
-                background: animationState === 'minimizing' ? '#a0a0a0' : '#c0c0c0',
-                cursor: animationState === 'minimizing' ? 'default' : 'pointer',
-                fontFamily: 'Pixelated MS Sans Serif, sans-serif',
-                lineHeight: '1',
-                minWidth: '16px',
-                height: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: animationState === 'minimizing' ? '#666' : 'black',
-                opacity: animationState === 'minimizing' ? 0.6 : 1
+              style={getButtonStyles(true)}
+              onMouseDown={(e) => handleButtonPress(e, animationState !== 'minimizing')}
+              onMouseUp={(e) => handleButtonRelease(e, animationState !== 'minimizing')}
+              onMouseLeave={(e) => handleButtonRelease(e, animationState !== 'minimizing')}
+              onTouchStart={(e) => {
+                handleButtonPress(e, animationState !== 'minimizing');
               }}
-              onMouseDown={(e) => {
-                if (animationState !== 'minimizing') {
-                  e.target.style.border = '1px inset #c0c0c0';
-                }
-              }}
-              onMouseUp={(e) => {
-                if (animationState !== 'minimizing') {
-                  e.target.style.border = '1px outset #c0c0c0';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (animationState !== 'minimizing') {
-                  e.target.style.border = '1px outset #c0c0c0';
-                }
+              onTouchEnd={(e) => {
+                handleButtonRelease(e, animationState !== 'minimizing');
+                // Toujours gérer le touch, marquer comme traité
+                setTouchHandled(true);
+                handleTouchClose(e);
               }}
             >
               ×
