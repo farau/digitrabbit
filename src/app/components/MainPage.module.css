@@ -43,7 +43,7 @@
   position: relative;
   width: 100vw;
   height: 100vh;
-  background: url('/img/light.png') no-repeat center center fixed;
+  background: url('/img/light.jpeg') no-repeat center center fixed;
   background-size: cover;
   background-attachment: fixed; /* Fait en sorte que l'image reste fixe lors du défilement */
   display: flex;
@@ -58,7 +58,7 @@
   position: relative;
   width: 100vw;
   height: 100vh;
-  background: url('/img/night.png') no-repeat center center fixed;
+  background: url('/img/night.jpeg') no-repeat center center fixed;
   background-size: cover;
   background-attachment: fixed; /* Fait en sorte que l'image reste fixe lors du défilement */
   display: flex;

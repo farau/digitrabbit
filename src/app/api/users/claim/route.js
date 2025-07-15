@@ -1,7 +1,13 @@
 // api/users/claim/route.js
 import { NextResponse } from 'next/server';
-import { BADBUNNZ_ADDRESS_ETH, MEGALIO_ADDRESS_ETH, publicClientEth } from '@/utils/constants';
+import { BADBUNNZ_ADDRESS_ETH, MEGALIO_ADDRESS_ETH, publicClientEth } from '@/utils/constants.js';
+import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS } from '@/utils/constants.js';
 import { signMessage, signTypedData } from '@/lib/walletBackend';
+import { PrivyClient, User } from '@privy-io/server-auth';
+import { cookies, headers } from 'next/headers';
+import { megaethTestnet } from 'viem/chains';
+import { encodeFunctionData } from 'viem';
+
 
 // ABI minimal pour la fonction balanceOf
 const ERC721_ABI = [
@@ -13,6 +19,13 @@ const ERC721_ABI = [
         "type": "function"
     }
 ];
+
+// Initialize the Privy Server Client
+const privy = new PrivyClient(
+    process.env.NEXT_PUBLIC_PRIVY_APP_ID,
+    process.env.PRIVY_APP_SECRET
+);
+
 
 async function calculatePointsForUser(linkedWallets) {
     let claimablePoints = 0;
@@ -128,23 +141,36 @@ function generateUniqueNonce() {
 }
 
 // POST handler for claiming points
-export async function POST(request) {
+export async function POST() {
     try {
-        const body = await request.json();
-        const { linkedWallets, address } = body; // on récupère l'adresse de l'embeddedWallet pour signer la tx ave
+        let embeddedWallet;
+        let linkedWallets;
+        let user;
 
-        if (!linkedWallets || !Array.isArray(linkedWallets)) {
-            return NextResponse.json(
-                { error: 'linkedWallets array is required' },
-                { status: 400 }
-            );
-        }
+        try {
+            // Get identity token from cookie
+            const cookieStore = await cookies();
+            const idToken = cookieStore.get('privy-id-token')?.value;
 
-        if (linkedWallets.length === 0) {
-            return NextResponse.json(
-                { error: 'No wallets provided' },
-                { status: 400 }
+            if (!idToken) {
+                return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+            }
+
+            // Parse and verify the token
+            user = await privy.getUser({ idToken });
+
+            // Extraire les portefeuilles de l'objet utilisateur fiable
+            embeddedWallet = user.linkedAccounts.find(
+                (account) => account.type === 'wallet' && account.walletClientType === 'privy'
             );
+
+            linkedWallets = user.linkedAccounts
+                .filter(account => account.type === 'wallet')
+                .map(account => account.address);
+
+        } catch (error) {
+            console.error('Failed to get user data:', error);
+            return NextResponse.json({ error: 'Invalid or expired identity token.' }, { status: 401 });
         }
 
         // Calculate points for all linked wallets
@@ -164,24 +190,27 @@ export async function POST(request) {
         const nonce = generateUniqueNonce();
 
         // Create signature using backend wallet
-        // Note: We sign the total points across all wallets
         const signature = await signMessage(
-            address,
+            embeddedWallet.address,
             result.claimablePoints,
             nonce
         );
 
-        // Alternative: Use typed data signature (recommended for production)
-        // const signature = await signTypedData(userAddress, result.totalPoints, nonce);
+        if (!signature) {
+            return NextResponse.json(
+                { error: 'Failed to sign message' },
+                { status: 500 }
+            );
+        }
 
-        // Return claim data
+        // 5. Renvoyer le hachage de la transaction au client
         return NextResponse.json({
             success: true,
-            ...result,
-            nonce,
-            signature,
-            timestamp: Date.now()
+            signature: signature,
+            claimablePoints: result.claimablePoints,
+            nonce: nonce,
         });
+
 
     } catch (error) {
         console.error('Claim route error:', error);
@@ -192,48 +221,39 @@ export async function POST(request) {
     }
 }
 
-// Optional: GET handler to check claimable points without signing
+
 export async function GET(request) {
     try {
-        const { searchParams } = new URL(request.url);
-        const linkedWalletsParam = searchParams.get('linkedWallets');
+        // Get identity token from cookie
+        const cookieStore = await cookies();
+        const idToken = cookieStore.get('privy-id-token')?.value;
 
-        if (!linkedWalletsParam) {
-            return NextResponse.json(
-                { error: 'linkedWallets parameter is required' },
-                { status: 400 }
-            );
+        if (!idToken) {
+            return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
         }
 
-        let linkedWallets;
-        try {
-            linkedWallets = JSON.parse(linkedWalletsParam);
-        } catch (parseError) {
-            return NextResponse.json(
-                { error: 'Invalid linkedWallets JSON format' },
-                { status: 400 }
-            );
-        }
+        // Parse and verify the token
+        const user = await privy.getUser({ idToken });
 
-        if (!Array.isArray(linkedWallets)) {
-            return NextResponse.json(
-                { error: 'linkedWallets must be an array' },
-                { status: 400 }
-            );
-        }
+        // 4. Extraire les adresses des portefeuilles de l'objet utilisateur fiable
+        const linkedWallets = user.linkedAccounts
+            .filter(account => account.type === 'wallet')
+            .map(account => account.address);
 
+        // Calculate points for all linked wallets
         const result = await calculatePointsForUser(linkedWallets);
 
         return NextResponse.json({
             ...result,
-            claimable: result.totalPoints > 0
+            claimable: result.claimablePoints > 0  // Fixed: use claimablePoints instead of totalPoints
         });
 
     } catch (error) {
-        console.error('Get points error:', error);
-        return NextResponse.json(
-            { error: 'Internal server error' },
-            { status: 500 }
-        );
+        console.error('Claim error:', error);
+        // Gérer les erreurs de token invalide
+        if (error.message.includes('invalid')) {
+            return NextResponse.json({ error: 'Invalid auth token' }, { status: 401 });
+        }
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

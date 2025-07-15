@@ -8,26 +8,37 @@ const privy = new PrivyClient(
 );
 
 export async function middleware(req) {
-
     const cookieStore = await cookies();
     const isPrivyProtectedRoute = ['/api/users', '/api/validate-wallet'].some(route =>
         req.nextUrl.pathname.startsWith(route)
     );
 
     // =============== PROTECTION TEST (toutes les routes) ===============
-    // Activer en ajoutant TEST_MODE=true dans .env.local
     if (process.env.TEST_MODE === 'true') {
-        const testAuth = cookieStore.get('auth')?.value;
+        // Vérifier le token d'authentification
+        const authToken = req.cookies.get('auth_token');
 
-        if (testAuth !== 'authenticated' &&
-            req.nextUrl.pathname !== '/login' &&
-            req.nextUrl.pathname !== '/api/auth') {
-            return NextResponse.redirect(new URL('/login', req.url));
+        // Si l'utilisateur est authentifié et va sur /login, rediriger vers /
+        if (req.nextUrl.pathname === '/login' && authToken && authToken.value === 'valid-token') {
+            return NextResponse.redirect(new URL('/', req.url));
         }
 
-        // Si route de login/auth, laisser passer
-        if (req.nextUrl.pathname === '/login' || req.nextUrl.pathname === '/api/auth') {
+        // Routes à exclure de la protection
+        const excludedRoutes = ['/login', '/api/auth'];
+
+        if (excludedRoutes.some(route => req.nextUrl.pathname.startsWith(route))) {
             return NextResponse.next();
+        }
+
+        // Si pas de token, rediriger vers login
+        if (!authToken || authToken.value !== 'valid-token') {
+            return NextResponse.redirect(new URL('/login', req.url));
+        }
+    } else {
+        // =============== MODE PRODUCTION (TEST_MODE = false) ===============
+        // Rediriger /login vers / quand TEST_MODE est false
+        if (req.nextUrl.pathname === '/login') {
+            return NextResponse.redirect(new URL('/', req.url));
         }
     }
 
@@ -58,7 +69,8 @@ export const config = {
     matcher: [
         '/api/users/:path*',
         '/api/validate-wallet',
-        '/((?!_next/static|_next/image|favicon.ico).*)',
+        '/api/auth',
+        '/((?!_next/static|_next/image|favicon.ico).*)', // Supprimé |login pour permettre la redirection
     ],
     matcherExclude: ['/api/csp-report/:path*'],
 };
