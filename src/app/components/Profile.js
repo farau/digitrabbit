@@ -12,13 +12,12 @@ import {
 import { Download, Gift, Loader2, Trophy } from 'lucide-react'
 import { XLogo } from '@/utils/constants'
 import Wrapper from '@/app/components/Wrapper'
-import { useTheme } from '@/context'
+import { useTheme, useGame } from '@/context'
 import DynamicAvatar from '@/app/components/DynamicAvatar'
 import { useState } from 'react'
 import { useWallets, usePrivy } from '@privy-io/react-auth'
 import { useWalletClient } from '../hooks/useWalletClient'
 import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS } from '@/utils/constants'
-
 
 function XProfileDisplay() {
   const { user } = usePrivy();
@@ -397,7 +396,7 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
   );
 }
 
-export default function Profile({ embeddedWallet, playerData, setRefreshCounter }) {
+export default function Profile({ playerData, setRefreshCounter }) {
   const { user } = usePrivy();
   const { themeMode } = useTheme();
   const isNight = themeMode === 'dark';
@@ -408,6 +407,9 @@ export default function Profile({ embeddedWallet, playerData, setRefreshCounter 
   const tooltipColor = isNight ? '#eee' : '#333'
   const borderColor = isNight ? '#444' : '#ddd'
   const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)'
+
+
+  const { embeddedWallet, validationError, isValidating } = useGame()
 
   const { rabbitPoints, playerItems, totalClicks, sessionEndsAt, boost, streak, hasClaimedPoints } = playerData
 
@@ -534,6 +536,53 @@ export default function Profile({ embeddedWallet, playerData, setRefreshCounter 
       </button>
     );
   }
+
+  // Error and loading states
+  if (isValidating) {
+    return (
+      <Wrapper>
+        <div style={{
+          background: cardBg,
+          padding: '20px',
+          borderRadius: '10px',
+          border: `1px solid ${borderColor}`,
+          boxShadow,
+          textAlign: 'center',
+          margin: '20px'
+        }}>
+          <div className="flex items-center justify-center gap-3">
+            <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+            <p className="break-all">
+              Validating your wallet... Please wait.
+            </p>
+          </div>
+        </div>
+      </Wrapper>
+    )
+  }
+
+  if (validationError) {
+    return (
+      <Wrapper>
+        <div style={{
+          background: cardBg,
+          padding: '20px',
+          borderRadius: '10px',
+          border: `1px solid ${borderColor}`,
+          boxShadow,
+          textAlign: 'center',
+          margin: '20px'
+        }}>
+          <div className="flex items-center justify-center gap-3 text-red-700">
+            <p className="break-all">
+              {validationError}
+            </p>
+          </div>
+        </div>
+      </Wrapper>
+    )
+  }
+
 
   const userAddress =
     embeddedWallet?.address || '0x0000000000000000000000000000000000000000'

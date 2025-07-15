@@ -3,11 +3,11 @@
 import Image from 'next/image';
 import { Trophy, RotateCcw, Users, Calendar } from 'lucide-react';
 import { useLeaderboard } from '../hooks/useLeaderboard';
-import { useTheme } from '@/context';
+import { useTheme, useGame } from '@/context';
 import Wrapper from '@/app/components/Wrapper';
 
 // Top 100 displayed by default
-export default function Leaderboard({ limit = 100, embeddedWallet }) {
+export default function Leaderboard({ limit = 100 }) {
   const { data, loading, error, refresh } = useLeaderboard(limit);
   const { themeMode } = useTheme();
 
@@ -18,8 +18,13 @@ export default function Leaderboard({ limit = 100, embeddedWallet }) {
   const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)';
   const subTextColor = isNight ? '#999' : '#666';
 
+  const { embeddedWallet } = useGame()
+
   const formatScore = (score) => {
-    return new Intl.NumberFormat('fr-FR').format(Math.floor(score));
+    return new Intl.NumberFormat('en-EN', {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1
+    }).format(score);
   };
 
   const getRankStyle = (index, isCurrentUser = false) => {
@@ -382,7 +387,7 @@ export default function Leaderboard({ limit = 100, embeddedWallet }) {
               borderColor: borderColor
             }}
           >
-            Last update: {new Date(metadata.lastUpdate).toLocaleString('fr-FR')}
+            Last update: {new Date(metadata.lastUpdate).toLocaleString('en-EN')}
           </div>
         )}
       </div>

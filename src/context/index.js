@@ -2,7 +2,7 @@
 
 import { appId } from '@/config';
 import { megaethTestnet } from 'viem/chains';
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 import { ThemeProvider as StyledThemeProvider } from 'styled-components';
 import { lightTheme, darkTheme, lightModeConfig, darkModeConfig } from '@/themes';
@@ -10,11 +10,129 @@ import { PrivyProvider } from '@privy-io/react-auth';
 import { WagmiProvider } from '@privy-io/wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { wagmiConfig } from '@/wagmi-config';
+import { useWallets, usePrivy, getEmbeddedConnectedWallet } from '@privy-io/react-auth';
 
 if (!appId) throw new Error('App ID is not defined');
 
 const ThemeContext = createContext();
 export const useTheme = () => useContext(ThemeContext);
+
+// Contexte pour le jeu
+const GameContext = createContext();
+
+export const useGame = () => {
+  const context = useContext(GameContext);
+  if (!context) {
+    throw new Error('useGame must be used within GameProvider');
+  }
+  return context;
+};
+
+// Service de validation de wallet
+const WalletValidationService = {
+  async validateWalletOwnership(walletAddress) {
+    try {
+      const response = await fetch('/api/validate-wallet', {
+        method: 'POST',
+        body: JSON.stringify({ walletAddress })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Validation failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result.isValid;
+    } catch (error) {
+      console.error('Wallet validation error:', error);
+      return false;
+    }
+  },
+
+};
+
+// Composant GameProvider interne
+function GameProvider({ children }) {
+  const { user, ready, authenticated } = usePrivy();
+  const { wallets } = useWallets();
+
+  // États du wallet
+  const [embeddedWallet, setEmbeddedWallet] = useState(null);
+  const [isWalletReady, setIsWalletReady] = useState(false);
+  const [isWalletValidated, setIsWalletValidated] = useState(false);
+  const [validationError, setValidationError] = useState(null);
+  const [isValidating, setIsValidating] = useState(false);
+
+
+  // Fonction de validation du wallet
+  const validateWallet = useCallback(async (wallet) => {
+
+    if (!wallet || !user || !authenticated) return false;
+
+    setIsValidating(true);
+    setValidationError(null);
+    try {
+      const isValid = await WalletValidationService.validateWalletOwnership(
+        wallet.address
+      );
+
+      if (isValid) {
+        setIsWalletValidated(true);
+        console.log('✅ Wallet validation successful');
+      } else {
+        setIsWalletValidated(false);
+        setValidationError('Wallet ownership validation failed');
+        console.error('❌ Wallet validation failed');
+      }
+
+      return isValid;
+    } catch (error) {
+      setIsWalletValidated(false);
+      setValidationError(error.message);
+      console.error('❌ Wallet validation error:', error);
+      return false;
+    } finally {
+      setIsValidating(false);
+    }
+  }, [user, authenticated]);
+
+  // Gestion de l'état du wallet et validation
+  useEffect(() => {
+    if (ready && authenticated && user && wallets) {
+      const wallet = wallets.find(
+        (w) => w.walletClientType === 'privy' && w.address
+      );
+
+      if (wallet) {
+        setEmbeddedWallet(wallet);
+        setIsWalletReady(true);
+        // Déclencher la validation
+        validateWallet(wallet);
+      }
+    } else if (ready && !user) {
+      // Utilisateur non connecté mais Privy est prêt
+      setIsWalletReady(true);
+      setIsWalletValidated(false);
+    }
+  }, [ready, authenticated, user, wallets, validateWallet]);
+
+  // Retourner toutes les propriétés à plat pour faciliter l'usage
+  return (
+    <GameContext.Provider value={{
+      // États du wallet avec validation
+      embeddedWallet: isWalletValidated ? embeddedWallet : null,
+      isWalletValidated,
+      isValidating,
+      validationError,
+
+      // Fonctions de validation
+      validateWallet,
+
+    }}>
+      {children}
+    </GameContext.Provider>
+  );
+}
 
 export function ContextProvider({ children }) {
   const [themeMode, setThemeMode] = useState('light');
@@ -95,7 +213,11 @@ export function ContextProvider({ children }) {
             }}
         >
           <QueryClientProvider client={queryClient}>
-            <WagmiProvider config={wagmiConfig}>{children}</WagmiProvider>
+            <WagmiProvider config={wagmiConfig}>
+              <GameProvider>
+                {children}
+              </GameProvider>
+            </WagmiProvider>
           </QueryClientProvider>
         </PrivyProvider>
       </StyledThemeProvider>

@@ -11,7 +11,7 @@ import React from 'react'
 import Wrapper from './Wrapper'
 import RabbitImage from './RabbitImage'
 import TransactionStack from './TransactionStack'
-import { useTheme } from '@/context'
+import { useTheme, useGame } from '@/context'
 import { useWalletClient } from '../hooks/useWalletClient'
 
 function PlayerData({ refreshCounter, themeMode, seasonId, playerData, embeddedWallet }) {
@@ -123,7 +123,7 @@ function PlayerData({ refreshCounter, themeMode, seasonId, playerData, embeddedW
   );
 }
 
-export default function Game({ refreshCounter, setRefreshCounter, playerData, embeddedWallet, preSignedPool, isInitializing, error, initializePool, executeTransaction, getAvailableTransactions, isGameStarted, setIsGameStarted, onGameEnd }) {
+export default function Game({ refreshCounter, setRefreshCounter, playerData, preSignedPool, isInitializing, error, initializePool, executeTransaction, getAvailableTransactions, isGameStarted, setIsGameStarted, onGameEnd }) {
   const [result, setResult] = useState('')
   const [errorStartGame, setErrorStartGame] = useState('')
   const [isExecuting, setIsExecuting] = useState(false)
@@ -140,6 +140,7 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, em
   const borderColor = isNight ? '#444' : '#ddd'
   const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)'
 
+  const { embeddedWallet, isValidating, validationError } = useGame();
   const { walletClient } = useWalletClient(embeddedWallet)
 
   // Gestion de l'effet 3D
@@ -253,6 +254,75 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, em
         setSignedTx('')
       }, 100)
     }
+  }
+
+
+  // Error and loading states
+  if (isValidating) {
+    return (
+      <Wrapper>
+        <div style={{
+          background: cardBg,
+          padding: '20px',
+          borderRadius: '10px',
+          border: `1px solid ${borderColor}`,
+          boxShadow,
+          textAlign: 'center',
+          margin: '20px'
+        }}>
+          <div className="flex items-center justify-center gap-3">
+            <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+            <p className="break-all">
+              Validating your wallet... Please wait.
+            </p>
+          </div>
+        </div>
+      </Wrapper>
+    )
+  }
+
+  if (validationError) {
+    return (
+      <Wrapper>
+        <div style={{
+          background: cardBg,
+          padding: '20px',
+          borderRadius: '10px',
+          border: `1px solid ${borderColor}`,
+          boxShadow,
+          textAlign: 'center',
+          margin: '20px'
+        }}>
+          <div className="flex items-center justify-center gap-3 text-red-700">
+            <p className="break-all">
+              {validationError}
+            </p>
+          </div>
+        </div>
+      </Wrapper>
+    )
+  }
+
+  if (!embeddedWallet) {
+    return (
+      <Wrapper>
+        <div
+          style={{
+            background: cardBg,
+            padding: '20px',
+            borderRadius: '10px',
+            border: `1px solid ${borderColor}`,
+            boxShadow,
+            textAlign: 'center',
+            margin: '20px'
+          }}
+        >
+          <p style={{ color: textColor, margin: 0 }}>
+            Please log in your <XLogo size={16} className={isNight ? 'text-white' : 'text-black'} /> account to enjoy the benefits of MegaETH in our game.
+          </p>
+        </div>
+      </Wrapper>
+    )
   }
 
   return embeddedWallet ? (

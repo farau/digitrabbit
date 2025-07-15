@@ -6,17 +6,19 @@ import { megaethTestnet } from 'viem/chains'
 import { Loader2, ArrowLeft, ArrowRight } from 'lucide-react'
 import Wrapper from './Wrapper'
 import styles from './Shop.module.css'
-import { useTheme } from '@/context'
+import { useTheme, useGame } from '@/context'
 import Image from 'next/image'
 import DynamicAvatar from '@/app/components/DynamicAvatar'
 import { XLogo } from '@/utils/constants'
 import { useWalletClient } from '../hooks/useWalletClient'
 
-export default function Shop({ refreshCounter, setRefreshCounter, playerData, embeddedWallet }) {
+export default function Shop({ refreshCounter, setRefreshCounter, playerData }) {
   const [selectedLevels, setSelectedLevels] = useState(Array(NUM_SLOTS).fill(0))
   const [isWriting, setIsWriting] = useState(false)
   const [error, setError] = useState('')
   const [txResult, setTxResult] = useState('')
+  const { embeddedWallet, isValidating, validationError } = useGame();
+
   const { walletClient } = useWalletClient(embeddedWallet)
 
   // On récupère les données joueurs directement via la props
@@ -55,6 +57,54 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData, em
       setSelectedLevels(playerItems.map(owned => Math.max(1, owned + 1)))
     }
   }, [playerItems])
+
+
+  // Error and loading states
+  if (isValidating) {
+    return (
+      <Wrapper>
+        <div style={{
+          background: cardBg,
+          padding: '20px',
+          borderRadius: '10px',
+          border: `1px solid ${borderColor}`,
+          boxShadow,
+          textAlign: 'center',
+          margin: '20px'
+        }}>
+          <div className="flex items-center justify-center gap-3">
+            <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+            <p className="break-all">
+              Validating your wallet... Please wait.
+            </p>
+          </div>
+        </div>
+      </Wrapper>
+    )
+  }
+
+  if (validationError) {
+    return (
+      <Wrapper>
+        <div style={{
+          background: cardBg,
+          padding: '20px',
+          borderRadius: '10px',
+          border: `1px solid ${borderColor}`,
+          boxShadow,
+          textAlign: 'center',
+          margin: '20px'
+        }}>
+          <div className="flex items-center justify-center gap-3 text-red-700">
+            <p className="break-all">
+              {validationError}
+            </p>
+          </div>
+        </div>
+      </Wrapper>
+    )
+  }
+
 
   const handleBuyItem = async (slot, level) => {
     try {

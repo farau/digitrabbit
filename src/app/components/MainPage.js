@@ -12,7 +12,7 @@ import Settings from "./Settings";
 import { useWindowSize } from "../hooks/useWindowSize"; // Assurez-vous d'importer le bon hook
 import Leaderboard from "./Leaderboard";
 import About from "./About";
-import { useTheme } from "@/context";
+import { useTheme, useGame } from "@/context";
 import DraggableWindow from "./DraggableWindow";
 import Game from "./Game";
 import Chill from "./Chill";
@@ -21,11 +21,9 @@ import Assets from "./Assets";
 import FAQ from "./FAQ";
 import DREAM from "./DREAM";
 
-import { useWallets, getEmbeddedConnectedWallet } from '@privy-io/react-auth'
 import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, publicClient, NUM_SLOTS } from '@/utils/constants'
-import { usePrivy } from "@privy-io/react-auth";
 import { usePreSignedPool } from "../hooks/usePreSignedPool";
-import { useWalletClient } from '../hooks/useWalletClient'
+
 
 export default function MainPage() {
 
@@ -63,8 +61,7 @@ export default function MainPage() {
   })
 
   // On récupère l'embedded wallet ici puis on propage ensuite
-  const [embeddedWallet, setEmbeddedWallet] = useState(null);
-  const { wallets } = useWallets();
+  const { embeddedWallet, validationError, isValidating } = useGame()
 
   // Setter game
   const [isGameStarted, setIsGameStarted] = useState(false)
@@ -104,13 +101,6 @@ export default function MainPage() {
       sessionStorage.removeItem('3d_temp_disabled'); // Nettoie le flag
     }
   }, []);
-
-  // Initialisation de embeddedWallet (This part is correct and can stay)
-  useEffect(() => {
-    // The getEmbeddedConnectedWallet function should handle the case where wallets is empty
-    const wallet = getEmbeddedConnectedWallet(wallets);
-    setEmbeddedWallet(wallet);
-  }, [wallets]);
 
   // 1. On récupère la saison une seule fois au montage
   useEffect(() => {
@@ -263,15 +253,17 @@ export default function MainPage() {
       case "Assets":
         return <Assets assetsList={assetsList} setSelectedAssetsIndex={setSelectedAssetsIndex} />;
       case "Profile":
-        return <Profile embeddedWallet={embeddedWallet} playerData={playerData} setRefreshCounter={setRefreshCounter} />;
+        return <Profile playerData={playerData} setRefreshCounter={setRefreshCounter} />;
       case "Game":
         return <Game refreshCounter={refreshCounter} setRefreshCounter={setRefreshCounter} playerData={playerData} embeddedWallet={embeddedWallet} preSignedPool={preSignedPool} isInitializing={isInitializing} error={error} initializePool={initializePool} executeTransaction={executeTransaction} isGameStarted={isGameStarted} setIsGameStarted={setIsGameStarted} onGameEnd={() => setIsGameStarted(false)} getAvailableTransactions={getAvailableTransactions} />;
       case "Shop":
-        return <Shop refreshCounter={refreshCounter} setRefreshCounter={setRefreshCounter} playerData={playerData} embeddedWallet={embeddedWallet} />;
+        return <Shop refreshCounter={refreshCounter} setRefreshCounter={setRefreshCounter} playerData={playerData} />;
       case "Leaderboard":
-        return <Leaderboard embeddedWallet={embeddedWallet} />;
+        return <Leaderboard />;
       case "Settings":
-        return <Settings setSound={setSound} embeddedWallet={embeddedWallet} />;
+        return <Settings
+          sound={sound}
+          setSound={setSound} />;
       case "Chill":
         return <Chill />;
       case "FAQ":
