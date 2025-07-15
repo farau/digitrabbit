@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, NUM_SLOTS, MAX_LEVEL } from '@/constants'
+import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, NUM_SLOTS, MAX_LEVEL } from '@/utils/constants'
 import { megaethTestnet } from 'viem/chains'
 import { Loader2, ArrowLeft, ArrowRight } from 'lucide-react'
 import Wrapper from './Wrapper'
@@ -9,7 +9,7 @@ import styles from './Shop.module.css'
 import { useTheme } from '@/context'
 import Image from 'next/image'
 import DynamicAvatar from '@/app/components/DynamicAvatar'
-import { XLogo } from '@/constants'
+import { XLogo } from '@/utils/constants'
 import { useWalletClient } from '../hooks/useWalletClient'
 
 export default function Shop({ refreshCounter, setRefreshCounter, playerData, embeddedWallet }) {

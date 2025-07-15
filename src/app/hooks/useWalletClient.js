@@ -1,7 +1,7 @@
 // hooks/useWalletClient.js - Version améliorée
 import { useEffect, useState } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
-import { initWalletClient, clearWalletClient } from '@/utils/walletClient'
+import { initWalletClient, clearWalletClient } from '@/lib/walletClient'
 
 export function useWalletClient(embeddedWallet) {
     const [walletClient, setWalletClient] = useState(null)

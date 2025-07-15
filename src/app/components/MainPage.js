@@ -22,7 +22,7 @@ import FAQ from "./FAQ";
 import DREAM from "./DREAM";
 
 import { useWallets, getEmbeddedConnectedWallet } from '@privy-io/react-auth'
-import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, publicClient, NUM_SLOTS } from '@/constants'
+import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, publicClient, NUM_SLOTS } from '@/utils/constants'
 import { usePrivy } from "@privy-io/react-auth";
 import { usePreSignedPool } from "../hooks/usePreSignedPool";
 import { useWalletClient } from '../hooks/useWalletClient'

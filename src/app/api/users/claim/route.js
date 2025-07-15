@@ -1,7 +1,7 @@
 // api/users/claim/route.js
 import { NextResponse } from 'next/server';
-import { BADBUNNZ_ADDRESS_ETH, MEGALIO_ADDRESS_ETH, publicClientEth } from '@/constants';
-import { signMessage, signTypedData } from '@/utils/walletBackend';
+import { BADBUNNZ_ADDRESS_ETH, MEGALIO_ADDRESS_ETH, publicClientEth } from '@/utils/constants';
+import { signMessage, signTypedData } from '@/lib/walletBackend';
 
 // ABI minimal pour la fonction balanceOf
 const ERC721_ABI = [

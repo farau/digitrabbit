@@ -10,14 +10,14 @@ import {
   Tooltip,
 } from 'recharts'
 import { Download, Gift, Loader2, Trophy } from 'lucide-react'
-import { XLogo } from '@/constants'
+import { XLogo } from '@/utils/constants'
 import Wrapper from '@/app/components/Wrapper'
 import { useTheme } from '@/context'
 import DynamicAvatar from '@/app/components/DynamicAvatar'
 import { useState } from 'react'
 import { useWallets, usePrivy } from '@privy-io/react-auth'
 import { useWalletClient } from '../hooks/useWalletClient'
-import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS } from '@/constants'
+import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS } from '@/utils/constants'
 
 
 function XProfileDisplay() {

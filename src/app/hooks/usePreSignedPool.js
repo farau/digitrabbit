@@ -2,7 +2,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { encodeFunctionData } from 'viem'
 import { megaethTestnet } from 'viem/chains'
-import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS } from '@/constants'
+import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS } from '@/utils/constants'
 import { useWalletClient } from './useWalletClient'
 
 const play = encodeFunctionData({

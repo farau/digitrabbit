@@ -1,6 +1,6 @@
 // lib/leaderboard.js
 import { PrivyClient } from '@privy-io/server-auth';
-import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, publicClient } from '@/constants';
+import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, publicClient } from '@/utils/constants';
 
 // Configuration
 const PRIVY_APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
