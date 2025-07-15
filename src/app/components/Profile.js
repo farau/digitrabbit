@@ -505,6 +505,36 @@ export default function Profile({ embeddedWallet, playerData, setRefreshCounter 
     )
   }
 
+  function CopyWalletButton({ address }) {
+    const [isCopied, setIsCopied] = useState(false);
+
+    const handleCopy = async () => {
+      try {
+        await navigator.clipboard.writeText(address);
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+      } catch (err) {
+        console.error('Failed to copy address:', err);
+      }
+    };
+
+    return (
+      <button
+        onClick={handleCopy}
+        aria-label={`Copy wallet address`}
+        className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-zinc-700 transition focus:outline-none focus:ring-2 focus:ring-indigo-400"
+      >
+        {isCopied ? (
+          <>
+            Copied!
+          </>
+        ) : (
+          'Copy'
+        )}
+      </button>
+    );
+  }
+
   const userAddress =
     embeddedWallet?.address || '0x0000000000000000000000000000000000000000'
   const displayAddress = userAddress.slice(0, 4) + '...' + userAddress.slice(-4)
@@ -595,8 +625,13 @@ export default function Profile({ embeddedWallet, playerData, setRefreshCounter 
               boxShadow,
             }}
           >
-            <strong>Wallet Address: </strong>
-            <span style={{ wordBreak: 'break-all' }}>{displayAddress}</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <strong>Wallet Address: </strong>
+                <span style={{ wordBreak: 'break-all' }}>{displayAddress}</span>
+              </div>
+              <CopyWalletButton address={userAddress} />
+            </div>
           </div>
           <div
             style={{
