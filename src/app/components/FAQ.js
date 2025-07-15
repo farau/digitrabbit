@@ -26,7 +26,7 @@ export default function FAQ() {
                         What is an embedded wallet and why do I need it to play the game?
                     </h5>
                     <p className={`text-xs leading-relaxed text-center ${subTextColor}`}>
-                        An embedded wallet is a secure, self-custodial crypto wallet that is created for you automatically within the game. You don't need to download a separate browser extension or mobile app. This wallet is essential for the game as it stores your hard-earned RabbitPoints and any in-game items you purchase, which are recorded on the blockchain. This ensures you have true ownership of your assets.
+                        An embedded wallet is a secure, self-custodial crypto wallet that is created for you automatically within the game. You don&apos;t need to download a separate browser extension or mobile app. This wallet is essential for the game as it stores your hard-earned RabbitPoints and any in-game items you purchase, which are recorded on the blockchain. This ensures you have true ownership of your assets.
                     </p>
                 </div>
 
@@ -97,7 +97,7 @@ export default function FAQ() {
                         Can I export my private key from the embedded wallet?
                     </h5>
                     <p className={`text-xs leading-relaxed text-center ${subTextColor}`}>
-                        Yes, to do so go to Settings and click on the "Export private key" button.
+                        Yes, to do so go to Settings and click on the &quot;Export private key&quot; button.
                     </p>
                 </div>
 
@@ -114,7 +114,7 @@ export default function FAQ() {
                         Can I link my wallets containing partnerships NFTs?
                     </h5>
                     <p className={`text-xs leading-relaxed text-center ${subTextColor}`}>
-                        Yes, head over the Settings section, you will see appear all of the wallets you've previously linked. These one will be used to compute your final score once the season is over.
+                        Yes, head over the Settings section, you will see appear all of the wallets you&apos;ve previously linked. These one will be used to compute your final score once the season is over.
                     </p>
                 </div>
             </div>
