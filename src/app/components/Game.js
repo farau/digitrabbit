@@ -24,7 +24,7 @@ function PlayerData({ refreshCounter, themeMode, seasonId, playerData, embeddedW
   const borderColor = isNight ? '#444' : '#ddd';
   const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)';
 
-  const { rabbitPoints, totalClicks, sessionEndsAt, boost } = playerData;
+  const { rabbitPoints, totalClicks, gameClicks, playerItems, sessionEndsAt, boost, streak } = playerData;
 
   useEffect(() => {
     const handleResize = () => {
@@ -95,8 +95,10 @@ function PlayerData({ refreshCounter, themeMode, seasonId, playerData, embeddedW
         </div>
 
         <div style={baseCardStyle}>
-          <div style={labelStyle} className="text-base sm:text-sm md:text-xs">Clicks</div>
-          <div style={valueStyle} className="text-base sm:text-sm md:text-xs">{totalClicks - totalClicks}</div>
+          <div style={labelStyle} className="text-base sm:text-sm md:text-xs">
+            {cooldownRemaining > COOLDOWN_SECONDS ? 'Clicks' : 'Last Clicks'}
+          </div>
+          <div style={valueStyle} className="text-base sm:text-sm md:text-xs">{gameClicks}</div>
         </div>
 
         <div style={baseCardStyle}>
@@ -123,6 +125,63 @@ function PlayerData({ refreshCounter, themeMode, seasonId, playerData, embeddedW
   );
 }
 
+function TwitterShareButton({ score, totalClicks, themeMode, onClose }) {
+  const isNight = themeMode === 'dark';
+  const textColor = isNight ? '#eee' : '#333';
+  const cardBg = isNight ? '#222' : '#f3f3f3';
+  const borderColor = isNight ? '#444' : '#ddd';
+  const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)';
+  const subTextColor = isNight ? 'text-zinc-400' : 'text-gray-600';
+
+  const handleTwitterShare = () => {
+    const tweetText = `🐰 Just scored ${score} RabbitPoints on @digitrabbits website! 🚀\n\nExperience lightning-fast blockchain gaming with MegaETH's incredible speed! ⚡\n\nWen 1M total clicks?\n\nActual number of clicks : ${totalClicks} out of 1M!\n#MegaETH #DigitRabbits`;
+    const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
+    window.open(tweetUrl, '_blank', 'width=600,height=400');
+    onClose();
+  };
+
+  const shareButtonStyle = {
+    background: isNight
+      ? 'linear-gradient(135deg, #000000 0%, #1a1a1a 100%)'
+      : 'linear-gradient(135deg, #000000 0%, #333333 100%)',
+    color: 'white',
+    border: 'none',
+    padding: '8px 16px',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    transition: 'all 0.2s ease',
+    boxShadow: isNight
+      ? '0 2px 6px rgba(0, 0, 0, 0.5)'
+      : '0 2px 6px rgba(0, 0, 0, 0.3)',
+  };
+
+  return (
+    <button className={`mt-4 mb-4 ${styles.pulse}`}
+      onClick={handleTwitterShare}
+      style={shareButtonStyle}
+      onMouseOver={(e) => {
+        e.target.style.transform = 'translateY(-1px)';
+        e.target.style.boxShadow = isNight
+          ? '0 3px 8px rgba(0, 0, 0, 0.6)'
+          : '0 3px 8px rgba(0, 0, 0, 0.4)';
+      }}
+      onMouseOut={(e) => {
+        e.target.style.transform = 'translateY(0)';
+        e.target.style.boxShadow = isNight
+          ? '0 2px 6px rgba(0, 0, 0, 0.5)'
+          : '0 2px 6px rgba(0, 0, 0, 0.3)';
+      }}
+    >
+      Share score on <XLogo size={16} />
+    </button>
+  );
+}
+
 export default function Game({ refreshCounter, setRefreshCounter, playerData, preSignedPool, isInitializing, error, initializePool, executeTransaction, getAvailableTransactions, isGameStarted, setIsGameStarted, onGameEnd }) {
   const [result, setResult] = useState('')
   const [errorStartGame, setErrorStartGame] = useState('')
@@ -133,6 +192,8 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
   const [currentTransactionHash, setCurrentTransactionHash] = useState('')
   const { themeMode, show3DEffects, toggle3DEffects } = useTheme()
   const [timer, setTimer] = useState(60)
+  const [showTwitterShare, setShowTwitterShare] = useState(false)
+  const [finalScore, setFinalScore] = useState(0)
 
   const isNight = themeMode === 'dark';
   const textColor = isNight ? '#eee' : '#333'
@@ -173,7 +234,8 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
       setTimer((prev) => {
         if (prev <= 1) {
           clearInterval(interval)
-          onGameEnd?.()  // 👈 Utilise le callback proprement
+          setShowTwitterShare(true)
+          //onGameEnd?.()  // 👈 Utilise le callback proprement
           return 0
         }
         return prev - 1
@@ -181,7 +243,21 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [isGameStarted])
+  }, [isGameStarted, setIsGameStarted])
+
+  // Separate useEffect to handle the parent state update
+  useEffect(() => {
+    if (timer == 0) {
+      onGameEnd?.();
+    }
+  }, [timer, onGameEnd]);
+
+  // Mettre à jour le score final quand le jeu se termine
+  useEffect(() => {
+    if (showTwitterShare && playerData?.gameClicks !== undefined) {
+      setFinalScore(playerData.gameClicks)
+    }
+  }, [showTwitterShare, playerData?.gameClicks, setFinalScore])
 
   // Démarrage du jeu
   const handleStartGame = async () => {
@@ -358,6 +434,16 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
             />
           </div>
         </div>
+
+        {/* X Share Modal */}
+        {showTwitterShare && (
+          <TwitterShareButton
+            score={finalScore}
+            totalClicks={playerData?.totalClicks}
+            themeMode={themeMode}
+            onClose={() => setShowTwitterShare(false)}
+          />
+        )}
 
         {/* Initialization Status */}
         {isInitializing ? (
