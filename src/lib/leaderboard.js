@@ -160,7 +160,7 @@ async function calculateLeaderboard() {
                     rank: 0, // Sera calculé après le tri
                     walletAddress,
                     score: displayScore,
-                    totalClicks: Number(totalClicks),
+                    totalClicks: parseInt(totalClicks, 10),
                     streak: Number(streak),
                     hasClaimedPoints,
                     twitter: {

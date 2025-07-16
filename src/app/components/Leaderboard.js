@@ -147,7 +147,7 @@ export default function Leaderboard({ limit = 100 }) {
           </div>
           <div className="text-xs sm:text-sm mt-1" style={{ color: subTextColor }}>
             <span className="mr-2">🔥 {player.streak}</span>
-            <span>👆 {formatScore(player.totalClicks)}</span>
+            <span>👆 {player.totalClicks}</span>
           </div>
         </div>
       </div>

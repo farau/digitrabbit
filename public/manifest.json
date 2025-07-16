@@ -1,0 +1,28 @@
+{
+  "name": "Digit Rabbits",
+  "short_name": "DigitRabbits",
+  "description": "Explore the wonderful world of Digit Rabbits!",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/img/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/img/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/img/icon-apple.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 'use client';
 
-import { appId } from '@/config';
+import { appId, clientId } from '@/config';
 import { megaethTestnet } from 'viem/chains';
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
@@ -198,6 +198,7 @@ export function ContextProvider({ children }) {
       <StyledThemeProvider theme={theme}>
         <PrivyProvider
           appId={appId}
+          {...(clientId && { clientId })}
           config={
             {
               // Create embedded wallets for users who don't have a wallet

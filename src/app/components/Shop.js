@@ -13,7 +13,7 @@ import { XLogo } from '@/utils/constants'
 import { useWalletClient } from '../hooks/useWalletClient'
 
 export default function Shop({ refreshCounter, setRefreshCounter, playerData }) {
-  const [selectedLevels, setSelectedLevels] = useState(Array(NUM_SLOTS).fill(0))
+  const [selectedLevels, setSelectedLevels] = useState(Array(NUM_SLOTS).fill(1))
   const [isWriting, setIsWriting] = useState(false)
   const [error, setError] = useState('')
   const [txResult, setTxResult] = useState('')
@@ -51,10 +51,10 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
     }
   }, [walletClient])
 
-  // Initialise les niveaux sélectionnés au niveau suivant disponible
+  // Initialise les niveaux sélectionnés au niveau 1
   useEffect(() => {
     if (playerItems) {
-      setSelectedLevels(playerItems.map(owned => Math.max(1, owned + 1)))
+      setSelectedLevels(Array(NUM_SLOTS).fill(1))
     }
   }, [playerItems])
 
@@ -141,11 +141,8 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
   const changeLevel = (slot, delta) => {
     setSelectedLevels((prev) => {
       const next = [...prev]
-      const owned = playerItems[slot]
-      const maxAvailable = Math.min(MAX_LEVEL, owned + 1)
-      const minAvailable = Math.max(1, owned + 1)
-
-      next[slot] = Math.max(minAvailable, Math.min(maxAvailable, next[slot] + delta))
+      // Permet de naviguer entre 1 et MAX_LEVEL
+      next[slot] = Math.max(1, Math.min(MAX_LEVEL, next[slot] + delta))
       return next
     })
   }
@@ -167,8 +164,8 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
 
   // Vérifie si un niveau peut être visualisé
   const isLevelViewable = (slot, level) => {
-    const owned = playerItems[slot]
-    return level <= owned + 1
+    // Permet de voir tous les niveaux de 1 à MAX_LEVEL
+    return level >= 1 && level <= MAX_LEVEL
   }
 
   // Niveau sélectionné pour la preview
@@ -257,7 +254,6 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
               const owned = playerItems[i]
               const price = getItemPrice(selected)
               const canBuy = isLevelAvailable(i, selected)
-              const canView = isLevelViewable(i, selected)
               const nextLevel = owned + 1
 
               return (
@@ -278,31 +274,36 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
                     >
                       <div className="flex items-center gap-4">
                         <ArrowLeft
-                          className={`cursor-pointer hover:scale-110 transition ${selected <= nextLevel ? 'opacity-50 cursor-not-allowed' : ''
+                          className={`cursor-pointer hover:scale-110 transition ${selected <= 1 ? 'opacity-50 cursor-not-allowed' : ''
                             }`}
-                          onClick={() => selected > nextLevel && changeLevel(i, -1)}
+                          onClick={() => selected > 1 && changeLevel(i, -1)}
                         />
                         <div className="text-center">
                           <div className="font-bold">{slotLabels[i]}</div>
                           <div className="text-xs text-gray-500 dark:text-gray-400">
                             Owned: {owned > 0 ? `Lv ${owned}` : 'None'}
                           </div>
-                          <div className={`text-sm ${!canView ? 'opacity-50' : ''}`}>
-                            {canView ? `Selected: Lv ${selected}` : `Next: Lv ${nextLevel}`}
+                          <div className={`text-sm ${!canBuy ? 'opacity-75' : ''}`}>
+                            <div className="flex items-center justify-center gap-1">
+                              <span>Selected: Lv {selected}</span>
+                              {playerItems[i] >= selected && (
+                                <span className="text-green-600 dark:text-green-400">✓</span>
+                              )}
+                            </div>
                           </div>
-                          <div className={`text-sm text-yellow-600 dark:text-yellow-400 ${!canView ? 'opacity-50' : ''}`}>
-                            Price: {canView ? price : getItemPrice(nextLevel)}
+                          <div className={`text-sm text-yellow-600 dark:text-yellow-400`}>
+                            Price: {price}
                           </div>
-                          {!canBuy && canView && (
+                          {!canBuy && (
                             <div className="text-xs text-red-500 dark:text-red-400 mt-1">
-                              {selected > nextLevel ? `Buy Lv ${nextLevel} first` : ''}
+                              {selected > nextLevel ? `Buy Lv ${nextLevel} first` : 'Already owned'}
                             </div>
                           )}
                         </div>
                         <ArrowRight
-                          className={`cursor-pointer hover:scale-110 transition ${selected >= nextLevel ? 'opacity-50 cursor-not-allowed' : ''
+                          className={`cursor-pointer hover:scale-110 transition ${selected >= MAX_LEVEL ? 'opacity-50 cursor-not-allowed' : ''
                             }`}
-                          onClick={() => selected < nextLevel && changeLevel(i, 1)}
+                          onClick={() => selected < MAX_LEVEL && changeLevel(i, 1)}
                         />
                       </div>
                     </div>
@@ -335,40 +336,10 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
             }
 
             {/* IMAGE PREVIEW */}
-            {
-              selected > 0 && isLevelViewable(selectedSlot, selected) && (
-                <div className="flex justify-center">
-                  <div
-                    className="w-28 h-28 rounded-full flex items-center justify-center overflow-hidden"
-                    style={{
-                      backgroundColor: cardBg,
-                      color: textColor,
-                      borderColor,
-                      borderWidth: 1,
-                      borderStyle: 'solid',
-                      boxShadow,
-                    }}
-                  >
-                    <Image
-                      src={getImagePath(selectedSlot, selected)}
-                      alt={`${slotLabels[selectedSlot]} level ${selected}`}
-                      width={160}
-                      height={160}
-                      className="w-full h-full object-contain"
-                      onError={(e) => {
-                        e.target.style.display = 'none'
-                      }}
-                    />
-                  </div>
-                </div>
-              )
-            }
-
-            {/* Message si niveau non disponible */}
-            {selected > 0 && !isLevelViewable(selectedSlot, selected) && (
+            {selected > 0 && (
               <div className="flex justify-center">
                 <div
-                  className="w-28 h-28 rounded-full flex items-center justify-center"
+                  className="w-28 h-28 rounded-full flex items-center justify-center overflow-hidden"
                   style={{
                     backgroundColor: cardBg,
                     color: textColor,
@@ -378,111 +349,111 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
                     boxShadow,
                   }}
                 >
-                  <div className="text-center text-sm opacity-50">
-                    <div>🔒</div>
-                    <div>Locked</div>
-                  </div>
+                  <Image
+                    src={getImagePath(selectedSlot, selected)}
+                    alt={`${slotLabels[selectedSlot]} level ${selected}`}
+                    width={160}
+                    height={160}
+                    className="w-full h-full object-contain"
+                    onError={(e) => {
+                      e.target.style.display = 'none'
+                    }}
+                  />
                 </div>
               </div>
             )}
-          </div >
-        </div >
+          </div>
+        </div>
 
         {/* TX Feedback */}
-        {
-          txResult && (
-            <div className="mt-6 mx-auto max-w-md p-4 text-center text-green-800 bg-green-100 border border-green-400 rounded-lg dark:bg-green-900 dark:text-green-300 dark:border-green-600 text-sm shadow-sm">
-              ✅ Transaction :{' '}
-              <a
-                className="underline hover:text-green-700 dark:hover:text-green-400"
-                target="_blank"
-                rel="noopener noreferrer"
-                href={`https://web3.okx.com/explorer/megaeth-testnet/tx/${txResult}`}
-              >
-                See on explorer
-              </a>
-            </div>
-          )
-        }
+        {txResult && (
+          <div className="mt-6 mx-auto max-w-md p-4 text-center text-green-800 bg-green-100 border border-green-400 rounded-lg dark:bg-green-900 dark:text-green-300 dark:border-green-600 text-sm shadow-sm">
+            ✅ Transaction :{' '}
+            <a
+              className="underline hover:text-green-700 dark:hover:text-green-400"
+              target="_blank"
+              rel="noopener noreferrer"
+              href={`https://web3.okx.com/explorer/megaeth-testnet/tx/${txResult}`}
+            >
+              See on explorer
+            </a>
+          </div>
+        )}
 
         {/* Confirmation Modal */}
-        {
-          modalVisible && (
-            <>
+        {modalVisible && (
+          <>
+            <div
+              className="fixed top-160 md:top-50 inset-0 z-50"
+              style={{
+                position: 'fixed',
+                left: 0,
+                width: '100%',
+                height: '100%',
+                zIndex: 9999
+              }}
+              onClick={() => setModalVisible(false)}
+            />
+            <div
+              className="fixed z-50"
+              style={{
+                position: 'fixed',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                zIndex: 10000,
+                width: '90%',
+                maxWidth: '384px'
+              }}
+            >
               <div
-                className="fixed top-160 md:top-50 inset-0 z-50"
+                className='relative top-160 md:top-50'
                 style={{
-                  position: 'fixed',
-                  left: 0,
-                  width: '100%',
-                  height: '100%',
-                  zIndex: 9999
-                }}
-                onClick={() => setModalVisible(false)}
-              />
-              <div
-                className="fixed z-50"
-                style={{
-                  position: 'fixed',
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  zIndex: 10000,
-                  width: '90%',
-                  maxWidth: '384px'
+                  backgroundColor: cardBg,
+                  color: textColor,
+                  borderColor,
+                  borderWidth: 1,
+                  borderStyle: 'solid',
+                  boxShadow,
+                  borderRadius: '12px',
+                  padding: '24px'
                 }}
               >
-                <div
-                  className='relative top-160 md:top-50'
-                  style={{
-                    backgroundColor: cardBg,
-                    color: textColor,
-                    borderColor,
-                    borderWidth: 1,
-                    borderStyle: 'solid',
-                    boxShadow,
-                    borderRadius: '12px',
-                    padding: '24px'
-                  }}
-                >
-                  <h2 className="text-lg font-bold mb-2 text-center">Confirm Purchase</h2>
-                  <p className="text-sm text-center mb-4">
-                    Buy <span className="font-semibold">Level {pendingBuy.level}</span> item in{' '}
-                    <span className="font-semibold">{slotLabels[pendingBuy.slot]}</span>?
-                  </p>
-                  <div className="flex justify-center gap-4">
-                    <button
-                      onClick={() => {
-                        setModalVisible(false)
-                        handleBuyItem(pendingBuy.slot, pendingBuy.level)
-                      }}
-                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
-                    >
-                      Confirm
-                    </button>
-                    <button
-                      onClick={() => setModalVisible(false)}
-                      className="bg-gray-300 hover:bg-gray-400 dark:bg-gray-700 dark:hover:bg-gray-600 text-black dark:text-white px-4 py-2 rounded"
-                    >
-                      Cancel
-                    </button>
-                  </div>
+                <h2 className="text-lg font-bold mb-2 text-center">Confirm Purchase</h2>
+                <p className="text-sm text-center mb-4">
+                  Buy <span className="font-semibold">Level {pendingBuy.level}</span> item in{' '}
+                  <span className="font-semibold">{slotLabels[pendingBuy.slot]}</span>?
+                </p>
+                <div className="flex justify-center gap-4">
+                  <button
+                    onClick={() => {
+                      setModalVisible(false)
+                      handleBuyItem(pendingBuy.slot, pendingBuy.level)
+                    }}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    onClick={() => setModalVisible(false)}
+                    className="bg-gray-300 hover:bg-gray-400 dark:bg-gray-700 dark:hover:bg-gray-600 text-black dark:text-white px-4 py-2 rounded"
+                  >
+                    Cancel
+                  </button>
                 </div>
               </div>
-            </>
-          )
-        }
-      </div >
+            </div>
+          </>
+        )}
+      </div>
       {/* Error Message */}
-      {
-        error && (
-          <div className="mb-6 mt-4 p-4 bg-red-100/70 dark:bg-red-900/70 rounded-lg max-w-2xl text-left backdrop-blur-sm">
-            <h4 className="text-red-700 dark:text-red-300 break-all">❌ Error :</h4>
-            <p className="text-red-700 dark:text-red-300 break-all">{error}</p>
-          </div>
-        )
-      }
-    </Wrapper >
+      {error && (
+        <div className="mb-6 mt-4 p-4 bg-red-100/70 dark:bg-red-900/70 rounded-lg max-w-2xl text-left backdrop-blur-sm">
+          <h4 className="text-red-700 dark:text-red-300 break-all">❌ Error :</h4>
+          <p className="text-red-700 dark:text-red-300 break-all">{error}</p>
+        </div>
+      )}
+    </Wrapper>
   ) : (
     <Wrapper>
       <div

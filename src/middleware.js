@@ -62,7 +62,7 @@ export const config = {
     matcher: [
         '/api/users/:path*',
         '/api/validate-wallet',
-        '/((?!_next/static|_next/image|favicon.ico).*)',
+        '/((?!_next/static|_next/image|favicon.ico|manifest.json).*)'
     ],
     matcherExclude: ['/api/csp-report/:path*'],
 };

@@ -7,7 +7,7 @@ import { useGLTF, OrbitControls } from "@react-three/drei";
 import { useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useEffect } from "react";
-
+import { useTheme } from "@/context"
 function RotatingModel({ mouse, clicked }) {
   const { scene } = useGLTF("/3d/head");
   const modelRef = useRef();
@@ -102,11 +102,12 @@ export function FloatingHeadModel({ mouse, isClicked, themeMode, onPointerDown, 
 
 
 
-export default function Icon({ name, src, label, onClick, position, sound, themeMode, show3DEffects }) {
+export default function Icon({ name, src, label, onClick, position, sound, show3DEffects }) {
   const is3D = src === "/3d/head";
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
   const [click, setClicked] = useState(false);
   const soundRef = useRef("crying");
+  const { themeMode } = useTheme()
 
   useEffect(() => {
     if (sound) {
@@ -197,7 +198,16 @@ export default function Icon({ name, src, label, onClick, position, sound, theme
         <Image src={src} alt={name} width={50} height={50} />
       )}
 
-      <p style={{ margin: 0, fontSize: 8 }}>{label}</p>
-    </div>
+      <p style={{
+        margin: 0,
+        fontSize: 8,
+        color: themeMode === 'dark' ? 'white' : 'black',
+        textShadow: themeMode === 'dark'
+          ? '-1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black'
+          : '-1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white'
+      }}>
+        {label}
+      </p>
+    </div >
   );
 }

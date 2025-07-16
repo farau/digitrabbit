@@ -40,10 +40,10 @@ h4 {
 
 body {
   background: var(--background);
-  color: var(--foreground); /* pas white en dur */
   font-family: 'Press Start 2P','sans-serif', cursive;
   overflow: hidden;
 }
+
 
 /* Cacher complètement la scrollbar par défaut */
 ::-webkit-scrollbar {
