@@ -17,6 +17,7 @@ export default function MobileBackground({ restoreApp, themeMode }) {
     const [mouseStartTime, setMouseStartTime] = useState(0);
     const musicRef = useRef(null);
 
+
     useEffect(() => {
         // Animation d'entrée décalée
         const timer = setTimeout(() => setIsVisible(true), 500);
@@ -30,6 +31,19 @@ export default function MobileBackground({ restoreApp, themeMode }) {
 
         return () => clearTimeout(timer);
     }, []);
+
+    useEffect(() => {
+        const path =
+            themeMode === 'light'
+                ? '/sounds/harp_song.mp3'
+                : '/sounds/mandolin_song.mp3';
+
+        const preloadAudio = new Audio(path);
+        preloadAudio.volume = 1;
+        preloadAudio.load(); // Force le chargement
+        musicRef.current = preloadAudio;
+    }, [themeMode]);
+
 
     const socialLinks = [
         {
@@ -93,44 +107,25 @@ export default function MobileBackground({ restoreApp, themeMode }) {
 
     // Fonction unifiée pour jouer le son
     const playSound = async () => {
-        console.log("playSound called, themeMode:", themeMode);
-
-        // Déclencher l'animation de gigotement
         setIsWiggling(true);
         setShowMusicNote(true);
 
-        // Arrêter l'animation après 500ms
         setTimeout(() => {
             setIsWiggling(false);
             setShowMusicNote(false);
         }, 500);
 
-        // Arrêter l'ancien son s'il existe
-        if (musicRef.current) {
-            try {
-                musicRef.current.pause();
-                musicRef.current.currentTime = 0;
-            } catch (e) {
-                console.warn("Error during pause/reset:", e);
-            }
-        }
-
-        // Créer une nouvelle instance Audio
-        const audioPath =
-            themeMode === 'light'
-                ? '/sounds/harp_song.mp3'
-                : '/sounds/mandolin_song.mp3';
-
-        const newAudio = new Audio(audioPath);
-        newAudio.volume = 1;
-        musicRef.current = newAudio;
+        const audio = musicRef.current;
+        if (!audio) return;
 
         try {
-            await newAudio.play();
+            audio.currentTime = 0;
+            await audio.play();
         } catch (error) {
             console.error('Error playing audio:', error);
         }
     };
+
 
     // Gestion du lapin - Touch
     const handleRabbitTouchStart = (e) => {
@@ -171,8 +166,8 @@ export default function MobileBackground({ restoreApp, themeMode }) {
         const rect = e.currentTarget.getBoundingClientRect();
         const touch = e.touches[0];
         setDragOffset({
-            x: touch.clientX - rect.left - rect.width / 2,
-            y: touch.clientY - rect.top - rect.height / 2
+            x: touch.clientX - rect.left,
+            y: touch.clientY - rect.top
         });
 
         const target = e.currentTarget;
@@ -237,8 +232,8 @@ export default function MobileBackground({ restoreApp, themeMode }) {
         const rect = e.currentTarget.getBoundingClientRect();
         setMouseStartPos({ x: e.clientX, y: e.clientY });
         setDragOffset({
-            x: e.clientX - rect.left - rect.width / 2,
-            y: e.clientY - rect.top - rect.height / 2
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
         });
 
         // NE PAS ajouter la classe dragging ici - on attend de voir si c'est un vrai drag
@@ -449,7 +444,7 @@ export default function MobileBackground({ restoreApp, themeMode }) {
 
             {/* Lapin flottant au centre */}
             <div
-                className={`${styles.floatingRabbit} ${styles[themeMode]} ${isWiggling ? styles.wiggling : ''}`}
+                className={`${styles.floatingRabbit} ${styles[themeMode]} ${isWiggling ? styles.wiggling : ''} noSelect`}
                 onClick={handleRabbitClick}
                 onTouchStart={handleRabbitTouchStart}
                 onTouchEnd={handleRabbitTouchEnd}

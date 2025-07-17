@@ -49,7 +49,7 @@ export default function DraggableWindow({
     const baseY = (screenSize.height - height) * 0.1;
 
     if (isMobile) {
-      return { x: 0, y: Math.max(0, baseY) };
+      return { x: 0, y: Math.max(0, 0) };
     }
 
     if (index > 0) {

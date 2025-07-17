@@ -38,7 +38,7 @@
   .lightMode,
   .darkMode {
     width: 100%;
-    max-height: 80vh;
+    max-height: 100%;
   }
 }
 
