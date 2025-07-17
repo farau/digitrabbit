@@ -66,20 +66,26 @@
   color: white;
 }
 
-.mobileImage {
-  display: none;
-  position: absolute;
-  opacity: 0;
-  transform: translateY(30px);
-  animation: fadeInDown 3s ease-out forwards;
-  z-index: 1;
-}
-
-@media (max-width: 630px) {
-  .mobileImage {
-    display: block;
-    margin: 0 auto;
-    position: absolute;
+/* Media queries pour très petits écrans (smartphones en portrait) */
+@media screen and (max-width: 480px) {
+  .bgDay {
+    background: url('/img/light_mobile.jpg') no-repeat center center;
+    background-size: cover;
+    background-attachment: scroll;
+  }
+  
+  .bgNight {
+    background: url('/img/night.jpeg') no-repeat center center;
+    background-size: cover;
+    background-attachment: scroll;
+  }
+  
+  /* Ajustements pour les modales sur très petits écrans */
+  .lightMode,
+  .darkMode {
+    width: 95%;
+    max-height: 85vh;
+    top: 5vh;
   }
 }
 

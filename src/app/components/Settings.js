@@ -252,7 +252,7 @@ export default function Settings({ sound, setSound }) {
   };
 
 
-  const sounds = ['crying', 'robot', 'bird', 'cat', 'sheep', 'cow', 'rooster'];
+  const sounds = ['crying', 'McDonald’s Beeping', 'robot', 'bird', 'cat', 'sheep', 'cow', 'rooster'];
 
   return (
     <Wrapper>

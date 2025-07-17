@@ -40,8 +40,8 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
   const borderColor = isNight ? '#444' : '#ddd'
 
   // Mapping des slots vers les noms de dossiers
-  const slotFolders = ['rabbit_color', 'backgrounds', 'clothes', 'eyes', 'hat']
-  const slotLabels = ["Rabbit Color", "Backgrounds", "Clothes", "Eyes", "Hat"]
+  const slotFolders = ['rabbit_color', 'backgrounds', 'clothes', 'glasses', 'hat']
+  const slotLabels = ["Rabbit Color", "Backgrounds", "Clothes", "Glasses", "Hat"]
 
   // Réinitialise les états quand le walletClient est disponible
   useEffect(() => {

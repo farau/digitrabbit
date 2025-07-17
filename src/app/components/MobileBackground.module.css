@@ -1,0 +1,477 @@
+.container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 0.8s ease-in-out;
+  /* Masquer par défaut sur desktop */
+  display: none;
+}
+
+.container.visible {
+  opacity: 1;
+}
+
+.floatingLink {
+  position: absolute;
+  z-index: 2;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid rgba(255, 255, 255, 0.4);
+  cursor: grab;
+  pointer-events: auto;
+  user-select: none;
+  touch-action: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: scale(0);
+  animation: popIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards, float 4s ease-in-out infinite;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 
+    0 8px 25px rgba(0, 0, 0, 0.3),
+    0 4px 12px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  /* Effet contrasté : haut plus clair, bas plus sombre */
+  background: linear-gradient(180deg, 
+    rgba(255, 255, 255, 0.25) 0%, 
+    rgba(255, 255, 255, 0.15) 30%, 
+    rgba(255, 255, 255, 0.05) 70%, 
+    rgba(0, 0, 0, 0.1) 100%);
+}
+
+.floatingLink img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+.floatingLink:hover {
+  transform: scale(1.15);
+  box-shadow: 
+    0 12px 35px rgba(0, 0, 0, 0.4),
+    0 6px 18px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+  border-color: rgba(255, 255, 255, 0.6);
+  /* Effet contrasté renforcé au hover */
+  background: linear-gradient(180deg, 
+    rgba(255, 255, 255, 0.35) 0%, 
+    rgba(255, 255, 255, 0.25) 30%, 
+    rgba(255, 255, 255, 0.1) 70%, 
+    rgba(0, 0, 0, 0.15) 100%);
+}
+
+.floatingLink:active {
+  transform: scale(0.95);
+  cursor: grabbing;
+}
+
+/* Style pendant le drag */
+.floatingLink.dragging {
+  transform: translate(-50%, -50%) scale(1.2) !important;
+  box-shadow: 
+    0 15px 40px rgba(0, 0, 0, 0.5),
+    0 8px 20px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  z-index: 1001;
+  opacity: 0.9;
+  transition: none !important;
+  cursor: grabbing;
+  border-color: rgba(255, 255, 255, 0.8);
+}
+
+/* Thème jour */
+.floatingLink.light {
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 
+    0 8px 25px rgba(0, 0, 0, 0.2),
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+  /* Effet contrasté pour le thème jour */
+  background: linear-gradient(180deg, 
+    rgba(255, 255, 255, 0.4) 0%, 
+    rgba(255, 255, 255, 0.25) 30%, 
+    rgba(255, 255, 255, 0.1) 70%, 
+    rgba(0, 0, 0, 0.08) 100%);
+}
+
+.floatingLink.light:hover {
+  border-color: rgba(255, 255, 255, 0.7);
+  box-shadow: 
+    0 12px 35px rgba(0, 0, 0, 0.3),
+    0 6px 18px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.12);
+  /* Effet contrasté renforcé au hover pour le thème jour */
+  background: linear-gradient(180deg, 
+    rgba(255, 255, 255, 0.5) 0%, 
+    rgba(255, 255, 255, 0.35) 30%, 
+    rgba(255, 255, 255, 0.15) 70%, 
+    rgba(0, 0, 0, 0.12) 100%);
+}
+
+.floatingLink.light.dragging {
+  border-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 
+    0 15px 40px rgba(0, 0, 0, 0.4),
+    0 8px 20px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+}
+
+/* Thème nuit */
+.floatingLink.night {
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 
+    0 8px 25px rgba(0, 0, 0, 0.5),
+    0 4px 12px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  /* Effet contrasté pour le thème nuit */
+  background: linear-gradient(180deg, 
+    rgba(255, 255, 255, 0.15) 0%, 
+    rgba(255, 255, 255, 0.08) 30%, 
+    rgba(255, 255, 255, 0.03) 70%, 
+    rgba(0, 0, 0, 0.2) 100%);
+}
+
+.floatingLink.night:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 
+    0 12px 35px rgba(0, 0, 0, 0.6),
+    0 6px 18px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+  /* Effet contrasté renforcé au hover pour le thème nuit */
+  background: linear-gradient(180deg, 
+    rgba(255, 255, 255, 0.25) 0%, 
+    rgba(255, 255, 255, 0.15) 30%, 
+    rgba(255, 255, 255, 0.05) 70%, 
+    rgba(0, 0, 0, 0.25) 100%);
+}
+
+.floatingLink.night.dragging {
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 
+    0 15px 40px rgba(0, 0, 0, 0.7),
+    0 8px 20px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Animations */
+@keyframes popIn {
+  0% {
+    transform: scale(0) rotate(0deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.1) rotate(5deg);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-8px) rotate(1deg);
+  }
+  50% {
+    transform: translateY(-4px) rotate(-0.5deg);
+  }
+  75% {
+    transform: translateY(-12px) rotate(0.5deg);
+  }
+}
+
+/* Lapin flottant au centre */
+.floatingRabbit {
+  position: absolute;
+  top: 30%;
+  left: 30%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: float 6s ease-in-out infinite;
+  z-index: 1;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  /* Améliorer la zone de clic */
+  padding: 10px;
+  border-radius: 50%;
+  transition: transform 0.1s ease;
+}
+
+.floatingRabbit::after {
+  content: '';
+  position: absolute;
+  bottom: 18px; /* remonté un peu plus */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 30px;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow:
+    -30px 0 0 0 #ffffff,
+    30px 0 0 0 #ffffff,
+    -15px -10px 0 0 #ffffff,
+    15px -10px 0 0 #ffffff;
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.8)); /* halo autour du nuage */
+  z-index: -1;
+  opacity: 0.95;
+  pointer-events: none;
+}
+
+/* Mode nuit : nuage plus haut + halo plus fort */
+.dark::after {
+  bottom: 32px;
+  filter: drop-shadow(0 0 14px rgba(255, 255, 255, 1));
+  opacity: 1;
+}
+
+.floatingRabbit:hover {
+  transform: scale(1.05);
+}
+
+.floatingRabbit:active {
+  transform: scale(0.95);
+}
+
+/* Classe pour déclencher l'animation de gigotement */
+.floatingRabbit.wiggling {
+  animation: float 6s ease-in-out infinite, wiggle 0.5s ease-in-out;
+}
+
+/* Animation de gigotement */
+@keyframes wiggle {
+  0% { transform: rotate(0deg) scale(1); }
+  10% { transform: rotate(-4deg) scale(1.02) translateY(-2px); }
+  20% { transform: rotate(4deg) scale(0.98) translateY(2px); }
+  30% { transform: rotate(-3deg) scale(1.01) translateY(-1px); }
+  40% { transform: rotate(3deg) scale(0.99) translateY(1px); }
+  50% { transform: rotate(-2deg) scale(1.01) translateY(-2px); }
+  60% { transform: rotate(2deg) scale(0.99) translateY(1px); }
+  70% { transform: rotate(-1deg) scale(1.005) translateY(-0.5px); }
+  80% { transform: rotate(1deg) scale(0.995) translateY(0.5px); }
+  90% { transform: rotate(-0.5deg) scale(1.002) translateY(-0.2px); }
+  100% { transform: rotate(0deg) scale(1) translateY(0px); }
+}
+
+/* Spécifique pour mobile */
+@media screen and (max-width: 630px) {
+  .floatingRabbit {
+    /* Agrandir la zone de clic sur mobile */
+    padding: 20px;
+    top: 25%;
+    left: 25%;
+  }
+}
+
+@media screen and (max-width: 540px) {
+  .floatingRabbit {
+    top: 20%;
+    left: 20%;
+  }
+}
+
+
+/* Note de musique */
+.musicNote {
+  position: absolute;
+  font-size: 32px;
+  font-weight: bold;
+  pointer-events: none;
+  z-index: 10;
+  animation: musicNoteVibrate 0.5s ease-out forwards;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+  transform-origin: center bottom;
+}
+
+/* Thème jour */
+.musicNote.light {
+  color: #000000;
+  background: #000000;
+  top: 80px;
+  right: 180px;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 4px 8px rgba(255, 107, 107, 0.4));
+}
+
+/* Thème nuit */
+.musicNote.dark {
+  color: black;
+  background: black;
+  top: 160px;
+  right: 190px;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 4px 8px rgba(254, 202, 87, 0.4));
+}
+
+/* Animation de vibration douce avec déplacement vers la gauche */
+@keyframes musicNoteVibrate {
+  0% {
+    transform: translateX(0) scale(0.3) rotate(-10deg);
+    opacity: 0;
+  }
+  20% {
+    transform: translateX(-10px) scale(1.2) rotate(5deg);
+    opacity: 1;
+  }
+  30% {
+    transform: translateX(-20px) scale(0.9) rotate(-2deg);
+    opacity: 1;
+  }
+  40% {
+    transform: translateX(-30px) scale(1.1) rotate(1deg);
+    opacity: 1;
+  }
+  50% {
+    transform: translateX(-30px) scale(0.95) rotate(-0.5deg);
+    opacity: 1;
+  }
+  60% {
+    transform: translateX(-40px) scale(1.05) rotate(0.3deg);
+    opacity: 1;
+  }
+  70% {
+    transform: translateX(-45px) scale(0.98) rotate(-0.2deg);
+    opacity: 1;
+  }
+  80% {
+    transform: translateX(-50px) scale(1.02) rotate(0.1deg);
+    opacity: 0.8;
+  }
+  90% {
+    transform: translateX(-55px) scale(0.99) rotate(-0.05deg);
+    opacity: 0.3;
+  }
+  100% {
+    transform: translateX(-50px) scale(1) rotate(0deg);
+    opacity: 0;
+  }
+}
+
+
+/* Responsive pour mobile */
+@media screen and (max-width: 630px) {
+  .musicNote {
+    font-size: 28px;
+  top: 80px;
+  right: 180px;
+  }
+}
+
+@media screen and (max-width: 540px) {
+  .musicNote {
+    font-size: 24px;
+  top: 80px;
+  right: 180px;
+  }
+}
+
+
+/* Affichage uniquement sur mobile et tablettes */
+@media screen and (max-width: 630px) {
+  .container {
+    display: block; /* Afficher sur mobile/tablette */
+  }
+  
+  .floatingLink {
+    width: 58px;
+    height: 58px;
+    border-width: 2px;
+  }
+  
+  .floatingLink img {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .floatingRabbit {
+    /* Agrandir la zone de clic sur mobile */
+    padding: 20px;
+  }
+  
+  .musicNote {
+    font-size: 28px;
+    top: -30px;
+    right: 15px;
+  }
+}
+
+@media screen and (max-width: 540px) {
+  .floatingLink {
+    width: 52px;
+    height: 52px;
+    border-width: 2px;
+  }
+  
+  .floatingLink img {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .musicNote {
+    font-size: 24px;
+    top: -25px;
+    right: 12px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .floatingLink {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .floatingLink img {
+    width: 30px;
+    height: 30px;
+  }
+  
+  .floatingLink.dragging {
+    transform: translate(-50%, -50%) scale(1.3) !important;
+  }
+}
+
+@media screen and (max-width: 320px) {
+  .floatingLink {
+    width: 46px;
+    height: 46px;
+  }
+  
+  .floatingLink img {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .floatingLink.dragging {
+    transform: translate(-50%, -50%) scale(1.25) !important;
+  }
+}

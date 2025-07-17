@@ -31,7 +31,7 @@ export default function DraggableWindow({
 
   const isMobile = useMemo(() => {
     // Détection combinée : taille d'écran ET capacité tactile
-    const isSmallScreen = screenSize.width < 768;
+    const isSmallScreen = screenSize.width < 480;
     const hasTouchCapability = typeof window !== 'undefined' &&
       ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 
@@ -42,20 +42,29 @@ export default function DraggableWindow({
   // Position centrée calculée
   const getCenteredPosition = useCallback(() => {
     const { width, height } = windowDimensions;
+    const index = visibleApps.length;
+    const spacing = 30;
+
     const baseX = (screenSize.width - width) / 2;
     const baseY = (screenSize.height - height) * 0.1;
 
-    if (!isMobile && visibleApps.length > 0) {
-      const spacing = 30;
-      const maxOffsetX = screenSize.width - width;
-      const maxOffsetY = screenSize.height - height - 100;
+    if (isMobile) {
+      return { x: 0, y: Math.max(0, baseY) };
+    }
 
-      const offsetX = spacing % maxOffsetX;
-      const offsetY = spacing % maxOffsetY;
+    if (index > 0) {
+      // Calculer un offset équilibré autour du centre
+      const offsetIndex = index - 1; // ex : pour 3 apps → 0,1,2
+      const middleIndex = (visibleApps.length - 1) / 2; // ex : 1 si 3 apps
+      const offsetX = (offsetIndex - middleIndex) * spacing;
+      const offsetY = (offsetIndex - middleIndex) * spacing;
+
+      const newX = baseX + offsetX;
+      const newY = baseY + offsetY;
 
       return {
-        x: baseX + offsetX * visibleApps.length,
-        y: baseY + offsetY * visibleApps.length
+        x: Math.max(0, Math.min(newX, screenSize.width - width)),
+        y: Math.max(0, Math.min(newY, screenSize.height - height)),
       };
     }
 

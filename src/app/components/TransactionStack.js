@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 
-const getExplorerUrl = (tx) => `https://web3.okx.com/explorer/megaeth-testnet/tx/${tx}`
+const getExplorerUrl = (tx) => `https://www.megaexplorer.xyz/tx/${tx}`
 
 export default function TransactionStack({ isExecuting, showSuccess, error, txId, transactionHash }) {
     const [stack, setStack] = useState([])

@@ -626,7 +626,7 @@ export default function Profile({ playerData, setRefreshCounter }) {
                     { folder: 'backgrounds', index: 1 },
                     { folder: 'rabbit_color', index: 0 },
                     { folder: 'clothes', index: 2 },
-                    { folder: 'eyes', index: 3 },
+                    { folder: 'glasses', index: 3 },
                     { folder: 'hat', index: 4 }
                   ];
 
@@ -658,7 +658,6 @@ export default function Profile({ playerData, setRefreshCounter }) {
               <Download className="w-3 h-3" />
               Download Rabbit
             </button>
-
           </div>
         </div>
 
@@ -674,12 +673,14 @@ export default function Profile({ playerData, setRefreshCounter }) {
               boxShadow,
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <strong>Wallet Address: </strong>
                 <span style={{ wordBreak: 'break-all' }}>{displayAddress}</span>
               </div>
-              <CopyWalletButton address={userAddress} />
+              <div style={{ flexShrink: 0 }}>
+                <CopyWalletButton address={userAddress} />
+              </div>
             </div>
           </div>
           <div

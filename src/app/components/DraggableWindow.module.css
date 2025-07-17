@@ -32,6 +32,16 @@
 
 }
 
+/* Media queries pour très petits écrans (smartphones en portrait) */
+@media screen and (max-width: 480px) {
+  /* Ajustements pour les modales sur très petits écrans */
+  .lightMode,
+  .darkMode {
+    width: 100%;
+    max-height: 80vh;
+  }
+}
+
 .stickyTop {
   position: sticky;
   top: 0;

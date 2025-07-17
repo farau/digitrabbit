@@ -68,18 +68,18 @@ export default function Leaderboard({ limit = 100 }) {
   const renderPlayerCard = (player, index, isCurrentUser = false) => (
     <div
       key={player.walletAddress}
-      className="p-4 sm:p-6 hover:bg-opacity-50 transition-colors duration-200"
+      className="p-3 sm:p-4 md:p-6 hover:bg-opacity-50 transition-colors duration-200"
       style={{
         background: isCurrentUser
           ? (isNight ? 'rgba(79, 70, 229, 0.15)' : 'rgba(79, 70, 229, 0.08)')
           : index < 3 ? (isNight ? 'rgba(79, 70, 229, 0.1)' : 'rgba(79, 70, 229, 0.05)') : 'transparent'
       }}
     >
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
         {/* Rank */}
         <div className="flex-shrink-0">
           <div
-            className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-sm sm:text-base"
+            className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-xs sm:text-sm"
             style={getRankStyle(index, isCurrentUser)}
           >
             {!isCurrentUser && index === 0 && '🥇'}
@@ -95,13 +95,14 @@ export default function Leaderboard({ limit = 100 }) {
             <Image
               src={player.twitter.avatar}
               alt={player.twitter.displayName || 'Avatar'}
-              width={48}
-              height={48}
-              className="rounded-full w-10 h-10 sm:w-12 sm:h-12"
+              width={96}
+              height={96}
+              className="rounded-full w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12"
+              sizes="(min-width: 768px) 48px, (min-width: 640px) 40px, 32px"
             />
           ) : (
             <div
-              className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-sm sm:text-base font-bold"
+              className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold"
               style={{
                 background: isNight ? '#444' : '#e5e7eb',
                 color: isNight ? '#ccc' : '#666'
@@ -115,10 +116,10 @@ export default function Leaderboard({ limit = 100 }) {
         {/* Player Info */}
         <div className="flex-1 min-w-0">
           <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-            <p className="text-base sm:text-lg font-semibold truncate" style={{ color: textColor, margin: 0 }}>
+            <p className="text-sm sm:text-base md:text-lg font-semibold truncate" style={{ color: textColor, margin: 0 }}>
               {player.twitter.displayName || 'Anonymous User'}
               {isCurrentUser && (
-                <span className="ml-2 text-xs font-normal px-2 py-1 rounded-full" style={{
+                <span className="ml-1 sm:ml-2 text-xs font-normal px-1 sm:px-2 py-0.5 sm:py-1 rounded-full" style={{
                   background: isNight ? '#4f46e5' : '#4f46e5',
                   color: 'white'
                 }}>
@@ -132,21 +133,21 @@ export default function Leaderboard({ limit = 100 }) {
               </span>
             )}
           </div>
-          <p className="text-xs sm:text-sm truncate mt-1" style={{ color: subTextColor, margin: 0 }}>
+          <p className="text-xs sm:text-sm truncate mt-0.5 sm:mt-1" style={{ color: subTextColor, margin: 0 }}>
             {player.walletAddress.slice(0, 6)}...{player.walletAddress.slice(-4)}
           </p>
         </div>
 
         {/* Stats */}
         <div className="flex-shrink-0 text-right">
-          <div className="text-lg sm:text-xl font-bold" style={{ color: textColor }}>
+          <div className="text-sm sm:text-lg md:text-xl font-bold" style={{ color: textColor }}>
             {formatScore(player.score)}
             <span className="text-xs sm:text-sm font-normal ml-1" style={{ color: subTextColor }}>
               pts
             </span>
           </div>
-          <div className="text-xs sm:text-sm mt-1" style={{ color: subTextColor }}>
-            <span className="mr-2">🔥 {player.streak}</span>
+          <div className="text-xs sm:text-sm mt-0.5 sm:mt-1" style={{ color: subTextColor }}>
+            <span className="mr-1 sm:mr-2">🔥 {player.streak}</span>
             <span>👆 {player.totalClicks}</span>
           </div>
         </div>
@@ -160,7 +161,7 @@ export default function Leaderboard({ limit = 100 }) {
         <div
           style={{
             background: cardBg,
-            padding: '40px',
+            padding: '30px 20px',
             borderRadius: '12px',
             border: `1px solid ${borderColor}`,
             boxShadow,
@@ -168,8 +169,8 @@ export default function Leaderboard({ limit = 100 }) {
           }}
         >
           <div className="flex flex-col items-center gap-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-2 border-transparent border-t-blue-500"></div>
-            <p style={{ color: textColor, margin: 0 }}>Loading leaderboard...</p>
+            <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-2 border-transparent border-t-blue-500"></div>
+            <p className="text-sm sm:text-base" style={{ color: textColor, margin: 0 }}>Loading leaderboard...</p>
           </div>
         </div>
       </Wrapper>
@@ -182,7 +183,7 @@ export default function Leaderboard({ limit = 100 }) {
         <div
           style={{
             background: cardBg,
-            padding: '40px',
+            padding: '30px 20px',
             borderRadius: '12px',
             border: `1px solid ${borderColor}`,
             boxShadow,
@@ -190,7 +191,7 @@ export default function Leaderboard({ limit = 100 }) {
           }}
         >
           <div className="flex flex-col items-center gap-4">
-            <p style={{ color: isNight ? '#ef4444' : '#dc2626', margin: 0 }}>
+            <p className="text-sm sm:text-base" style={{ color: isNight ? '#ef4444' : '#dc2626', margin: 0 }}>
               Error: {error}
             </p>
             <button
@@ -201,14 +202,14 @@ export default function Leaderboard({ limit = 100 }) {
                   : 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
                 color: 'white',
                 border: 'none',
-                padding: '10px 20px',
+                padding: '8px 16px',
                 borderRadius: '8px',
-                fontSize: '14px',
+                fontSize: '13px',
                 fontWeight: '500',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
+                gap: '6px',
                 transition: 'all 0.2s ease',
                 boxShadow: '0 2px 6px rgba(79, 70, 229, 0.3)',
               }}
@@ -236,7 +237,7 @@ export default function Leaderboard({ limit = 100 }) {
         <div
           style={{
             background: cardBg,
-            padding: '40px',
+            padding: '30px 20px',
             borderRadius: '12px',
             border: `1px solid ${borderColor}`,
             boxShadow,
@@ -244,7 +245,7 @@ export default function Leaderboard({ limit = 100 }) {
           }}
         >
           <div className="flex flex-col items-center gap-4">
-            <p style={{ color: subTextColor, margin: 0 }}>No data available</p>
+            <p className="text-sm sm:text-base" style={{ color: subTextColor, margin: 0 }}>No data available</p>
             <button
               onClick={refresh}
               style={{
@@ -253,14 +254,14 @@ export default function Leaderboard({ limit = 100 }) {
                   : 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
                 color: 'white',
                 border: 'none',
-                padding: '10px 20px',
+                padding: '8px 16px',
                 borderRadius: '8px',
-                fontSize: '14px',
+                fontSize: '13px',
                 fontWeight: '500',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
+                gap: '6px',
                 transition: 'all 0.2s ease',
                 boxShadow: '0 2px 6px rgba(79, 70, 229, 0.3)',
               }}
@@ -292,34 +293,34 @@ export default function Leaderboard({ limit = 100 }) {
       <div
         style={{
           background: cardBg,
-          padding: '20px',
+          padding: '16px 20px',
           borderRadius: '12px',
           border: `1px solid ${borderColor}`,
           boxShadow,
-          marginBottom: '20px'
+          marginBottom: '16px'
         }}
       >
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Trophy className={`w-6 h-6 ${isNight ? 'text-yellow-400' : 'text-yellow-600'}`} />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Trophy className={`w-5 h-5 sm:w-6 sm:h-6 ${isNight ? 'text-yellow-400' : 'text-yellow-600'}`} />
             <h2 style={{
-              fontSize: '24px',
+              fontSize: '20px',
               fontWeight: '600',
               margin: 0,
               color: textColor
-            }}>
+            }} className="sm:text-2xl">
               Leaderboard
             </h2>
           </div>
 
           {metadata && (
-            <div className="flex flex-col sm:flex-row gap-4 text-sm" style={{ color: subTextColor }}>
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-xs sm:text-sm" style={{ color: subTextColor }}>
+              <div className="flex items-center gap-1 sm:gap-2">
+                <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span>Season {metadata.currentSeasonId}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4" />
+              <div className="flex items-center gap-1 sm:gap-2">
+                <Users className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span>{metadata.totalPlayers} players</span>
               </div>
             </div>
@@ -336,11 +337,11 @@ export default function Leaderboard({ limit = 100 }) {
             border: `1px solid ${borderColor}`,
             boxShadow,
             overflow: 'hidden',
-            marginBottom: '20px'
+            marginBottom: '16px'
           }}
         >
           <div
-            className="px-4 py-3 text-sm font-medium border-b"
+            className="px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium border-b"
             style={{
               background: isNight ? '#1a1a1a' : '#f9f9f9',
               color: textColor,
@@ -364,7 +365,7 @@ export default function Leaderboard({ limit = 100 }) {
         }}
       >
         <div
-          className="px-4 py-3 text-sm font-medium border-b"
+          className="px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium border-b"
           style={{
             background: isNight ? '#1a1a1a' : '#f9f9f9',
             color: textColor,
@@ -380,7 +381,7 @@ export default function Leaderboard({ limit = 100 }) {
         {/* Footer */}
         {metadata && (
           <div
-            className="px-4 py-3 text-center text-xs sm:text-sm border-t"
+            className="px-3 sm:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm border-t"
             style={{
               background: isNight ? '#1a1a1a' : '#f9f9f9',
               color: subTextColor,

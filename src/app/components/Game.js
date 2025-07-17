@@ -134,7 +134,7 @@ function TwitterShareButton({ score, totalClicks, themeMode, onClose }) {
   const subTextColor = isNight ? 'text-zinc-400' : 'text-gray-600';
 
   const handleTwitterShare = () => {
-    const tweetText = `🐰 Just scored ${score} RabbitPoints on @digitrabbits website! 🚀\n\nExperience lightning-fast blockchain gaming with MegaETH's incredible speed! ⚡\n\nWen 1M total clicks?\n\nActual number of clicks : ${totalClicks} out of 1M!\n#MegaETH #DigitRabbits`;
+    const tweetText = `🐰 Just scored ${score} RabbitPoints on @digitrabbits website! 🚀\n\nExperience lightning-fast blockchain gaming with MegaETH's incredible speed! ⚡\n\nWen 1M total clicks?\n\nRabbitio`;
     const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
     window.open(tweetUrl, '_blank', 'width=600,height=400');
     onClose();
@@ -194,6 +194,12 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
   const [timer, setTimer] = useState(60)
   const [showTwitterShare, setShowTwitterShare] = useState(false)
   const [finalScore, setFinalScore] = useState(0)
+
+  // Ajouter un état local pour la validation
+  const [isValidatingPool, setIsValidatingPool] = useState(false);
+  // État pour gérer les erreurs du pool
+  const [poolError, setPoolError] = useState(null);
+
 
   const isNight = themeMode === 'dark';
   const textColor = isNight ? '#eee' : '#333'
@@ -259,6 +265,49 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
     }
   }, [showTwitterShare, playerData?.gameClicks, setFinalScore])
 
+  const [isComponentOpen, setIsComponentOpen] = useState(false);
+
+  // useEffect pour vérifier si le composant vient de se fermer ou s'ouvrir pour tester la validité de la pool
+  useEffect(() => {
+    setIsComponentOpen(true);
+    return () => setIsComponentOpen(false);
+  }, []);
+
+  // Check de la presignedPool à chaque fois qu'on ouvre la fenetre pour vérifier qu'une partie peut etre lancée
+  // Modifier le useEffect pour inclure l'état de validation
+  useEffect(() => {
+    // Éviter les vérifications redondantes
+    if (!isComponentOpen || isInitializing) {
+      console.log("Pool initialization already in progress");
+      return;
+    }
+
+    const hasValidPool = preSignedPool?.transactions?.length > 0 && getAvailableTransactions() > 0;
+
+    if (!hasValidPool) {
+      console.log("Pool reinitialization needed:", {
+        hasPool: !!preSignedPool,
+        transactionCount: preSignedPool?.transactions?.length || 0,
+        availableCount: getAvailableTransactions(),
+        timestamp: new Date().toISOString()
+      });
+
+      setIsValidatingPool(true);
+      setPoolError(null); // Reset l'erreur précédente
+
+      initializePool()
+        .catch((error) => {
+          console.error('Error during verification of the pool:', error);
+          setPoolError('Verification of the pool failed, please logout and login again.', error);
+        })
+        .finally(() => {
+          setIsValidatingPool(false);
+        });
+    }
+  }, [isComponentOpen, preSignedPool, isInitializing]);
+
+
+
   // Démarrage du jeu
   const handleStartGame = async () => {
     try {
@@ -266,6 +315,11 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
         throw new Error('No wallet client set')
       }
 
+      const hasValidPool = preSignedPool?.transactions?.length > 0 && getAvailableTransactions() > 0;
+      const canStartGame = !isInitializing && !isValidatingPool && hasValidPool && !poolError;
+      if (!canStartGame) {
+        throw new Error("The game couldn't start. Please log in again and try.")
+      }
       console.log(`Starting game on MegaETH Testnet...`)
 
       setIsWritingContract(true)
@@ -290,7 +344,12 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
 
     } catch (err) {
       console.error('Contract write failed:', err)
-      setErrorStartGame(err.shortMessage)
+      if (err.shortMessage?.toLowerCase().includes("gas value exceeds maximum value")) {
+        setErrorStartGame("Please fund your wallet your testnet tokens. Go to the Settings section, copy your wallet address and paste it into the faucet.");
+      } else {
+        setErrorStartGame(err.shortMessage);
+      }
+
       throw err
     } finally {
       setIsWritingContract(false)
@@ -446,7 +505,7 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
         )}
 
         {/* Initialization Status */}
-        {isInitializing ? (
+        {isInitializing || isValidatingPool ? (
           <div
             className="mb-6 p-4 rounded-lg flex items-center gap-3"
             style={{
@@ -457,7 +516,9 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
             }}
           >
             <Loader2 className="animate-spin" size={20} />
-            <span>Loading...</span>
+            <span>
+              {isInitializing ? 'Loading...' : 'Validating...'}
+            </span>
           </div>
         ) : (
           <div className="mb-10">
@@ -476,16 +537,23 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
             </button>
           </div>
         )}
+
+        {/* Error Message */}
+        {errorStartGame && (
+          <div className="mb-6 p-4 bg-red-100/70 dark:bg-red-900/70 rounded-lg max-w-2xl text-left backdrop-blur-sm">
+            <h4 className="text-red-700 dark:text-red-300 break-all">❌ Error :</h4>
+            <p className="text-red-700 dark:text-red-300 break-all">{errorStartGame}</p>
+          </div>
+        )}
+
+        {/* Pool errors */}
+        {poolError && (
+          <div className="mb-6 p-4 bg-red-100/70 dark:bg-red-900/70 rounded-lg max-w-2xl text-left backdrop-blur-sm">
+            <h4 className="text-red-700 dark:text-red-300 break-all">❌ Error :</h4>
+            <p className="text-red-700 dark:text-red-300 break-all">{poolError}</p>
+          </div>
+        )}
       </div>
-
-      {/* Error Message */}
-      {errorStartGame && (
-        <div className="mb-6 p-4 bg-red-100/70 dark:bg-red-900/70 rounded-lg max-w-2xl text-left backdrop-blur-sm">
-          <h4 className="text-red-700 dark:text-red-300 break-all">❌ Error :</h4>
-          <p className="text-red-700 dark:text-red-300 break-all">{errorStartGame}</p>
-        </div>
-      )}
-
     </Wrapper>
   ) : (
     <Wrapper>

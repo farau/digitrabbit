@@ -12,8 +12,8 @@ const DynamicAvatar = ({
     const isNight = themeMode === 'dark'
 
     // Mapping des slots vers les noms de dossiers
-    const slotFolders = ['rabbit_color', 'backgrounds', 'clothes', 'eyes', 'hat']
-    const slotLabels = ["Rabbit Color", "Backgrounds", "Clothes", "Eyes", "Hat"]
+    const slotFolders = ['rabbit_color', 'backgrounds', 'clothes', 'glasses', 'hat']
+    const slotLabels = ["Rabbit Color", "Backgrounds", "Clothes", "Glasses", "Hat"]
 
     return (
         <div className={`relative ${size}`}>
@@ -21,12 +21,12 @@ const DynamicAvatar = ({
                 const itemLevel = playerItems[index] || 0
                 const imagePath = `/img/shop/${folder}/${itemLevel}.png`
 
-                // Ordre des z-index : background au plus bas, puis rabbit_color, clothes, eyes, hat au plus haut
+                // Ordre des z-index : background au plus bas, puis rabbit_color, clothes, glasses, hat au plus haut
                 const zIndexOrder = {
                     'backgrounds': 1,
                     'rabbit_color': 2,
                     'clothes': 3,
-                    'eyes': 4,
+                    'glasses': 4,
                     'hat': 5
                 }
 

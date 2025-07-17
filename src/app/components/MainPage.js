@@ -20,6 +20,7 @@ import Shop from "./Shop";
 import Assets from "./Assets";
 import FAQ from "./FAQ";
 import DREAM from "./DREAM";
+import MobileBackground from "./MobileBackground";
 
 import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, publicClient, NUM_SLOTS } from '@/utils/constants'
 import { usePreSignedPool } from "../hooks/usePreSignedPool";
@@ -30,8 +31,6 @@ export default function MainPage() {
   const [visibleApps, setVisibleApps] = useState([]);
   const [minimizedApps, setMinimizedApps] = useState([]);
   const [appZIndices, setAppZIndices] = useState({});
-  const [focusedApp, setFocusedApp] = useState(null);
-  const [zCounter, setZCounter] = useState(1); // zIndex de départ
 
   const [sound, setSound] = useState("crying");
   const { themeMode, toggleTheme, show3DEffects, toggle3DEffects } = useTheme();
@@ -294,7 +293,6 @@ export default function MainPage() {
 
   return (
     <div className={`${themeMode === 'light' ? styles.bgDay : styles.bgNight}`}>
-      <Image src="/img/bg-img-mobile.png" alt="Mobile image" fill className={styles.mobileImage} />
       {/* Icônes interactives */}
       <Icon
         name="About"
@@ -423,6 +421,12 @@ export default function MainPage() {
           <button onClick={(e) => { e.stopPropagation(); setSelectedMemeIndex((prev) => (prev + 1) % memeList.length); }} style={navButtonStyle}>▶</button>
         </div>
       )}
+
+      {/* Background dans le cas où on est sur mobile */}
+      <MobileBackground
+        restoreApp={restoreApp}
+        themeMode={themeMode}
+      />
 
       {/* Affichage des assets plein écran*/}
       {selectedAssetsIndex !== null && (
