@@ -195,12 +195,7 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
   const [showTwitterShare, setShowTwitterShare] = useState(false)
   const [finalScore, setFinalScore] = useState(0)
 
-  // Ajouter un état local pour la validation
-  const [isValidatingPool, setIsValidatingPool] = useState(false);
-  // État pour gérer les erreurs du pool
-  const [poolError, setPoolError] = useState(null);
-
-
+  // Design
   const isNight = themeMode === 'dark';
   const textColor = isNight ? '#eee' : '#333'
   const cardBg = isNight ? '#222' : '#f3f3f3'
@@ -265,65 +260,52 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
     }
   }, [showTwitterShare, playerData?.gameClicks, setFinalScore])
 
-  const [isComponentOpen, setIsComponentOpen] = useState(false);
-
-  // useEffect pour vérifier si le composant vient de se fermer ou s'ouvrir pour tester la validité de la pool
-  useEffect(() => {
-    setIsComponentOpen(true);
-    return () => setIsComponentOpen(false);
-  }, []);
-
-  // Check de la presignedPool à chaque fois qu'on ouvre la fenetre pour vérifier qu'une partie peut etre lancée
-  // Modifier le useEffect pour inclure l'état de validation
-  useEffect(() => {
-    // Éviter les vérifications redondantes
-    if (!isComponentOpen || isInitializing) {
-      console.log("Pool initialization already in progress");
-      return;
-    }
-
-    const hasValidPool = preSignedPool?.transactions?.length > 0 && getAvailableTransactions() > 0;
-
-    if (!hasValidPool) {
-      console.log("Pool reinitialization needed:", {
-        hasPool: !!preSignedPool,
-        transactionCount: preSignedPool?.transactions?.length || 0,
-        availableCount: getAvailableTransactions(),
-        timestamp: new Date().toISOString()
-      });
-
-      setIsValidatingPool(true);
-      setPoolError(null); // Reset l'erreur précédente
-
-      initializePool()
-        .catch((error) => {
-          console.error('Error during verification of the pool:', error);
-          setPoolError('Verification of the pool failed, please logout and login again.', error);
-        })
-        .finally(() => {
-          setIsValidatingPool(false);
-        });
-    }
-  }, [isComponentOpen, preSignedPool, isInitializing]);
-
-
-
   // Démarrage du jeu
   const handleStartGame = async () => {
     try {
+      // 1. Vérification du wallet
       if (!walletClient || !embeddedWallet || !embeddedWallet.address) {
         throw new Error('No wallet client set')
       }
 
-      const hasValidPool = preSignedPool?.transactions?.length > 0 && getAvailableTransactions() > 0;
-      const canStartGame = !isInitializing && !isValidatingPool && hasValidPool && !poolError;
-      if (!canStartGame) {
-        throw new Error("The game couldn't start. Please log in again and try.")
+      // 2. Vérification et initialisation du pool si nécessaire
+      setIsWritingContract(true)
+      setErrorStartGame('') // Reset les erreurs précédentes
+
+      let currentPool = preSignedPool
+      const hasValidePool = currentPool?.transactions?.length > 0 && getAvailableTransactions() > 0;
+
+      // Si le pool n'est pas valide, l'initialiser
+      if (!hasValidePool) {
+        console.log("Initializing pool before starting game...")
+
+        try {
+          await initializePool();
+
+          // Vérifier que l'initialisation a réussi
+          const newAvailableCount = getAvailableTransactions()
+          if (newAvailableCount === 0) {
+            throw new Error('Pool initialization completed but no transaction available. Please logout and login again.')
+          }
+
+          console.log("Pool successfully initialized:", {
+            availableCount: newAvailableCount,
+            timestamp: new Date().toISOString()
+          });
+        } catch (poolError) {
+          console.error('Pool initialization failed:', poolError)
+          throw new Error('Failed to initialize transaction pool. Please logout and login again.')
+        }
       }
+
+      // 3. Dernière vérification avant de démarrer le jeu
+      if (!preSignedPool || getAvailableTransactions() === 0) {
+        throw new Error("Pool is still invalid after initialization. Please logout and login again.");
+      }
+
       console.log(`Starting game on MegaETH Testnet...`)
 
-      setIsWritingContract(true)
-
+      // 4. Démarrer le jeu 
       const result = await walletClient.writeContract({
         account: embeddedWallet.address,
         address: DIGIT_RABBITS_ADDRESS,
@@ -347,7 +329,7 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
       if (err.shortMessage?.toLowerCase().includes("gas value exceeds maximum value")) {
         setErrorStartGame("Please fund your wallet your testnet tokens. Go to the Settings section, copy your wallet address and paste it into the faucet.");
       } else {
-        setErrorStartGame(err.shortMessage);
+        setErrorStartGame(err.message || err.shortMessage || 'Unknown error occurred');
       }
 
       throw err
@@ -355,6 +337,13 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
       setIsWritingContract(false)
       setRefreshCounter(c => c + 1)
     }
+  }
+
+  // Fonction simplifiée pour l'état du bouton
+  const getButtonText = () => {
+    if (isWritingContract) return "Starting...";
+    if (isGameStarted) return "Game Started";
+    return "Start Game";
   }
 
   // Exécution d'une transaction de jeu
@@ -505,7 +494,7 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
         )}
 
         {/* Initialization Status */}
-        {isInitializing || isValidatingPool ? (
+        {isInitializing ? (
           <div
             className="mb-6 p-4 rounded-lg flex items-center gap-3"
             style={{
@@ -521,10 +510,11 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
             </span>
           </div>
         ) : (
+          // Bouton Start Game simplifié
           <div className="mb-10">
             <button
               onClick={handleStartGame}
-              disabled={isExecuting || isGameStarted}
+              disabled={isWritingContract || isGameStarted}
               className="px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed z-10"
               style={{
                 background: cardBg,
@@ -533,8 +523,17 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
                 boxShadow
               }}
             >
-              Start Game
+              {getButtonText()}
             </button>
+
+            {isWritingContract && (
+              <div className="mt-2 text-sm opacity-70" style={{ color: textColor }}>
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                  <span>Preparing game...</span>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -546,13 +545,6 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
           </div>
         )}
 
-        {/* Pool errors */}
-        {poolError && (
-          <div className="mb-6 p-4 bg-red-100/70 dark:bg-red-900/70 rounded-lg max-w-2xl text-left backdrop-blur-sm">
-            <h4 className="text-red-700 dark:text-red-300 break-all">❌ Error :</h4>
-            <p className="text-red-700 dark:text-red-300 break-all">{poolError}</p>
-          </div>
-        )}
       </div>
     </Wrapper>
   ) : (

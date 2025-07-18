@@ -69,13 +69,13 @@
 /* Media queries pour très petits écrans (smartphones en portrait) */
 @media screen and (max-width: 480px) {
   .bgDay {
-    background: url('/img/light_mobile.jpg') no-repeat center center;
+    background: url('/img/phone_bg_light.jpg') no-repeat center center;
     background-size: cover;
     background-attachment: scroll;
   }
   
   .bgNight {
-    background: url('/img/night.jpeg') no-repeat center center;
+    background: url('/img/phone_bg_night.jpg') no-repeat center center;
     background-size: cover;
     background-attachment: scroll;
   }
