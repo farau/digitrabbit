@@ -273,6 +273,7 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
       setErrorStartGame('') // Reset les erreurs précédentes
 
       let currentPool = preSignedPool
+
       const hasValidePool = currentPool?.transactions?.length > 0 && getAvailableTransactions() > 0;
 
       // Si le pool n'est pas valide, l'initialiser
@@ -280,10 +281,11 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
         console.log("Initializing pool before starting game...")
 
         try {
-          await initializePool();
+          const pool = await initializePool();
 
           // Vérifier que l'initialisation a réussi
-          const newAvailableCount = getAvailableTransactions()
+          const newAvailableCount = pool.transactions.length - pool.currentIndex
+
           if (newAvailableCount === 0) {
             throw new Error('Pool initialization completed but no transaction available. Please logout and login again.')
           }
@@ -296,11 +298,6 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
           console.error('Pool initialization failed:', poolError)
           throw new Error('Failed to initialize transaction pool. Please logout and login again.')
         }
-      }
-
-      // 3. Dernière vérification avant de démarrer le jeu
-      if (!preSignedPool || getAvailableTransactions() === 0) {
-        throw new Error("Pool is still invalid after initialization. Please logout and login again.");
       }
 
       console.log(`Starting game on MegaETH Testnet...`)
@@ -473,15 +470,16 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
                 }
               }}
             />
-            <TransactionStack
-              isExecuting={isExecuting}
-              showSuccess={showSuccess}
-              error={error}
-              txId={signedTx}
-              transactionHash={currentTransactionHash}
-            />
           </div>
         </div>
+
+        <TransactionStack
+          isExecuting={isExecuting}
+          showSuccess={showSuccess}
+          error={error}
+          txId={signedTx}
+          transactionHash={currentTransactionHash}
+        />
 
         {/* X Share Modal */}
         {showTwitterShare && (

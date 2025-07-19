@@ -27,7 +27,7 @@ export default function Leaderboard({ limit = 100 }) {
     }).format(score);
   };
 
-  const getRankStyle = (index, isCurrentUser = false) => {
+  const getRankStyle = (rank, isCurrentUser = false) => {
     if (isCurrentUser) {
       return {
         background: isNight
@@ -38,21 +38,21 @@ export default function Leaderboard({ limit = 100 }) {
       };
     }
 
-    if (index === 0) return {
+    if (rank === 1) return {
       background: isNight
         ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)'
         : 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
       color: '#000',
       fontWeight: 'bold'
     };
-    if (index === 1) return {
+    if (rank === 2) return {
       background: isNight
         ? 'linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%)'
         : 'linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%)',
       color: '#000',
       fontWeight: 'bold'
     };
-    if (index === 2) return {
+    if (rank === 3) return {
       background: isNight
         ? 'linear-gradient(135deg, #cd7c2f 0%, #a0522d 100%)'
         : 'linear-gradient(135deg, #cd7c2f 0%, #a0522d 100%)',
@@ -65,14 +65,14 @@ export default function Leaderboard({ limit = 100 }) {
     };
   };
 
-  const renderPlayerCard = (player, index, isCurrentUser = false) => (
+  const renderPlayerCard = (player, isCurrentUser = false) => (
     <div
       key={player.walletAddress}
       className="p-3 sm:p-4 md:p-6 hover:bg-opacity-50 transition-colors duration-200"
       style={{
         background: isCurrentUser
           ? (isNight ? 'rgba(79, 70, 229, 0.15)' : 'rgba(79, 70, 229, 0.08)')
-          : index < 3 ? (isNight ? 'rgba(79, 70, 229, 0.1)' : 'rgba(79, 70, 229, 0.05)') : 'transparent'
+          : player.rank <= 3 ? (isNight ? 'rgba(79, 70, 229, 0.1)' : 'rgba(79, 70, 229, 0.05)') : 'transparent'
       }}
     >
       <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
@@ -80,12 +80,12 @@ export default function Leaderboard({ limit = 100 }) {
         <div className="flex-shrink-0">
           <div
             className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-xs sm:text-sm"
-            style={getRankStyle(index, isCurrentUser)}
+            style={getRankStyle(player.rank, isCurrentUser)}
           >
-            {!isCurrentUser && index === 0 && '🥇'}
-            {!isCurrentUser && index === 1 && '🥈'}
-            {!isCurrentUser && index === 2 && '🥉'}
-            {(isCurrentUser || index > 2) && `#${player.rank}`}
+            {!isCurrentUser && player.rank === 1 && '🥇'}
+            {!isCurrentUser && player.rank === 2 && '🥈'}
+            {!isCurrentUser && player.rank === 3 && '🥉'}
+            {(isCurrentUser || player.rank > 3) && `#${player.rank}`}
           </div>
         </div>
 
@@ -350,7 +350,7 @@ export default function Leaderboard({ limit = 100 }) {
           >
             My Rank
           </div>
-          {renderPlayerCard(currentUser, -1, true)}
+          {renderPlayerCard(currentUser, true)}
         </div>
       )}
 
@@ -375,7 +375,7 @@ export default function Leaderboard({ limit = 100 }) {
           Top {limit}
         </div>
         <div className="divide-y" style={{ borderColor: borderColor }}>
-          {topPlayersWithoutCurrentUser.map((player, index) => renderPlayerCard(player, index))}
+          {topPlayersWithoutCurrentUser.map((player) => renderPlayerCard(player, false))}
         </div>
 
         {/* Footer */}

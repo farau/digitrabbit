@@ -124,17 +124,18 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
 
             const transactions = await Promise.all(signingPromises)
 
-            setPreSignedPool({
+            const poolData = {
                 transactions,
                 currentIndex: 0,
                 baseNonce: nonce,
                 isRefilling: false,
                 hasTriggeredRefill: false
-            })
+            }
+            setPreSignedPool(poolData)
 
             hasInitialized.current = true
             console.log(`✅ Pre-signed 15 transactions for MegaETH`)
-
+            return poolData
         } catch (err) {
             console.error('❌ Error initializing network:', err)
             setError(`Failed to initialize MegaETH: ${err.message}`)
@@ -142,15 +143,6 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
             setIsInitializing(false)
         }
     }, [walletClient, embeddedWallet?.address])
-
-    // Auto-initialisation quand le wallet est prêt
-    useEffect(() => {
-        if (!walletClient || !embeddedWallet?.address) return
-        if (hasInitialized.current) return // Évite les re-initialisations
-
-        console.log('🔄 Auto-initializing pool...')
-        initializePool()
-    }, [walletClient, embeddedWallet?.address, initializePool])
 
     // Reset de l'état d'initialisation si le wallet change
     useEffect(() => {
@@ -160,8 +152,6 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
     }, [embeddedWallet?.address])
 
     const executeTransaction = useCallback(async () => {
-
-        console.log("TEST EXECUTE TX")
 
         if (!preSignedPool || preSignedPool.currentIndex >= preSignedPool.transactions.length) {
             setError('No pre-signed transactions available')
