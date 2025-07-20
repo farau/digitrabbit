@@ -322,6 +322,24 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
       setResult(`Hash: ${result.transactionHash || result}`)
 
     } catch (err) {
+      // Log l'erreur dans Sentry avec contexte
+      Sentry.captureException(err, {
+        tags: {
+          action: 'start_game',
+          component: 'Game'
+        },
+        extra: {
+          walletAddress: embeddedWallet?.address,
+          hasValidPool: hasValidePool,
+          availableTransactions: getAvailableTransactions(),
+          // Seulement les métriques utiles du pool
+          poolStats: preSignedPool ? {
+            totalTransactions: preSignedPool.transactions?.length || 0,
+            currentIndex: preSignedPool.currentIndex || 0,
+            hasTransactions: Array.isArray(preSignedPool.transactions)
+          } : null
+        }
+      });
       console.error('Contract write failed:', err)
       if (err.shortMessage?.toLowerCase().includes("gas value exceeds maximum value")) {
         setErrorStartGame("Please fund your wallet your testnet tokens. Go to the Settings section, copy your wallet address and paste it into the faucet.");
@@ -365,6 +383,24 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
         setShowSuccess(true)
       }
     } catch (err) {
+      // Log dans Sentry
+      Sentry.captureException(err, {
+        tags: {
+          action: 'execute_transaction',
+          component: 'Game'
+        },
+        extra: {
+          currentTxId,
+          availableTransactions: getAvailableTransactions(),
+          walletAddress: embeddedWallet?.address,
+          // Seulement les métriques utiles du pool
+          poolStats: preSignedPool ? {
+            totalTransactions: preSignedPool.transactions?.length || 0,
+            currentIndex: preSignedPool.currentIndex || 0,
+            hasTransactions: Array.isArray(preSignedPool.transactions)
+          } : null
+        }
+      });
       console.error('❌ Error executing transaction:', err)
       setShowSuccess(false)
     } finally {
