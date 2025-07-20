@@ -13,6 +13,7 @@ import RabbitImage from './RabbitImage'
 import TransactionStack from './TransactionStack'
 import { useTheme, useGame } from '@/context'
 import { useWalletClient } from '../hooks/useWalletClient'
+import * as Sentry from '@sentry/nextjs'
 
 function PlayerData({ refreshCounter, themeMode, seasonId, playerData, embeddedWallet }) {
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
@@ -330,7 +331,6 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
         },
         extra: {
           walletAddress: embeddedWallet?.address,
-          hasValidPool: hasValidePool,
           availableTransactions: getAvailableTransactions(),
           // Seulement les métriques utiles du pool
           poolStats: preSignedPool ? {
