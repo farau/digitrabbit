@@ -383,31 +383,15 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
         {/* Confirmation Modal */}
         {modalVisible && (
           <>
+            {/* Overlay */}
             <div
-              className="fixed top-160 md:top-50 inset-0 z-50"
-              style={{
-                position: 'fixed',
-                left: 0,
-                width: '100%',
-                height: '100%',
-                zIndex: 9999
-              }}
+              className="fixed inset-0 z-50"
               onClick={() => setModalVisible(false)}
             />
-            <div
-              className="fixed z-50"
-              style={{
-                position: 'fixed',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                zIndex: 10000,
-                width: '90%',
-                maxWidth: '384px'
-              }}
-            >
+
+            {/* Modal Container */}
+            <div className="fixed top-150 md:top-1/2 left-1/2 transform -translate-x-1/2 md:-translate-y-1/2 z-50 w-full max-w-sm px-4">
               <div
-                className='relative top-160 md:top-50'
                 style={{
                   backgroundColor: cardBg,
                   color: textColor,

@@ -26,10 +26,16 @@ const privy = new PrivyClient(
     process.env.PRIVY_APP_SECRET
 );
 
+const badbunnzPoints = 8000;
+const megalioPoints = 1000;
+
+
 
 async function calculatePointsForUser(linkedWallets) {
     let claimablePoints = 0;
     let totalBadbunnzCount = 0;
+    let claimableBadbunnzPoints = 0;
+    let claimableMegalioPoints = 0;
     let totalMegalioCount = 0;
     const walletBreakdown = [];
 
@@ -39,6 +45,8 @@ async function calculatePointsForUser(linkedWallets) {
             claimablePoints: 0,
             totalBadbunnzCount: 0,
             totalMegalioCount: 0,
+            claimableBadbunnzPoints: 0,
+            claimableMegalioPoints: 0,
             walletBreakdown: [],
             walletsChecked: 0
         };
@@ -73,7 +81,8 @@ async function calculatePointsForUser(linkedWallets) {
                     args: [walletAddress]
                 });
                 walletBadbunnz = Number(badbunnzCount);
-                walletPoints += walletBadbunnz * 10000; // 10000 points per Badbunnz
+                claimableBadbunnzPoints += walletBadbunnz * badbunnzPoints;
+                walletPoints += walletBadbunnz * badbunnzPoints; // 8000 points per Badbunnz
 
                 // Rule 2: Check Megalio Collection for this wallet
                 const megalioCount = await publicClientEth.readContract({
@@ -83,7 +92,8 @@ async function calculatePointsForUser(linkedWallets) {
                     args: [walletAddress]
                 });
                 walletMegalio = Number(megalioCount);
-                walletPoints += walletMegalio * 2000; // 2000 points per Megalio
+                claimableMegalioPoints += walletMegalio * megalioPoints;
+                walletPoints += walletMegalio * megalioPoints; // 1000 points per Megalio
 
                 // Add to totals
                 claimablePoints += walletPoints;
@@ -115,6 +125,8 @@ async function calculatePointsForUser(linkedWallets) {
             claimablePoints,
             totalBadbunnzCount,
             totalMegalioCount,
+            claimableBadbunnzPoints,
+            claimableMegalioPoints,
             walletBreakdown,
             walletsChecked: linkedWallets.length
         };
@@ -245,7 +257,7 @@ export async function GET(request) {
 
         return NextResponse.json({
             ...result,
-            claimable: result.claimablePoints > 0  // Fixed: use claimablePoints instead of totalPoints
+            claimable: result.claimablePoints > 0
         });
 
     } catch (error) {

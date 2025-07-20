@@ -19,7 +19,7 @@ import Chill from "./Chill";
 import Shop from "./Shop";
 import Assets from "./Assets";
 import FAQ from "./FAQ";
-import DREAM from "./DREAM";
+import Roadmap from "./Roadmap";
 import MobileBackground from "./MobileBackground";
 
 import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, publicClient, NUM_SLOTS } from '@/utils/constants'
@@ -267,8 +267,8 @@ export default function MainPage() {
         return <Chill />;
       case "FAQ":
         return <FAQ />;
-      case "DREAM":
-        return <DREAM
+      case "Roadmap":
+        return <Roadmap
           embeddedWallet={embeddedWallet}
           refreshCounter={refreshCounter}
           playerData={playerData}
@@ -374,10 +374,10 @@ export default function MainPage() {
       />
 
       <Icon
-        name="dream"
-        label={"DREAM"}
-        src="/img/icons/dream.png"
-        onClick={() => restoreApp("DREAM")}
+        name="Roadmap"
+        label={"Roadmap"}
+        src="/img/icons/roadmap.png"
+        onClick={() => restoreApp("Roadmap")}
         position={{ x: "12%", y: "26%" }}
       />
 

@@ -152,6 +152,230 @@ function TweetAvatarButton({ isNight }) {
   );
 }
 
+function PointsModal({ isOpen, onClose, pointsData, onClaim, isClaiming, isNight }) {
+  if (!isOpen || !pointsData) return null;
+
+  const textColor = isNight ? '#eee' : '#333';
+  const cardBg = isNight ? '#222' : '#f3f3f3';
+  const borderColor = isNight ? '#444' : '#ddd';
+  const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)';
+  const overlayBg = isNight ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.5)';
+  const subTextColor = isNight ? '#ccc' : '#666';
+
+  const collections = [
+    {
+      name: 'BadBunnz',
+      count: pointsData.totalBadbunnzCount || 0,
+      points: pointsData.claimableBadbunnzPoints || 0,
+      image: '/img/collections/badbunnz.png'
+    },
+    {
+      name: 'Megalio',
+      count: pointsData.totalMegalioCount || 0,
+      points: pointsData.claimableMegalioPoints || 0,
+      image: '/img/collections/megalio.jpg'
+    }
+  ];
+
+  const activeCollections = collections.filter(c => c.count > 0);
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: overlayBg,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 50,
+        padding: '20px'
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          backgroundColor: cardBg,
+          borderRadius: '12px',
+          padding: '24px',
+          maxWidth: '480px',
+          width: '100%',
+          maxHeight: '90vh',
+          overflowY: 'auto',
+          border: `1px solid ${borderColor}`,
+          boxShadow,
+          color: textColor
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header épuré */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '20px',
+          paddingBottom: '15px',
+          borderBottom: `1px solid ${borderColor}`
+        }}>
+          <h2 style={{
+            fontSize: '20px',
+            fontWeight: '600',
+            margin: 0,
+            color: textColor
+          }}>
+            Available Rewards
+          </h2>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              fontSize: '18px',
+              cursor: 'pointer',
+              color: subTextColor,
+              padding: '4px 8px',
+              borderRadius: '4px',
+              outline: 'none'
+            }}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Collections - Style simple avec images */}
+        <div style={{ marginBottom: '20px' }}>
+          {activeCollections.map((collection, index) => (
+            <div
+              key={collection.name}
+              style={{
+                background: cardBg,
+                border: `1px solid ${borderColor}`,
+                borderRadius: '8px',
+                padding: '15px',
+                marginBottom: index < activeCollections.length - 1 ? '10px' : '0',
+                boxShadow
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <img
+                    src={collection.image}
+                    alt={collection.name}
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '6px',
+                      objectFit: 'cover',
+                      border: `1px solid ${borderColor}`
+                    }}
+                  />
+                  <div>
+                    <div style={{
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      color: textColor,
+                      marginBottom: '4px'
+                    }}>
+                      {collection.name}
+                    </div>
+                    <div style={{
+                      fontSize: '13px',
+                      color: subTextColor
+                    }}>
+                      {collection.count} NFT{collection.count > 1 ? 's' : ''}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{
+                    fontSize: '18px',
+                    fontWeight: '600',
+                    color: textColor
+                  }}>
+                    {collection.points.toLocaleString()}
+                  </div>
+                  <div style={{
+                    fontSize: '12px',
+                    color: subTextColor
+                  }}>
+                    points
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Total - Style cohérent avec Profile */}
+        <div
+          style={{
+            background: cardBg,
+            padding: '15px',
+            borderRadius: '10px',
+            marginBottom: '20px',
+            border: `1px solid ${borderColor}`,
+            boxShadow
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <strong>Total RabbitPoints:</strong>
+            </div>
+            <div style={{
+              fontSize: '20px',
+              fontWeight: '600',
+              color: textColor
+            }}>
+              {pointsData.claimablePoints.toLocaleString()}
+            </div>
+          </div>
+        </div>
+
+        {/* Claim Button - Style simple */}
+        <button
+          onClick={onClaim}
+          disabled={isClaiming || pointsData.claimablePoints === 0}
+          style={{
+            width: '100%',
+            background: pointsData.claimablePoints === 0
+              ? (isNight ? '#444' : '#ddd')
+              : (isNight ? '#4f46e5' : '#6366f1'),
+            color: 'white',
+            border: 'none',
+            padding: '12px 20px',
+            borderRadius: '8px',
+            fontSize: '14px',
+            fontWeight: '600',
+            cursor: (isClaiming || pointsData.claimablePoints === 0) ? 'not-allowed' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            opacity: (isClaiming || pointsData.claimablePoints === 0) ? 0.6 : 1,
+            transition: 'opacity 0.2s ease'
+          }}
+        >
+          {isClaiming ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              Claiming...
+            </>
+          ) : pointsData.claimablePoints === 0 ? (
+            'No Points Available'
+          ) : (
+            <>
+              Claim Points
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCounter }) {
   const { wallets } = useWallets();
   const { walletClient } = useWalletClient(embeddedWallet);
@@ -160,6 +384,7 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
   const [pointsData, setPointsData] = useState(null);
   const [error, setError] = useState(null);
   const [claimSuccess, setClaimSuccess] = useState(false);
+  const [showModal, setShowModal] = useState(false); // Nouvelle state pour la modale
 
   const handleCheckPoints = async () => {
     if (!user?.linkedAccounts) return;
@@ -169,17 +394,15 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
     setClaimSuccess(false);
 
     try {
-      // Get all linked wallets from the user's linked accounts
       const linkedWallets = user.linkedAccounts
         .filter(account => account.type === 'wallet')
-        .map(account => account.address); // Fixed: removed object wrapper
+        .map(account => account.address);
 
       if (linkedWallets.length === 0) {
         setError('No linked wallets found');
         return;
       }
 
-      // Fixed: properly encode the array
       const linkedWalletsJson = JSON.stringify(linkedWallets);
       const response = await fetch(`/api/users/claim?linkedWallets=${encodeURIComponent(linkedWalletsJson)}`);
 
@@ -189,6 +412,11 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
 
       const data = await response.json();
       setPointsData(data);
+
+      // Ouvrir la modale si des points sont disponibles
+      if (data.claimablePoints > 0) {
+        setShowModal(true);
+      }
     } catch (err) {
       console.error('Error checking points:', err);
       setError('Failed to check points');
@@ -208,12 +436,10 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
     setError(null);
 
     try {
-
       if (!embeddedWallet) {
         throw new Error('Embedded wallet not found');
       }
 
-      // Fixed: Get linked wallets properly
       const linkedWallets = user.linkedAccounts
         .filter(account => account.type === 'wallet')
         .map(account => account.address);
@@ -224,7 +450,7 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          linkedWallets: linkedWallets, // Fixed: send array directly
+          linkedWallets: linkedWallets,
           address: embeddedWallet.address
         }),
       });
@@ -239,7 +465,6 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
         throw new Error('Failed to get claim signature');
       }
 
-      // Exécuter la transaction sur le smart contract
       const hash = await walletClient.writeContract({
         account: embeddedWallet.address,
         address: DIGIT_RABBITS_ADDRESS,
@@ -254,8 +479,9 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
 
       console.log('Transaction hash:', hash);
       setClaimSuccess(true);
-      setRefreshCounter(c => c + 1)
-      setPointsData(null); // Reset pour cacher le bouton claim
+      setRefreshCounter(c => c + 1);
+      setPointsData(null);
+      setShowModal(false); // Fermer la modale après le claim
 
     } catch (err) {
       console.error('Error claiming points:', err);
@@ -286,115 +512,72 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
     opacity: (isChecking || isClaiming) ? 0.7 : 1,
   };
 
-  const claimButtonStyle = {
-    background: isNight
-      ? 'linear-gradient(135deg, #10b981 0%, #14c085 100%)'
-      : 'linear-gradient(135deg, #10b981 0%, #14c085 100%)',
-    color: 'white',
-    border: 'none',
-    padding: '10px 20px',
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontWeight: '600',
-    cursor: isClaiming ? 'not-allowed' : 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    transition: 'all 0.2s ease',
-    boxShadow: isNight
-      ? '0 2px 6px rgba(16, 185, 129, 0.3)'
-      : '0 2px 6px rgba(16, 185, 129, 0.3)',
-    opacity: isClaiming ? 0.7 : 1,
-  };
-
   return (
-    <div className="flex flex-col items-center gap-3">
-      <button
-        onClick={handleCheckPoints}
-        disabled={isChecking || isClaiming}
-        style={buttonStyle}
-        onMouseOver={(e) => {
-          if (!isChecking && !isClaiming) {
-            e.target.style.transform = 'translateY(-1px)';
-            e.target.style.boxShadow = isNight
-              ? '0 3px 8px rgba(79, 70, 229, 0.4)'
-              : '0 3px 8px rgba(79, 70, 229, 0.4)';
-          }
-        }}
-        onMouseOut={(e) => {
-          if (!isChecking && !isClaiming) {
-            e.target.style.transform = 'translateY(0)';
-            e.target.style.boxShadow = isNight
-              ? '0 2px 6px rgba(79, 70, 229, 0.3)'
-              : '0 2px 6px rgba(79, 70, 229, 0.3)';
-          }
-        }}
-      >
-        {isChecking ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
-        ) : (
-          <Gift className="w-4 h-4" />
-        )}
-        {isChecking ? 'Checking...' : 'Check Points'}
-      </button>
+    <>
+      <div className="flex flex-col items-center gap-3">
+        <button
+          onClick={handleCheckPoints}
+          disabled={isChecking || isClaiming}
+          style={buttonStyle}
+          onMouseOver={(e) => {
+            if (!isChecking && !isClaiming) {
+              e.target.style.transform = 'translateY(-1px)';
+              e.target.style.boxShadow = isNight
+                ? '0 3px 8px rgba(79, 70, 229, 0.4)'
+                : '0 3px 8px rgba(79, 70, 229, 0.4)';
+            }
+          }}
+          onMouseOut={(e) => {
+            if (!isChecking && !isClaiming) {
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = isNight
+                ? '0 2px 6px rgba(79, 70, 229, 0.3)'
+                : '0 2px 6px rgba(79, 70, 229, 0.3)';
+            }
+          }}
+        >
+          {isChecking ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Gift className="w-4 h-4" />
+          )}
+          {isChecking ? 'Checking...' : 'Check Points'}
+        </button>
 
-      {/* Display results */}
-      {pointsData && !isChecking && pointsData.claimablePoints > 0 && (
-        <div className="flex flex-col items-center gap-2">
-          <div className={`text-sm ${isNight ? 'text-green-400' : 'text-green-600'} text-center`}>
-            🎉 {pointsData.claimablePoints} points claimable!
+        {/* Affichage simple quand pas de points */}
+        {pointsData && !isChecking && pointsData.claimablePoints === 0 && (
+          <div className={`text-sm ${isNight ? 'text-gray-400' : 'text-gray-600'} text-center`}>
+            No points to claim
           </div>
-          <button
-            onClick={handleClaimPoints}
-            disabled={isClaiming}
-            style={claimButtonStyle}
-            onMouseOver={(e) => {
-              if (!isClaiming) {
-                e.target.style.transform = 'translateY(-1px)';
-                e.target.style.boxShadow = isNight
-                  ? '0 3px 8px rgba(16, 185, 129, 0.4)'
-                  : '0 3px 8px rgba(16, 185, 129, 0.4)';
-              }
-            }}
-            onMouseOut={(e) => {
-              if (!isClaiming) {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = isNight
-                  ? '0 2px 6px rgba(16, 185, 129, 0.3)'
-                  : '0 2px 6px rgba(16, 185, 129, 0.3)';
-              }
-            }}
-          >
-            {isClaiming ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Trophy className="w-4 h-4" />
-            )}
-            {isClaiming ? 'Claiming...' : 'Claim Points'}
-          </button>
-        </div>
-      )}
+        )}
 
-      {pointsData && !isChecking && pointsData.claimablePoints === 0 && (
-        <div className={`text-sm ${isNight ? 'text-gray-400' : 'text-gray-600'} text-center`}>
-          No points to claim
-        </div>
-      )}
+        {claimSuccess && (
+          <div className={`text-sm ${isNight ? 'text-green-400' : 'text-green-600'} text-center`}>
+            ✅ Points claimed successfully!
+          </div>
+        )}
 
-      {claimSuccess && (
-        <div className={`text-sm ${isNight ? 'text-green-400' : 'text-green-600'} text-center`}>
-          ✅ Points claimed successfully!
-        </div>
-      )}
+        {error && (
+          <div className={`text-sm ${isNight ? 'text-red-400' : 'text-red-600'} text-center max-w-xs`}>
+            {error}
+          </div>
+        )}
+      </div>
 
-      {error && (
-        <div className={`text-sm ${isNight ? 'text-red-400' : 'text-red-600'} text-center max-w-xs`}>
-          {error}
-        </div>
-      )}
-    </div>
+      {/* Modale pour le récapitulatif */}
+      <PointsModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        pointsData={pointsData}
+        onClaim={handleClaimPoints}
+        isClaiming={isClaiming}
+        isNight={isNight}
+      />
+    </>
   );
 }
+
+
 
 export default function Profile({ playerData, setRefreshCounter }) {
   const { user } = usePrivy();

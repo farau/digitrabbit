@@ -64,9 +64,9 @@ export default function Footer({ visibleApps, setVisibleApps, appZIndices, setAp
               <Image src="/img/icons/about.png" alt="About icon" width={30} height={30} className={styles.menuIcon} />
               About
             </div>
-            <div className={styles.menuItem} onClick={() => { openApp("DREAM"); setStartOpen(false); }}>
-              <Image src="/img/icons/dream.png" alt="DREAM icon" width={30} height={30} className={styles.menuIcon} />
-              DREAM
+            <div className={styles.menuItem} onClick={() => { openApp("Roadmap"); setStartOpen(false); }}>
+              <Image src="/img/icons/roadmap.png" alt="Roadmap icon" width={30} height={30} className={styles.menuIcon} />
+              Roadmap
             </div>
             <div className={styles.menuItem} onClick={() => { openApp("Memes"); setStartOpen(false); }}>
               <Image src="/img/icons/memes.png" alt="Meme icon" width={30} height={30} className={styles.menuIcon} />

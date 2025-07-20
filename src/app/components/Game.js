@@ -287,7 +287,7 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
           const newAvailableCount = pool.transactions.length - pool.currentIndex
 
           if (newAvailableCount === 0) {
-            throw new Error('Pool initialization completed but no transaction available. Please logout and login again.')
+            throw new Error('Pool initialization completed but no transaction available. Please try again.')
           }
 
           console.log("Pool successfully initialized:", {
@@ -296,7 +296,7 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
           });
         } catch (poolError) {
           console.error('Pool initialization failed:', poolError)
-          throw new Error('Failed to initialize transaction pool. Please logout and login again.')
+          throw new Error('Failed to initialize transaction pool. Please try again.')
         }
       }
 

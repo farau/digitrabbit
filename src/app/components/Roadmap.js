@@ -4,7 +4,7 @@ import Image from "next/image"
 import Wrapper from "./Wrapper"
 import { useTheme } from '@/context'
 
-export default function DREAM({ embeddedWallet, refreshCounter, playerData }) {
+export default function Roadmap({ embeddedWallet, refreshCounter, playerData }) {
     const { themeMode } = useTheme();
 
     const isNight = themeMode === 'dark';
@@ -28,7 +28,7 @@ export default function DREAM({ embeddedWallet, refreshCounter, playerData }) {
                 }}>
                     <div className="flex items-center justify-center gap-3">
                         <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                        <p style={{ color: textColor, margin: 0 }}>Loading dream progress...</p>
+                        <p style={{ color: textColor, margin: 0 }}>Loading Roadmap progress...</p>
                     </div>
                 </div>
             </Wrapper>
@@ -56,7 +56,7 @@ export default function DREAM({ embeddedWallet, refreshCounter, playerData }) {
                 margin: '20px auto'
             }}>
                 <div className="flex flex-col items-center gap-6">
-                    {/* Dream Image */}
+                    {/* Roadmap Image */}
                     <div style={{
                         position: 'relative',
                         borderRadius: '50%',
@@ -67,8 +67,8 @@ export default function DREAM({ embeddedWallet, refreshCounter, playerData }) {
                             : '0 4px 12px rgba(99, 102, 241, 0.3)'
                     }}>
                         <Image
-                            src="/img/dream-section.jpeg"
-                            alt="Dream"
+                            src="/img/roadmap-section.jpeg"
+                            alt="Roadmap"
                             width={150}
                             height={150}
                             className="object-cover"
@@ -80,22 +80,162 @@ export default function DREAM({ embeddedWallet, refreshCounter, playerData }) {
                         fontSize: '24px',
                         fontWeight: '600',
                         color: textColor,
-                        margin: '0 0 8px 0',
+                        margin: '0 0 20px 0',
                         fontStyle: 'italic'
                     }}>
-                        **Everyone has a dream...**
+                        Roadmap
                     </h3>
 
-                    {/* Description */}
-                    <p style={{
-                        fontSize: '16px',
-                        color: isNight ? '#ccc' : '#666',
-                        lineHeight: '1.6',
-                        maxWidth: '400px',
-                        margin: '0 0 20px 0'
+                    {/* Roadmap Steps - Structured List */}
+                    <div style={{
+                        width: '100%',
+                        maxWidth: '450px',
+                        textAlign: 'left',
+                        background: isNight
+                            ? 'rgba(30, 41, 59, 0.5)'
+                            : 'rgba(248, 250, 252, 0.7)',
+                        borderRadius: '12px',
+                        padding: '24px',
+                        border: `1px solid ${isNight ? '#374151' : '#e2e8f0'}`,
+                        marginBottom: '8px'
                     }}>
-                        Ours is to reach at least 1 million transactions on MegaETH, and we want you to be part of it!
-                    </p>
+                        {/* Step 1 */}
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            marginBottom: '18px',
+                            paddingBottom: '18px',
+                            borderBottom: `1px solid ${isNight ? '#374151' : '#e5e7eb'}`
+                        }}>
+                            <div style={{
+                                background: isNight ? '#4f46e5' : '#6366f1',
+                                color: 'white',
+                                width: '24px',
+                                height: '24px',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                marginRight: '16px',
+                                flexShrink: 0
+                            }}>
+                                1
+                            </div>
+                            <p style={{
+                                fontSize: '15px',
+                                color: isNight ? '#e2e8f0' : '#374155',
+                                lineHeight: '1.5',
+                                margin: '2px 0 0 0',
+                                fontWeight: '500'
+                            }}>
+                                Create a beautiful community with degen vibes on MegaETH
+                            </p>
+                        </div>
+
+                        {/* Step 2 */}
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            marginBottom: '18px',
+                            paddingBottom: '18px',
+                            borderBottom: `1px solid ${isNight ? '#374151' : '#e5e7eb'}`
+                        }}>
+                            <div style={{
+                                background: isNight ? '#4f46e5' : '#6366f1',
+                                color: 'white',
+                                width: '24px',
+                                height: '24px',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                marginRight: '16px',
+                                flexShrink: 0
+                            }}>
+                                2
+                            </div>
+                            <p style={{
+                                fontSize: '15px',
+                                color: isNight ? '#e2e8f0' : '#374155',
+                                lineHeight: '1.5',
+                                margin: '2px 0 0 0',
+                                fontWeight: '500'
+                            }}>
+                                Like rabbits! 🐰
+                            </p>
+                        </div>
+
+                        {/* Step 3 */}
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            marginBottom: '18px',
+                            paddingBottom: '18px',
+                            borderBottom: `1px solid ${isNight ? '#374151' : '#e5e7eb'}`
+                        }}>
+                            <div style={{
+                                background: isNight ? '#4f46e5' : '#6366f1',
+                                color: 'white',
+                                width: '24px',
+                                height: '24px',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                marginRight: '16px',
+                                flexShrink: 0
+                            }}>
+                                3
+                            </div>
+                            <p style={{
+                                fontSize: '15px',
+                                color: isNight ? '#e2e8f0' : '#374155',
+                                lineHeight: '1.5',
+                                margin: '2px 0 0 0',
+                                fontWeight: '500'
+                            }}>
+                                Reach at least 1 million transactions on MegaETH, because we like doing degen things! 🚀
+                            </p>
+                        </div>
+
+                        {/* Step 4 */}
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'flex-start'
+                        }}>
+                            <div style={{
+                                background: isNight ? '#4f46e5' : '#6366f1',
+                                color: 'white',
+                                width: '24px',
+                                height: '24px',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                marginRight: '16px',
+                                flexShrink: 0
+                            }}>
+                                4
+                            </div>
+                            <p style={{
+                                fontSize: '15px',
+                                color: isNight ? '#e2e8f0' : '#374155',
+                                lineHeight: '1.5',
+                                margin: '2px 0 0 0',
+                                fontWeight: '500'
+                            }}>
+                                Nothing else. ✨
+                            </p>
+                        </div>
+                    </div>
 
                     {/* Progress Card */}
                     <div style={{
@@ -123,7 +263,7 @@ export default function DREAM({ embeddedWallet, refreshCounter, playerData }) {
                                 fontWeight: '500',
                                 color: isNight ? '#e2e8f0' : '#334155'
                             }}>
-                                Dream Progress
+                                Progress
                             </span>
                             <span style={{
                                 fontSize: '14px',
@@ -173,7 +313,7 @@ export default function DREAM({ embeddedWallet, refreshCounter, playerData }) {
                                 color: isNight ? '#9ca3af' : '#6b7280',
                                 fontWeight: '500'
                             }}>
-                                {formatNumber(totalClicks)} transactions
+                                {formatNumber(totalClicks)} tx
                             </span>
                             <span style={{
                                 fontSize: '12px',
@@ -198,7 +338,7 @@ export default function DREAM({ embeddedWallet, refreshCounter, playerData }) {
                         border: `1px solid ${isNight ? '#4f46e5' : '#a5b4fc'}`,
                         maxWidth: '350px'
                     }}>
-                        Every click brings us closer to our dream! 🚀
+                        Every click brings us closer to our goal! 🚀
                     </div>
                 </div>
             </div>
