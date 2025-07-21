@@ -183,7 +183,7 @@ function TwitterShareButton({ score, totalClicks, themeMode, onClose }) {
   );
 }
 
-export default function Game({ refreshCounter, setRefreshCounter, playerData, preSignedPool, isInitializing, error, initializePool, executeTransaction, getAvailableTransactions, isGameStarted, setIsGameStarted, onGameEnd }) {
+export default function Game({ refreshCounter, setRefreshCounter, playerData, preSignedPool, isInitializing, error, initializePool, executeTransaction, getAvailableTransactions, isGameStarted, setIsGameStarted, onGameEnd, resetPool }) {
   const [result, setResult] = useState('')
   const [errorStartGame, setErrorStartGame] = useState('')
   const [isExecuting, setIsExecuting] = useState(false)
@@ -272,6 +272,7 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
       // 2. Vérification et initialisation du pool si nécessaire
       setIsWritingContract(true)
       setErrorStartGame('') // Reset les erreurs précédentes
+      await resetPool() // Reset de la pool avant début d'une nouvelle partie
 
       let currentPool = preSignedPool
 
@@ -318,6 +319,26 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
       }
 
       console.log(`Game started with hash: ${result}`)
+
+      Sentry.addBreadcrumb({
+        category: 'game',
+        message: 'Game started successfully',
+        level: 'info',
+        data: {
+          transactionHash: result.transactionHash || result,
+          walletAddress: embeddedWallet.address,
+          availableTransactions: getAvailableTransactions(),
+          poolStats: preSignedPool ? {
+            totalTransactions: preSignedPool.transactions?.length || 0,
+            currentIndex: preSignedPool.currentIndex || 0,
+            baseNonce: preSignedPool.baseNonce || 0,
+            hasTransactions: Array.isArray(preSignedPool.transactions),
+            remainingTransactions: (preSignedPool.transactions?.length || 0) - (preSignedPool.currentIndex || 0)
+          } : null,
+          timestamp: new Date().toISOString()
+        }
+      });
+
       setIsGameStarted(true)
       setTimer(60)
       setResult(`Hash: ${result.transactionHash || result}`)
@@ -336,6 +357,7 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
           poolStats: preSignedPool ? {
             totalTransactions: preSignedPool.transactions?.length || 0,
             currentIndex: preSignedPool.currentIndex || 0,
+            baseNonce: preSignedPool.baseNonce || 0,
             hasTransactions: Array.isArray(preSignedPool.transactions)
           } : null
         }
@@ -397,6 +419,7 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
           poolStats: preSignedPool ? {
             totalTransactions: preSignedPool.transactions?.length || 0,
             currentIndex: preSignedPool.currentIndex || 0,
+            baseNonce: preSignedPool.baseNonce || 0,
             hasTransactions: Array.isArray(preSignedPool.transactions)
           } : null
         }
