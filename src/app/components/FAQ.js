@@ -77,7 +77,7 @@ export default function FAQ() {
                         How to play the game?
                     </h5>
                     <div className={`text-xs leading-relaxed text-center ${subTextColor} space-y-2`}>
-                        <p>Connect each 5 hours and make the most clicks you can to get the better score. With your RabbitPoints you can buy items on the shop which will give you a boost to achieve even a better score.</p>
+                        <p>Connect each 2 hours and make the most clicks you can to get the better score. With your RabbitPoints you can buy items on the shop which will give you a boost to achieve even a better score.</p>
                         <p>Your items bring your Digital Rabbit to life! Every item you purchase is automatically equipped on your character in your profile, creating a one-of-a-kind digital identity. Download your creation and share it on socials to showcase your achievements and style!</p>
                         <p>Try to be on the top of the leaderboard to receive perks or WL.</p>
                         <p>Try to be as active as possible to achieve the best streak.</p>

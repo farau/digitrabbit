@@ -58,6 +58,18 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
     }
   }, [playerItems])
 
+  // Fonction pour créer les items de preview qui combinent les items possédés et l'item sélectionné
+  const getPreviewItems = () => {
+    const previewItems = [...playerItems]
+    const selectedLevel = selectedLevels[selectedSlot]
+
+    // Si le niveau sélectionné est différent du niveau possédé, on l'affiche en preview
+    if (selectedLevel !== playerItems[selectedSlot]) {
+      previewItems[selectedSlot] = selectedLevel
+    }
+
+    return previewItems
+  }
 
   // Error and loading states
   if (isValidating) {
@@ -148,7 +160,7 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
   }
 
   // Prix des items
-  const getItemPrice = (level) => level > 0 ? 1000 * level : 0
+  const getItemPrice = (level) => level === 5 ? 10000 * level : 1000 * level
 
   // Fonction pour obtenir le chemin de l'image
   const getImagePath = (slotIndex, level) => {
@@ -218,7 +230,9 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
           {/* LEFT : Digit Rabbit Canvas avec DynamicAvatar */}
           <div className="w-full sm:w-1/2">
             <h4 className="text-xs font-semibold mb-4 text-center" style={{ color: textColor }}>
-              Your Digit Rabbit
+              Your Digit Rabbit {selectedLevels[selectedSlot] !== playerItems[selectedSlot] && (
+                <span className="text-blue-500 dark:text-blue-400">(Preview)</span>
+              )}
             </h4>
             <div
               className="w-full h-[300px] rounded-xl shadow flex items-center justify-center relative"
@@ -234,12 +248,18 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
               }}
             >
               <DynamicAvatar
-                playerItems={playerItems}
+                playerItems={getPreviewItems()}
                 size="w-full h-full"
                 showBorder={false}
                 width={300}
                 height={300}
               />
+              {/* Indicateur de preview si l'item est différent */}
+              {selectedLevels[selectedSlot] !== playerItems[selectedSlot] && (
+                <div className="absolute top-2 right-2 bg-blue-500 text-white px-2 py-1 rounded-full text-xs">
+                  Preview
+                </div>
+              )}
             </div>
           </div>
 
@@ -255,6 +275,7 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
               const price = getItemPrice(selected)
               const canBuy = isLevelAvailable(i, selected)
               const nextLevel = owned + 1
+              const isPreview = selected !== owned
 
               return (
                 <>
@@ -263,9 +284,9 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
                       style={{
                         backgroundColor: cardBg,
                         color: textColor,
-                        borderColor,
-                        boxShadow,
-                        borderWidth: 1,
+                        borderColor: isPreview ? '#3b82f6' : borderColor,
+                        boxShadow: isPreview ? '0 0 12px rgba(59, 130, 246, 0.3)' : boxShadow,
+                        borderWidth: isPreview ? 2 : 1,
                         borderStyle: 'solid',
                         borderRadius: '0.75rem',
                         padding: '1rem',
@@ -288,6 +309,9 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
                               <span>Selected: Lv {selected}</span>
                               {playerItems[i] >= selected && (
                                 <span className="text-green-600 dark:text-green-400">✓</span>
+                              )}
+                              {isPreview && (
+                                <span className="text-blue-500 dark:text-blue-400">👁️</span>
                               )}
                             </div>
                           </div>
@@ -343,10 +367,10 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
                   style={{
                     backgroundColor: cardBg,
                     color: textColor,
-                    borderColor,
-                    borderWidth: 1,
+                    borderColor: selectedLevels[selectedSlot] !== playerItems[selectedSlot] ? '#3b82f6' : borderColor,
+                    borderWidth: selectedLevels[selectedSlot] !== playerItems[selectedSlot] ? 2 : 1,
                     borderStyle: 'solid',
-                    boxShadow,
+                    boxShadow: selectedLevels[selectedSlot] !== playerItems[selectedSlot] ? '0 0 12px rgba(59, 130, 246, 0.3)' : boxShadow,
                   }}
                 >
                   <Image
@@ -373,7 +397,7 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
               className="underline hover:text-green-700 dark:hover:text-green-400"
               target="_blank"
               rel="noopener noreferrer"
-              href={`https://web3.okx.com/explorer/megaeth-testnet/tx/${txResult}`}
+              href={`https://www.megaexplorer.xyz/tx/${txResult}`}
             >
               See on explorer
             </a>

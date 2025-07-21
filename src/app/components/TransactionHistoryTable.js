@@ -16,7 +16,7 @@ export default function TransactionHistoryTable({ transactionHistory, clearHisto
     const hoverBg = isNight ? '#333' : '#e5e5e5'
     const headerBg = isNight ? '#1a1a1a' : '#e8e8e8'
 
-    const getExplorerUrl = (tx) => `https://web3.okx.com/explorer/megaeth-testnet/tx/${tx}`
+    const getExplorerUrl = (tx) => `https://www.megaexplorer.xyz/tx/${tx}`
 
     const getTimeStyle = (time) => {
         if (time < 200) return isNight
