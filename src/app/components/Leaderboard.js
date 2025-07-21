@@ -1,7 +1,8 @@
 'use client';
 
 import Image from 'next/image';
-import { Trophy, RotateCcw, Users, Calendar } from 'lucide-react';
+import { Trophy, RotateCcw, Users, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState } from 'react';
 import { useLeaderboard } from '../hooks/useLeaderboard';
 import { useTheme, useGame } from '@/context';
 import Wrapper from '@/app/components/Wrapper';
@@ -10,6 +11,8 @@ import Wrapper from '@/app/components/Wrapper';
 export default function Leaderboard({ limit = 100 }) {
   const { data, loading, error, refresh } = useLeaderboard(limit);
   const { themeMode } = useTheme();
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const isNight = themeMode === 'dark';
   const textColor = isNight ? '#eee' : '#333';
@@ -287,6 +290,30 @@ export default function Leaderboard({ limit = 100 }) {
     leaderboard.filter(player => player.walletAddress.toLowerCase() !== embeddedWallet?.address?.toLowerCase()) :
     leaderboard;
 
+  // Pagination logic
+  const totalPages = Math.ceil(topPlayersWithoutCurrentUser.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentPagePlayers = topPlayersWithoutCurrentUser.slice(startIndex, endIndex);
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const goToPage = (page) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
   return (
     <Wrapper>
       {/* Header */}
@@ -365,18 +392,118 @@ export default function Leaderboard({ limit = 100 }) {
         }}
       >
         <div
-          className="px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium border-b"
+          className="px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium border-b flex items-center justify-between"
           style={{
             background: isNight ? '#1a1a1a' : '#f9f9f9',
             color: textColor,
             borderColor: borderColor
           }}
         >
-          Top {limit}
+          <span>Top Players</span>
+          <span style={{ color: subTextColor }}>
+            Page {currentPage} of {totalPages}
+          </span>
         </div>
         <div className="divide-y" style={{ borderColor: borderColor }}>
-          {topPlayersWithoutCurrentUser.map((player) => renderPlayerCard(player, false))}
+          {currentPagePlayers.map((player) => renderPlayerCard(player, false))}
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div
+            className="px-3 sm:px-4 py-3 border-t"
+            style={{
+              background: isNight ? '#1a1a1a' : '#f9f9f9',
+              borderColor: borderColor
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <button
+                onClick={goToPreviousPage}
+                disabled={currentPage === 1}
+                style={{
+                  background: currentPage === 1 ? (isNight ? '#333' : '#e5e7eb') : (isNight ? '#4f46e5' : '#4f46e5'),
+                  color: currentPage === 1 ? (isNight ? '#666' : '#999') : 'white',
+                  border: 'none',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <ChevronLeft className="w-3 h-3" />
+                Previous
+              </button>
+
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => goToPage(pageNum)}
+                      style={{
+                        background: pageNum === currentPage ? (isNight ? '#4f46e5' : '#4f46e5') : 'transparent',
+                        color: pageNum === currentPage ? 'white' : textColor,
+                        border: `1px solid ${pageNum === currentPage ? (isNight ? '#4f46e5' : '#4f46e5') : borderColor}`,
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        fontSize: '11px',
+                        fontWeight: pageNum === currentPage ? '600' : '400',
+                        cursor: 'pointer',
+                        minWidth: '28px',
+                        height: '28px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages}
+                style={{
+                  background: currentPage === totalPages ? (isNight ? '#333' : '#e5e7eb') : (isNight ? '#4f46e5' : '#4f46e5'),
+                  color: currentPage === totalPages ? (isNight ? '#666' : '#999') : 'white',
+                  border: 'none',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Next
+                <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         {metadata && (

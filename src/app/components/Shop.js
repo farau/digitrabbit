@@ -11,6 +11,7 @@ import Image from 'next/image'
 import DynamicAvatar from '@/app/components/DynamicAvatar'
 import { XLogo } from '@/utils/constants'
 import { useWalletClient } from '../hooks/useWalletClient'
+import WalletButton from './WalletButton'
 
 export default function Shop({ refreshCounter, setRefreshCounter, playerData }) {
   const [selectedLevels, setSelectedLevels] = useState(Array(NUM_SLOTS).fill(1))
@@ -475,9 +476,10 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
           margin: '20px'
         }}
       >
-        <p style={{ color: textColor, margin: 0 }}>
+        <p style={{ color: textColor, margin: 0, marginBottom: '12px' }}>
           Please log in your <XLogo size={16} className={isNight ? 'text-white' : 'text-black'} /> account to access the shop and customize your Digit Rabbit.
         </p>
+        <WalletButton />
       </div>
     </Wrapper>
   )

@@ -14,6 +14,7 @@ import TransactionStack from './TransactionStack'
 import { useTheme, useGame } from '@/context'
 import { useWalletClient } from '../hooks/useWalletClient'
 import * as Sentry from '@sentry/nextjs'
+import WalletButton from './WalletButton'
 
 function PlayerData({ refreshCounter, themeMode, seasonId, playerData, embeddedWallet }) {
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
@@ -135,7 +136,7 @@ function TwitterShareButton({ score, totalClicks, themeMode, onClose }) {
   const subTextColor = isNight ? 'text-zinc-400' : 'text-gray-600';
 
   const handleTwitterShare = () => {
-    const tweetText = `🐰 Just scored ${score} RabbitPoints on @digitrabbits website! 🚀\n\nExperience lightning-fast blockchain gaming with MegaETH's incredible speed! ⚡\n\nWen 1M total clicks?\n\nRabbitio`;
+    const tweetText = `🐰 Just scored ${score} RabbitPoints in 1 minute on the @digitrabbits website! 🚀\n\nEach click represents a transaction on-chain on the MegaETH's testnet! ⚡️\n\nWen 1M total clicks?\n\nRabbitio`;
     const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
     window.open(tweetUrl, '_blank', 'width=600,height=400');
     onClose();
@@ -182,6 +183,7 @@ function TwitterShareButton({ score, totalClicks, themeMode, onClose }) {
     </button>
   );
 }
+
 
 export default function Game({ refreshCounter, setRefreshCounter, playerData, preSignedPool, isInitializing, error, initializePool, executeTransaction, getAvailableTransactions, isGameStarted, setIsGameStarted, onGameEnd, resetPool }) {
   const [result, setResult] = useState('')
@@ -497,10 +499,12 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
             margin: '20px'
           }}
         >
-          <p style={{ color: textColor, margin: 0 }}>
+          <p style={{ color: textColor, margin: 0, marginBottom: '12px' }}>
             Please log in your <XLogo size={16} className={isNight ? 'text-white' : 'text-black'} /> account to enjoy the benefits of MegaETH in our game.
           </p>
+          <WalletButton />
         </div>
+
       </Wrapper>
     )
   }
@@ -620,6 +624,7 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
         <p style={{ color: textColor, margin: 0 }}>
           Please log in your <XLogo size={16} className={isNight ? 'text-white' : 'text-black'} /> account to enjoy the benefits of MegaETH in our game.
         </p>
+        <WalletButton />
       </div>
     </Wrapper>
   )

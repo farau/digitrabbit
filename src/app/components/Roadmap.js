@@ -130,7 +130,7 @@ export default function Roadmap({ embeddedWallet, refreshCounter, playerData }) 
                                 margin: '2px 0 0 0',
                                 fontWeight: '500'
                             }}>
-                                Create a beautiful community with degen vibes on MegaETH
+                                Create a beautiful community with degen vibes on MegaETH.
                             </p>
                         </div>
 
@@ -338,7 +338,7 @@ export default function Roadmap({ embeddedWallet, refreshCounter, playerData }) 
                         border: `1px solid ${isNight ? '#4f46e5' : '#a5b4fc'}`,
                         maxWidth: '350px'
                     }}>
-                        Every click brings us closer to our goal! 🚀
+                        Every click brings us closer to our goal!
                     </div>
                 </div>
             </div>

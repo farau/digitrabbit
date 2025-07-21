@@ -23,13 +23,54 @@ export default function FAQ() {
                     }}
                 >
                     <h5 className={`font-semibold mb-2 text-center ${textColor}`}>
+                        How to play the game?
+                    </h5>
+                    <div className={`text-xs leading-relaxed text-center ${subTextColor} space-y-2`}>
+                        <p>Launch the game and click as fast as you can on Digit Rabbit&apos;s head to get the highest score. Each click represents an onchain transaction on the MegaETH testnet, and will earn you RabbitPoints.</p>
+
+                    </div>
+                </div>
+                <div
+                    style={{
+                        background: isNight ? '#222' : '#f3f3f3',
+                        padding: '15px',
+                        borderRadius: '10px',
+                        boxShadow: isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)',
+                        border: `1px solid ${isNight ? '#444' : '#ddd'}`,
+                    }}
+                >
+                    <h5 className={`font-semibold mb-2 text-center ${textColor}`}>
+                        What are RabbitPoints for?
+                    </h5>
+                    <p className={`text-xs leading-relaxed text-center ${subTextColor}`}>
+                        With your RabbitPoints, you can buy items in the store that will give you a boost.
+                    </p>
+                    <p className={`text-xs leading-relaxed text-center ${subTextColor} mt-3`}>
+                        Your items bring your digital rabbit to life! Every item you buy is automatically fitted to your character in your profile, creating a unique digital identity. Upload your creation and share it on social networks to showcase your achievements and style!
+                    </p>
+                    <p className={`text-xs leading-relaxed text-center ${subTextColor} mt-3`}>
+                        Try to top the leaderboard to receive benefits.
+                    </p>
+                    <p className={`text-xs leading-relaxed text-center ${subTextColor} mt-1`}>
+                        Be as active as possible to get the best streak.
+                    </p>
+                </div>
+                <div
+                    style={{
+                        background: isNight ? '#222' : '#f3f3f3',
+                        padding: '15px',
+                        borderRadius: '10px',
+                        boxShadow: isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)',
+                        border: `1px solid ${isNight ? '#444' : '#ddd'}`,
+                    }}
+                >
+                    <h5 className={`font-semibold mb-2 text-center ${textColor}`}>
                         What is an embedded wallet and why do I need it to play the game?
                     </h5>
                     <p className={`text-xs leading-relaxed text-center ${subTextColor}`}>
                         An embedded wallet is a secure, self-custodial crypto wallet that is created for you automatically within the game. You don&apos;t need to download a separate browser extension or mobile app. This wallet is essential for the game as it stores your hard-earned RabbitPoints and any in-game items you purchase, which are recorded on the blockchain. This ensures you have true ownership of your assets.
                     </p>
                 </div>
-
                 <div
                     style={{
                         background: isNight ? '#222' : '#f3f3f3',
@@ -63,27 +104,6 @@ export default function FAQ() {
                         Yes. Your wallet is protected using advanced security measures. It is self-custodial, meaning you have full control over it. Neither the game developers nor Privy can access your private keys. For your peace of mind, you always have the option to export your private key.
                     </p>
                 </div>
-
-                <div
-                    style={{
-                        background: isNight ? '#222' : '#f3f3f3',
-                        padding: '15px',
-                        borderRadius: '10px',
-                        boxShadow: isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)',
-                        border: `1px solid ${isNight ? '#444' : '#ddd'}`,
-                    }}
-                >
-                    <h5 className={`font-semibold mb-2 text-center ${textColor}`}>
-                        How to play the game?
-                    </h5>
-                    <div className={`text-xs leading-relaxed text-center ${subTextColor} space-y-2`}>
-                        <p>Connect each 2 hours and make the most clicks you can to get the better score. With your RabbitPoints you can buy items on the shop which will give you a boost to achieve even a better score.</p>
-                        <p>Your items bring your Digital Rabbit to life! Every item you purchase is automatically equipped on your character in your profile, creating a one-of-a-kind digital identity. Download your creation and share it on socials to showcase your achievements and style!</p>
-                        <p>Try to be on the top of the leaderboard to receive perks or WL.</p>
-                        <p>Try to be as active as possible to achieve the best streak.</p>
-                    </div>
-                </div>
-
                 <div
                     style={{
                         background: isNight ? '#222' : '#f3f3f3',

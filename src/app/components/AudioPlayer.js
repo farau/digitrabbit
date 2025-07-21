@@ -10,7 +10,7 @@ function AudioPlayer({ src }) {
     const audio = audioRef.current;
     if (audio) {
       // Nécessaire pour certains navigateurs
-      audio.volume = 0.5; // facultatif : volume réduit
+      audio.volume = 0.2; // facultatif : volume réduit
       audio.play().catch((err) => {
         console.warn('Lecture bloquée par le navigateur :', err);
         setIsPlaying(false); // On désactive l’état "playing"
@@ -25,7 +25,7 @@ function AudioPlayer({ src }) {
     if (isPlaying) {
       audio.pause();
     } else {
-      audio.play().catch(() => {});
+      audio.play().catch(() => { });
     }
 
     setIsPlaying(!isPlaying);
@@ -38,11 +38,11 @@ function AudioPlayer({ src }) {
         onClick={toggleAudio}
         className="cursor-pointer w-6 h-6 text-white hover:text-gray-400 transition"
       >
-      <img
-        src={isPlaying ? "img/icons/loudspeaker_on.png" : "img/icons/loudspeaker_off.png"}
-        alt="Volume"
-        className="w-full h-full"
-      />
+        <img
+          src={isPlaying ? "img/icons/loudspeaker_on.png" : "img/icons/loudspeaker_off.png"}
+          alt="Volume"
+          className="w-full h-full"
+        />
       </div>
     </div>
   );
