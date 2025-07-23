@@ -108,8 +108,8 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
 
             const { gasPrice, gasLimit } = await defineGasPrice(walletClient)
 
-            console.log(`Pre-signing 15 transactions...`)
-            const signingPromises = Array.from({ length: 15 }, async (_, i) => {
+            console.log(`Pre-signing 10 transactions...`)
+            const signingPromises = Array.from({ length: 10 }, async (_, i) => {
                 return await walletClient.signTransaction({
                     account: embeddedWallet?.address,
                     to: DIGIT_RABBITS_ADDRESS,
@@ -134,7 +134,7 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
             setPreSignedPool(poolData)
 
             hasInitialized.current = true
-            console.log(`✅ Pre-signed 15 transactions for MegaETH`)
+            console.log(`✅ Pre-signed 10 transactions for MegaETH`)
             return poolData
         } catch (err) {
             console.error('❌ Error initializing network:', err)
@@ -227,6 +227,7 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
     }, [preSignedPool])
 
     const resetPool = useCallback(() => {
+        console.log("Reinitializing pool")
         setPreSignedPool(null)
         setError('')
         hasInitialized.current = false

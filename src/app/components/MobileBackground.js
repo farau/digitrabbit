@@ -453,8 +453,8 @@ export default function MobileBackground({ restoreApp, themeMode }) {
                 <Image
                     src={themeMode === 'light' ? "/img/rabbit_angel.png" : "/img/rabbit_angel_sleeping.png"}
                     alt="Rabbit angel"
-                    width={250}
-                    height={250}
+                    width={themeMode === 'light' ? 300 : 250}
+                    height={themeMode === 'light' ? 300 : 250}
                     draggable={false}
                 />
 

@@ -102,25 +102,42 @@ export function FloatingHeadModel({ mouse, isClicked, themeMode, onPointerDown, 
 
 
 
-export default function Icon({ name, src, label, onClick, position, sound, show3DEffects }) {
+export default function Icon({ name, src, label, onClick, position, sound, show3DEffects, volume }) {
   const is3D = src === "/3d/head";
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
   const [click, setClicked] = useState(false);
-  const soundRef = useRef("crying");
+  const soundRef = useRef(null);
   const { themeMode } = useTheme()
 
+  // Fonction helper pour définir le volume de manière sécurisée
+  const setVolumeSafely = (audioElement, vol) => {
+    if (audioElement && typeof vol === 'number' && !isNaN(vol) && isFinite(vol)) {
+      audioElement.volume = Math.max(0, Math.min(1, vol)); // Clamp entre 0 et 1
+    }
+  };
+
+  // useEffect pour créer/charger le son quand le son change
   useEffect(() => {
     if (sound) {
       soundRef.current = new Audio(`/sounds/${sound}.mp3`);
-      soundRef.current.volume = 0.4; // volume réduit
+      setVolumeSafely(soundRef.current, volume);
     }
-  }, [sound]);
+  }, [sound, volume]);
 
-  // Charger et préparer le son
-  if (!soundRef.current) {
-    soundRef.current = new Audio("/sounds/crying.mp3");
-    soundRef.current.volume = 0.2; // volume réduit
-  }
+  // useEffect séparé pour mettre à jour le volume
+  useEffect(() => {
+    if (soundRef.current && soundRef.current instanceof Audio) {
+      setVolumeSafely(soundRef.current, volume);
+    }
+  }, [volume]);
+
+  // Initialisation par défaut si pas de son défini
+  useEffect(() => {
+    if (!soundRef.current) {
+      soundRef.current = new Audio("/sounds/crying.mp3");
+      setVolumeSafely(soundRef.current, volume);
+    }
+  }, [volume]); // 👈 Ajouter volume en dépendance
 
   const handlePointerMove = (e) => {
     const bounds = e.currentTarget.getBoundingClientRect();

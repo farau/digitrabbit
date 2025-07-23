@@ -28,13 +28,13 @@
   box-shadow: inset 1px 1px 0 #444, inset -1px -1px 0 #000;
 }
 
-/* Thème clair */
+/* Thème clair assombri */
 .Footer[data-theme="light"] {
-  background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
-  border-top: 2px solid #e2e8f0;
-  border-bottom: 2px solid #cbd5e1;
-  color: #333;
-  box-shadow: inset 1px 1px 0 #e2e8f0, inset -1px -1px 0 #cbd5e1;
+  background: linear-gradient(to bottom, #e2e8f0, #cbd5e1);
+  border-top: 2px solid #94a3b8;
+  border-bottom: 2px solid #64748b;
+  color: #1e293b;
+  box-shadow: inset 1px 1px 0 #94a3b8, inset -1px -1px 0 #64748b;
 }
 
 .startButton {
@@ -53,11 +53,11 @@
   color: #eee;
 }
 
-/* Bouton start thème clair */
+/* Bouton start thème clair assombri */
 .Footer[data-theme="light"] .startButton {
-  background: linear-gradient(to bottom, #f8fafc, #e2e8f0);
-  border: 0.5px outset #cbd5e1;
-  color: #333;
+  background: linear-gradient(to bottom, #e2e8f0, #94a3b8);
+  border: 0.5px outset #64748b;
+  color: #1e293b;
 }
 
 .startMenu {
@@ -92,16 +92,16 @@
   scrollbar-color: #666 #222;
 }
 
-/* Menu start thème clair */
+/* Menu start thème clair assombri */
 .Footer[data-theme="light"] .startMenu {
-  background-color: #f8fafc;
-  border-top: 2px solid #e2e8f0;
-  border-left: 2px solid #e2e8f0;
-  border-bottom: 2px solid #cbd5e1;
-  border-right: 2px solid #cbd5e1;
-  box-shadow: inset 1px 1px 0 #e2e8f0, inset -1px -1px 0 #cbd5e1;
-  color: #333;
-  scrollbar-color: #cbd5e1 #f8fafc;
+  background-color: #e2e8f0;
+  border-top: 2px solid #94a3b8;
+  border-left: 2px solid #94a3b8;
+  border-bottom: 2px solid #64748b;
+  border-right: 2px solid #64748b;
+  box-shadow: inset 1px 1px 0 #94a3b8, inset -1px -1px 0 #64748b;
+  color: #1e293b;
+  scrollbar-color: #64748b #e2e8f0;
 }
 
 /* Pour Chrome, Edge, Safari */
@@ -130,15 +130,15 @@
   background-color: #888;
 }
 
-/* Scrollbar thème clair */
+/* Scrollbar thème clair assombri */
 .Footer[data-theme="light"] .startMenu::-webkit-scrollbar-track {
-  background: #f8fafc;
+  background: #e2e8f0;
 }
 .Footer[data-theme="light"] .startMenu::-webkit-scrollbar-thumb {
-  background-color: #cbd5e1;
+  background-color: #64748b;
 }
 .Footer[data-theme="light"] .startMenu::-webkit-scrollbar-thumb:hover {
-  background-color: #94a3b8;
+  background-color: #475569;
 }
 
 .menuItem {
@@ -161,9 +161,9 @@
   border-bottom: 1px solid #444;
 }
 
-/* Divider thème clair */
+/* Divider thème clair assombri */
 .Footer[data-theme="light"] .menuDivider {
-  border-bottom: 1px solid #cbd5e1;
+  border-bottom: 1px solid #64748b;
 }
 
 .menuItem:last-child {
@@ -181,7 +181,7 @@
   color: white;
 }
 
-/* Hover thème clair */
+/* Hover thème clair assombri */
 .Footer[data-theme="light"] .menuItem:hover {
   background-color: #4f46e5;
   color: white;
@@ -189,22 +189,37 @@
 
 /* Mode mobile */
 @media (max-width: 640px) {
+  .Footer {
+    height: 50px;
+    padding: 0 10px;
+  }
+  
   .startMenu {
+    bottom: 50px;
     width: 150px;         
-    max-height: 320px;    
+    max-height: 350px;    
     overflow-y: auto;     
     overflow-x: hidden;
   }
   
   .menuItem {
-    gap: 6px;             
-    padding: 6px 8px;     
-    font-size: 12px;      
+    gap: 8px;             
+    padding: 8px 12px;     
+    font-size: 13px;      
   }
   
   .menuIcon {
-    width: 20px !important;
-    height: 20px !important;
+    width: 22px !important;
+    height: 22px !important;
+  }
+  
+  .startButton {
+    padding: 4px 12px;
+    font-size: 15px;
+  }
+  
+  .clock {
+    font-size: 15px;
   }
 }
 
@@ -229,9 +244,9 @@
   color: #eee;
 }
 
-/* Clock thème clair */
+/* Clock thème clair assombri */
 .Footer[data-theme="light"] .clock {
-  color: #333;
+  color: #1e293b;
 }
 
 .socialIcons {
@@ -274,12 +289,12 @@
   box-shadow: inset -1px -1px #222, inset 1px 1px #555;
 }
 
-/* Boutons taskbar thème clair */
+/* Boutons taskbar thème clair assombri */
 .Footer[data-theme="light"] .taskbarAppButton {
-  background-color: #f8fafc;
-  border: 1px outset #cbd5e1;
-  color: #333;
-  box-shadow: inset -1px -1px #e2e8f0, inset 1px 1px #cbd5e1;
+  background-color: #e2e8f0;
+  border: 1px outset #64748b;
+  color: #1e293b;
+  box-shadow: inset -1px -1px #94a3b8, inset 1px 1px #64748b;
 }
 
 .taskbarAppButton:active {
@@ -295,11 +310,11 @@
   box-shadow: inset 1px 1px 0 #000, inset -1px -1px 0 #555;
 }
 
-/* Boutons taskbar active thème clair */
+/* Boutons taskbar active thème clair assombri */
 .Footer[data-theme="light"] .taskbarAppButton:active {
-  background: linear-gradient(to bottom, #e2e8f0, #f8fafc);
-  border: 1px inset #cbd5e1;
-  box-shadow: inset 1px 1px 0 #94a3b8, inset -1px -1px 0 #cbd5e1;
+  background: linear-gradient(to bottom, #94a3b8, #e2e8f0);
+  border: 1px inset #64748b;
+  box-shadow: inset 1px 1px 0 #475569, inset -1px -1px 0 #64748b;
 }
 
 /* Cacher les boutons taskbar en dessous de 768px de large */

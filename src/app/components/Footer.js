@@ -8,7 +8,7 @@ import WalletButton from "./WalletButton";
 import AudioPlayer from "./AudioPlayer";
 import { useTheme } from "@/context"; // Ajout de l'import pour le thème
 
-export default function Footer({ visibleApps, setVisibleApps, appZIndices, setAppZIndices, openApp }) {
+export default function Footer({ visibleApps, setVisibleApps, appZIndices, setAppZIndices, openApp, volumePlayer }) {
 
   const [startOpen, setStartOpen] = useState(false);
   const menuRef = useRef(null);
@@ -54,7 +54,7 @@ export default function Footer({ visibleApps, setVisibleApps, appZIndices, setAp
       <div className={styles.taskbarLeft}>
         {/* Logo sur la gauche */}
         <button className={styles.startButton} onClick={() => setStartOpen(!startOpen)}>
-          <Image src="/img/logo.png" alt="Nav Logo" width={70} height={50} />
+          <Image src={themeMode === 'light' ? "/img/logo.png" : "/img/logo_grey.png"} alt="Nav Logo" width={70} height={50} />
         </button>
 
         {/* Menu de navigation */}
@@ -134,7 +134,7 @@ export default function Footer({ visibleApps, setVisibleApps, appZIndices, setAp
             <Image src="/img/icons/megaeth.ico" alt="MegaETH" width={21} height={21} />
           </a>
         </div>
-        <AudioPlayer src="/sounds/soundtrack.mp3" />
+        <AudioPlayer src="/sounds/soundtrack.mp3" volumePlayer={volumePlayer} />
         <WalletButton />
         <span className={styles.clock}>{time}</span>
       </div>

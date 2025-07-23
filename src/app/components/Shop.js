@@ -52,12 +52,24 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
     }
   }, [walletClient])
 
-  // Initialise les niveaux sélectionnés au niveau 1
+  // Initialise les niveaux sélectionnés au niveau possédé le plus haut pour chaque slot
   useEffect(() => {
     if (playerItems) {
-      setSelectedLevels(Array(NUM_SLOTS).fill(1))
+      const initialLevels = playerItems.map(owned => Math.max(1, owned || 1))
+      setSelectedLevels(initialLevels)
     }
   }, [playerItems])
+
+  // Fonction pour obtenir le niveau minimum affichable pour un slot
+  const getMinViewableLevel = (slot) => {
+    const owned = playerItems[slot]
+    return Math.max(1, owned) // Au minimum niveau 1, sinon le niveau possédé
+  }
+
+  // Fonction pour obtenir le niveau maximum affichable pour un slot
+  const getMaxViewableLevel = (slot) => {
+    return MAX_LEVEL // Permet de voir jusqu'au niveau maximum pour inciter à l'achat
+  }
 
   // Fonction pour créer les items de preview qui combinent les items possédés et l'item sélectionné
   const getPreviewItems = () => {
@@ -118,7 +130,6 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
     )
   }
 
-
   const handleBuyItem = async (slot, level) => {
     try {
       if (!walletClient || !embeddedWallet || !embeddedWallet.address) {
@@ -154,8 +165,11 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
   const changeLevel = (slot, delta) => {
     setSelectedLevels((prev) => {
       const next = [...prev]
-      // Permet de naviguer entre 1 et MAX_LEVEL
-      next[slot] = Math.max(1, Math.min(MAX_LEVEL, next[slot] + delta))
+      const minLevel = getMinViewableLevel(slot)
+      const maxLevel = getMaxViewableLevel(slot)
+
+      // Navigue seulement entre les niveaux autorisés pour ce slot
+      next[slot] = Math.max(minLevel, Math.min(maxLevel, next[slot] + delta))
       return next
     })
   }
@@ -175,10 +189,11 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
     return level === owned + 1
   }
 
-  // Vérifie si un niveau peut être visualisé
+  // Vérifie si un niveau peut être visualisé (nouvelle logique)
   const isLevelViewable = (slot, level) => {
-    // Permet de voir tous les niveaux de 1 à MAX_LEVEL
-    return level >= 1 && level <= MAX_LEVEL
+    const minLevel = getMinViewableLevel(slot)
+    const maxLevel = getMaxViewableLevel(slot)
+    return level >= minLevel && level <= maxLevel
   }
 
   // Niveau sélectionné pour la preview
@@ -257,7 +272,7 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
               />
               {/* Indicateur de preview si l'item est différent */}
               {selectedLevels[selectedSlot] !== playerItems[selectedSlot] && (
-                <div className="absolute top-2 right-2 bg-blue-500 text-white px-2 py-1 rounded-full text-xs">
+                <div className="absolute top-2 right-2 bg-blue-500 text-white px-2 py-1 rounded-full text-xs z-1">
                   Preview
                 </div>
               )}
@@ -277,6 +292,8 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
               const canBuy = isLevelAvailable(i, selected)
               const nextLevel = owned + 1
               const isPreview = selected !== owned
+              const minViewable = getMinViewableLevel(i)
+              const maxViewable = getMaxViewableLevel(i)
 
               return (
                 <>
@@ -296,9 +313,9 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
                     >
                       <div className="flex items-center gap-4">
                         <ArrowLeft
-                          className={`cursor-pointer hover:scale-110 transition ${selected <= 1 ? 'opacity-50 cursor-not-allowed' : ''
+                          className={`cursor-pointer hover:scale-110 transition ${selected <= minViewable ? 'opacity-50 cursor-not-allowed' : ''
                             }`}
-                          onClick={() => selected > 1 && changeLevel(i, -1)}
+                          onClick={() => selected > minViewable && changeLevel(i, -1)}
                         />
                         <div className="text-center">
                           <div className="font-bold">{slotLabels[i]}</div>
@@ -326,9 +343,9 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
                           )}
                         </div>
                         <ArrowRight
-                          className={`cursor-pointer hover:scale-110 transition ${selected >= MAX_LEVEL ? 'opacity-50 cursor-not-allowed' : ''
+                          className={`cursor-pointer hover:scale-110 transition ${selected >= maxViewable ? 'opacity-50 cursor-not-allowed' : ''
                             }`}
-                          onClick={() => selected < MAX_LEVEL && changeLevel(i, 1)}
+                          onClick={() => selected < maxViewable && changeLevel(i, 1)}
                         />
                       </div>
                     </div>

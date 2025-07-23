@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Volume2, VolumeX } from 'lucide-react';
 
-function AudioPlayer({ src }) {
+function AudioPlayer({ src, volumePlayer }) {
   const [isPlaying, setIsPlaying] = useState(true);
   const audioRef = useRef(null);
 
@@ -10,13 +9,13 @@ function AudioPlayer({ src }) {
     const audio = audioRef.current;
     if (audio) {
       // Nécessaire pour certains navigateurs
-      audio.volume = 0.2; // facultatif : volume réduit
+      audio.volume = volumePlayer; // facultatif : volume réduit
       audio.play().catch((err) => {
         console.warn('Lecture bloquée par le navigateur :', err);
         setIsPlaying(false); // On désactive l’état "playing"
       });
     }
-  }, []);
+  }, [volumePlayer]);
 
   const toggleAudio = () => {
     const audio = audioRef.current;

@@ -226,7 +226,7 @@
 .floatingRabbit::after {
   content: '';
   position: absolute;
-  bottom: 18px; /* remonté un peu plus */
+  bottom: 20px; /* remonté un peu plus */
   left: 50%;
   transform: translateX(-50%);
   width: 60px;
@@ -246,7 +246,7 @@
 
 /* Mode nuit : nuage plus haut + halo plus fort */
 .dark::after {
-  bottom: 32px;
+  bottom: 20px;
   filter: drop-shadow(0 0 14px rgba(255, 255, 255, 1));
   opacity: 1;
 }

@@ -10,6 +10,7 @@ import {
   Tooltip,
 } from 'recharts'
 import { Download, Gift, Loader2, Trophy } from 'lucide-react'
+import Image from 'next/image'
 import { XLogo } from '@/utils/constants'
 import Wrapper from '@/app/components/Wrapper'
 import { useTheme, useGame } from '@/context'
@@ -63,10 +64,12 @@ function XProfileDisplay() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           {profilePictureUrl && (
-            <img
+            <Image
               src={profilePictureUrl}
               alt={name || 'X profile picture'}
-              style={{ width: '50px', height: '50px', borderRadius: '50%' }}
+              width={50}
+              height={50}
+              style={{ borderRadius: '50%' }}
             />
           )}
           <div>
@@ -262,7 +265,7 @@ function PointsModal({ isOpen, onClose, pointsData, onClaim, isClaiming, isNight
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <img
+                  <Image
                     src={collection.image}
                     alt={collection.name}
                     style={{

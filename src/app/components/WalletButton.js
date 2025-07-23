@@ -11,7 +11,7 @@ function LogoutButton() {
 
     return (
         <button disabled={disableLogout} onClick={logout}>
-            Log out
+            Logout
         </button>
     );
 }

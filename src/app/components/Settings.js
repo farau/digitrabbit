@@ -1,11 +1,12 @@
 'use client';
 import { useState } from 'react';
 import {
-  Sun, Moon, Volume2, Sparkles, KeyRound
+  Sun, Moon, Volume2, VolumeX, Volume, Sparkles, Music
 } from 'lucide-react';
+
 import { useTheme, useGame } from '@/context';
 import Wrapper from './Wrapper';
-import { useLinkAccount, usePrivy, exportWallet } from '@privy-io/react-auth';
+import { useLinkAccount, usePrivy } from '@privy-io/react-auth';
 import { useBalance } from 'wagmi';
 
 
@@ -231,7 +232,7 @@ function WalletBalance({ embeddedWallet, themeMode }) {
   );
 }
 
-export default function Settings({ sound, setSound }) {
+export default function Settings({ sound, setSound, volume, setVolume, volumePlayer, setVolumePlayer }) {
   const { themeMode, toggleTheme, show3DEffects, toggle3DEffects } = useTheme();
   const isNight = themeMode === 'dark';
   const textColor = isNight ? '#eee' : '#333';
@@ -290,16 +291,77 @@ export default function Settings({ sound, setSound }) {
         </button>
       </div>
 
-      {/* Sound Selector */}
-      <div className="mb-6">
-        <label className="block mb-2 text-base font-semibold flex items-center gap-2">
-          <Volume2 className="w-4 h-4" /> Rabbitio Sound
-        </label>
+      {/* Main Music Sound Selector */}
+      <div className="mt-4 mb-4">
+        <div className="block mb-2 text-base font-medium flex items-center gap-2">
+          <Music className="w-5 h-5 text-indigo-500" />
+          Main Music
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex items-center gap-4 px-1">
+            <VolumeX className="w-5 h-5 text-gray-400 flex-shrink-0" />
+            <div className="flex-1 relative group">
+              {/* Track background */}
+              <div className={`w-full h-3 rounded-full shadow-inner
+          ${themeMode === 'light'
+                  ? 'bg-gradient-to-r from-gray-200 to-gray-300'
+                  : 'bg-gradient-to-r from-gray-700 to-gray-600'
+                }`}
+              />
+
+              {/* Progress fill with gradient */}
+              <div
+                className="absolute top-0 left-0 h-3 rounded-full pointer-events-none transition-all duration-300 ease-out
+            bg-gradient-to-r from-indigo-400 via-indigo-500 to-indigo-600 shadow-md
+            group-hover:shadow-lg group-hover:from-indigo-500 group-hover:to-indigo-700"
+                style={{ width: `${volumePlayer * 100}%` }}
+              />
+
+              {/* Invisible input overlay */}
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={volumePlayer * 100}
+                onChange={(e) => setVolumePlayer(Number(e.target.value) / 100)}
+                className="absolute top-0 left-0 w-full h-3 opacity-0 cursor-pointer"
+              />
+
+              {/* Custom thumb */}
+              <div
+                className="absolute top-1/2 -translate-y-1/2 w-5 h-5 bg-white rounded-full shadow-lg 
+            border-2 border-indigo-500 pointer-events-none transition-all duration-200
+            group-hover:scale-110 group-hover:border-indigo-600 group-hover:shadow-xl"
+                style={{ left: `calc(${volumePlayer * 100}% - 10px)` }}
+              >
+                <div className="w-full h-full bg-indigo-500 rounded-full scale-50 group-hover:bg-indigo-600 transition-colors" />
+              </div>
+            </div>
+            <Volume2 className="w-5 h-5 text-gray-400 flex-shrink-0" />
+            <div className={`text-sm font-bold min-w-[3rem] text-center px-3 py-2 rounded-lg shadow-sm border
+        ${themeMode === 'light'
+                ? 'bg-gradient-to-br from-gray-50 to-gray-100 text-gray-800 border-gray-200'
+                : 'bg-gradient-to-br from-gray-800 to-gray-700 text-gray-200 border-gray-600'
+              }`}>
+              {Math.round(volumePlayer * 100)}%
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      {/* Sound Selector - Hidden on mobile */}
+      <div className="hidden md:flex items-center justify-between mb-4">
+        <div className="text-base font-medium flex items-center gap-2">
+          <Music className="w-5 h-5 text-green-500" />
+          <span>Rabbitio Sound</span>
+        </div>
         <select
           value={sound}
           onChange={(e) => setSound(e.target.value)}
-          className={`w-full p-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 shadow-sm
-            ${themeMode === 'light'
+          className={`w-48 p-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 shadow-sm
+      ${themeMode === 'light'
               ? 'bg-white text-black border-gray-300'
               : 'bg-white text-black border-zinc-600'
             }`}
@@ -312,85 +374,141 @@ export default function Settings({ sound, setSound }) {
         </select>
       </div>
 
+      {/* Volume Control - Hidden on mobile*/}
+      <div className="hidden md:block space-y-3">
+        <div className="flex items-center gap-4 px-1">
+          <VolumeX className="w-5 h-5 text-gray-400 flex-shrink-0" />
+          <div className="flex-1 relative group">
+            {/* Track background */}
+            <div className={`w-full h-3 rounded-full shadow-inner
+          ${themeMode === 'light'
+                ? 'bg-gradient-to-r from-gray-200 to-gray-300'
+                : 'bg-gradient-to-r from-gray-700 to-gray-600'
+              }`}
+            />
+
+            {/* Progress fill with gradient */}
+            <div
+              className="absolute top-0 left-0 h-3 rounded-full pointer-events-none transition-all duration-300 ease-out
+                     bg-gradient-to-r from-indigo-400 via-indigo-500 to-indigo-600 shadow-md
+                     group-hover:shadow-lg group-hover:from-indigo-500 group-hover:to-indigo-700"
+              style={{ width: `${volume * 100}%` }}
+            />
+
+            {/* Invisible input overlay */}
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={volume * 100}
+              onChange={(e) => setVolume(Number(e.target.value) / 100)}
+              className="absolute top-0 left-0 w-full h-3 opacity-0 cursor-pointer"
+            />
+
+            {/* Custom thumb */}
+            <div
+              className="absolute top-1/2 -translate-y-1/2 w-5 h-5 bg-white rounded-full shadow-lg 
+                     border-2 border-indigo-500 pointer-events-none transition-all duration-200
+                     group-hover:scale-110 group-hover:border-indigo-600 group-hover:shadow-xl"
+              style={{ left: `calc(${volume * 100}% - 10px)` }}
+            >
+              <div className="w-full h-full bg-indigo-500 rounded-full scale-50 group-hover:bg-indigo-600 transition-colors" />
+            </div>
+          </div>
+          <Volume2 className="w-5 h-5 text-gray-400 flex-shrink-0" />
+          <div className={`text-sm font-bold min-w-[3rem] text-center px-3 py-2 rounded-lg shadow-sm border
+        ${themeMode === 'light'
+              ? 'bg-gradient-to-br from-gray-50 to-gray-100 text-gray-800 border-gray-200'
+              : 'bg-gradient-to-br from-gray-800 to-gray-700 text-gray-200 border-gray-600'
+            }`}>
+            {Math.round(volume * 100)}%
+          </div>
+        </div>
+      </div>
+
       {/* Wallet Section */}
 
-      {isValidating && (
-        <div className="flex items-center justify-center gap-3">
-          <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-          <p className="break-all">
-            Validating your wallet... Please wait.
-          </p>
-        </div>
-      )
+      {
+        isValidating && (
+          <div className="flex items-center justify-center gap-3">
+            <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+            <p className="break-all">
+              Validating your wallet... Please wait.
+            </p>
+          </div>
+        )
       }
 
-      {validationError && (
-        <div className="flex items-center justify-center gap-3 text-red-700">
-          <p className="break-all">
-            {validationError}
-          </p>
-        </div>
-      )
+      {
+        validationError && (
+          <div className="flex items-center justify-center gap-3 text-red-700">
+            <p className="break-all">
+              {validationError}
+            </p>
+          </div>
+        )
       }
 
-      {ready && authenticated && embeddedWallet && (
-        <div className="mt-8 border-t border-gray-200 dark:border-zinc-700 pt-6">
-          {[
-            { label: 'Embedded Wallet', wallet: embeddedWallet, type: 'embedded' }].map(
-              ({ label, wallet, type }) =>
-                wallet && (
-                  <div
-                    key={type}
-                    style={{
-                      background: cardBg,
-                      padding: '10px 15px',
-                      borderRadius: '10px',
-                      marginBottom: 10,
-                      boxShadow,
-                      border: `1px solid ${borderColor}`,
-                    }}
-                  >
-                    <p
-                      className={
-                        "text-base font-semibold mb-3 " +
-                        (themeMode === "dark" ? "text-white" : "text-black")
-                      }
+      {
+        ready && authenticated && embeddedWallet && (
+          <div className="mt-8 border-t border-gray-200 dark:border-zinc-700 pt-6">
+            {[
+              { label: 'Embedded Wallet', wallet: embeddedWallet, type: 'embedded' }].map(
+                ({ label, wallet, type }) =>
+                  wallet && (
+                    <div
+                      key={type}
+                      style={{
+                        background: cardBg,
+                        padding: '10px 15px',
+                        borderRadius: '10px',
+                        marginBottom: 10,
+                        boxShadow,
+                        border: `1px solid ${borderColor}`,
+                      }}
                     >
-                      {label}
-                    </p>
-                    <div className="flex items-center justify-between gap-3 flex-wrap">
-                      <code className="flex-1 min-w-0 text-xs bg-gray-100 dark:bg-zinc-800 px-3 py-1 rounded-md text-gray-900 dark:text-white break-words select-none">
-                        {wallet.address}
-                      </code>
-                      <button
-                        onClick={() => handleCopy(wallet.address, type)}
-                        aria-label={`Copy ${type} wallet address`}
-                        className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-zinc-700 transition focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                      <p
+                        className={
+                          "text-base font-semibold mb-3 " +
+                          (themeMode === "dark" ? "text-white" : "text-black")
+                        }
                       >
-                        {copied === type ? (
-                          <>
-                            Copied!
-                          </>
-                        ) : (
-                          'Copy'
-                        )}
-                      </button>
+                        {label}
+                      </p>
+                      <div className="flex items-center justify-between gap-3 flex-wrap">
+                        <code className="flex-1 min-w-0 text-xs bg-gray-100 dark:bg-zinc-800 px-3 py-1 rounded-md text-gray-900 dark:text-white break-words select-none">
+                          {wallet.address}
+                        </code>
+                        <button
+                          onClick={() => handleCopy(wallet.address, type)}
+                          aria-label={`Copy ${type} wallet address`}
+                          className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-zinc-700 transition focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        >
+                          {copied === type ? (
+                            <>
+                              Copied!
+                            </>
+                          ) : (
+                            'Copy'
+                          )}
+                        </button>
 
+                      </div>
+
+                      {type === 'embedded' && (
+                        <>
+                          <WalletBalance embeddedWallet={embeddedWallet} />
+                          <ExportWalletButton />
+                          <AllLinkedWallets />
+                        </>
+                      )}
                     </div>
+                  )
+              )}
+          </div>
+        )
+      }
 
-                    {type === 'embedded' && (
-                      <>
-                        <WalletBalance embeddedWallet={embeddedWallet} />
-                        <ExportWalletButton />
-                        <AllLinkedWallets />
-                      </>
-                    )}
-                  </div>
-                )
-            )}
-        </div>
-      )}
-
-    </Wrapper>
+    </Wrapper >
   );
 }

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import styles from "./MainPage.module.css";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
+import styles from "./MainPage.module.css";
 import Icon from "./Icon";
 import Footer from "./Footer";
 import MemeGallery from "./MemeGallery";
@@ -33,6 +33,10 @@ export default function MainPage() {
   const [appZIndices, setAppZIndices] = useState({});
 
   const [sound, setSound] = useState("crying");
+  const [volume, setVolume] = useState(0.5);
+
+  const [volumePlayer, setVolumePlayer] = useState(0.2); // Volume musique principale
+
   const { themeMode, toggleTheme, show3DEffects, toggle3DEffects } = useTheme();
   const { width } = useWindowSize();
 
@@ -243,6 +247,11 @@ export default function MainPage() {
     });
   };
 
+  const onGameEnd = useCallback(async () => {
+    setIsGameStarted(false)
+    resetPool() // Reset de la pool avant début d'une nouvelle partie
+  }, [resetPool]) // Dépendre de resetPool qui est stable
+
   const renderAppContent = (appName) => {
     switch (appName) {
       case "About":
@@ -254,7 +263,7 @@ export default function MainPage() {
       case "Profile":
         return <Profile playerData={playerData} setRefreshCounter={setRefreshCounter} />;
       case "Game":
-        return <Game refreshCounter={refreshCounter} setRefreshCounter={setRefreshCounter} playerData={playerData} embeddedWallet={embeddedWallet} preSignedPool={preSignedPool} isInitializing={isInitializing} error={error} initializePool={initializePool} executeTransaction={executeTransaction} isGameStarted={isGameStarted} setIsGameStarted={setIsGameStarted} onGameEnd={() => setIsGameStarted(false)} getAvailableTransactions={getAvailableTransactions} resetPool={resetPool} />;
+        return <Game refreshCounter={refreshCounter} setRefreshCounter={setRefreshCounter} playerData={playerData} embeddedWallet={embeddedWallet} preSignedPool={preSignedPool} isInitializing={isInitializing} error={error} initializePool={initializePool} executeTransaction={executeTransaction} isGameStarted={isGameStarted} setIsGameStarted={setIsGameStarted} onGameEnd={onGameEnd} getAvailableTransactions={getAvailableTransactions} />;
       case "Shop":
         return <Shop refreshCounter={refreshCounter} setRefreshCounter={setRefreshCounter} playerData={playerData} />;
       case "Leaderboard":
@@ -262,7 +271,12 @@ export default function MainPage() {
       case "Settings":
         return <Settings
           sound={sound}
-          setSound={setSound} />;
+          setSound={setSound}
+          volume={volume}
+          setVolume={setVolume}
+          volumePlayer={volumePlayer}
+          setVolumePlayer={setVolumePlayer}
+        />;
       case "Chill":
         return <Chill />;
       case "FAQ":
@@ -350,6 +364,7 @@ export default function MainPage() {
         themeMode={themeMode}
         position={{ x: `${width - 690}px`, y: "1%" }}
         show3DEffects={show3DEffects}
+        volume={volume}
       />
       <Icon
         name="settings"
@@ -399,25 +414,39 @@ export default function MainPage() {
           onClick={() => setSelectedMemeIndex(null)}
         >
           <button onClick={(e) => { e.stopPropagation(); setSelectedMemeIndex((prev) => (prev > 0 ? prev - 1 : memeList.length - 1)); }} style={navButtonStyle}>◀</button>
-          <img src={`img/memes/${encodeURIComponent(memeList[selectedMemeIndex])}`} alt="Full meme" style={{ maxHeight: "70%", maxWidth: "70%", borderRadius: "10px", boxShadow: "0 0 20px black" }} />
-          <a
-            href={`img/memes/${encodeURIComponent(memeList[selectedMemeIndex])}`}
-            download
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: "#fff",
-              padding: "10px 20px",
-              borderRadius: "8px",
-              textDecoration: "none",
-              color: "#000",
-              fontWeight: "bold",
-              boxShadow: "0 0 10px rgba(0,0,0,0.5)",
-              position: "absolute",
-              bottom: "50px",
-            }}
-          >
-            Download
-          </a>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}>
+            <Image
+              src={`/img/memes/${encodeURIComponent(memeList[selectedMemeIndex])}`}
+              alt="Full meme"
+              width={800}
+              height={600}
+              style={{
+                maxHeight: "100%",
+                maxWidth: "100%",
+                borderRadius: "10px",
+                boxShadow: "0 0 20px black",
+                objectFit: "contain"
+              }}
+            />
+            <a
+              href={`img/memes/${encodeURIComponent(memeList[selectedMemeIndex])}`}
+              download
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: "#fff",
+                padding: "10px 20px",
+                borderRadius: "8px",
+                textDecoration: "none",
+                color: "#000",
+                fontWeight: "bold",
+                boxShadow: "0 0 10px rgba(0,0,0,0.5)",
+                position: "absolute",
+                bottom: "8%",
+              }}
+            >
+              Download
+            </a>
+          </div>
           <button onClick={(e) => { e.stopPropagation(); setSelectedMemeIndex((prev) => (prev + 1) % memeList.length); }} style={navButtonStyle}>▶</button>
         </div>
       )}
@@ -488,7 +517,12 @@ export default function MainPage() {
       ))}
 
       {show3DEffects && <BackgroundSwitcher />}
-      <Footer visibleApps={visibleApps} setVisibleApps={setVisibleApps} appZIndices={appZIndices} setAppZIndices={setAppZIndices} openApp={restoreApp} />
+      <Footer visibleApps={visibleApps}
+        setVisibleApps={setVisibleApps}
+        appZIndices={appZIndices}
+        setAppZIndices={setAppZIndices}
+        openApp={restoreApp}
+        volumePlayer={volumePlayer} />
     </div>
   );
 }

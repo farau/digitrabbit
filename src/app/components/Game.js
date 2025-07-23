@@ -274,7 +274,6 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
       // 2. Vérification et initialisation du pool si nécessaire
       setIsWritingContract(true)
       setErrorStartGame('') // Reset les erreurs précédentes
-      await resetPool() // Reset de la pool avant début d'une nouvelle partie
 
       let currentPool = preSignedPool
 
