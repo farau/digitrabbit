@@ -182,11 +182,12 @@ export default function RabbitImage({ isClicked }) {
                         src={imageSrc}
                         alt="Rabbit"
                         fill
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                         className={`
-    object-contain pointer-events-none
-    transition-all duration-300 ease-out
-    ${click ? 'animate-pulse' : ''}
-  `}
+        object-contain pointer-events-none
+        transition-all duration-300 ease-out
+        ${click ? 'animate-pulse' : ''}
+    `}
                         draggable={false}
                         priority={true} // Image principale du jeu, importante à charger rapidement
                     />

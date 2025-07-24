@@ -263,7 +263,20 @@ export default function MainPage() {
       case "Profile":
         return <Profile playerData={playerData} setRefreshCounter={setRefreshCounter} />;
       case "Game":
-        return <Game refreshCounter={refreshCounter} setRefreshCounter={setRefreshCounter} playerData={playerData} embeddedWallet={embeddedWallet} preSignedPool={preSignedPool} isInitializing={isInitializing} error={error} initializePool={initializePool} executeTransaction={executeTransaction} isGameStarted={isGameStarted} setIsGameStarted={setIsGameStarted} onGameEnd={onGameEnd} getAvailableTransactions={getAvailableTransactions} />;
+        return <Game
+          refreshCounter={refreshCounter}
+          setRefreshCounter={setRefreshCounter}
+          playerData={playerData}
+          embeddedWallet={embeddedWallet}
+          preSignedPool={preSignedPool}
+          isInitializing={isInitializing} error={error}
+          initializePool={initializePool}
+          executeTransaction={executeTransaction}
+          isGameStarted={isGameStarted}
+          setIsGameStarted={setIsGameStarted}
+          onGameEnd={onGameEnd}
+          getAvailableTransactions={getAvailableTransactions}
+        />;
       case "Shop":
         return <Shop refreshCounter={refreshCounter} setRefreshCounter={setRefreshCounter} playerData={playerData} />;
       case "Leaderboard":

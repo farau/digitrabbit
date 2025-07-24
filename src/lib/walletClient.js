@@ -1,6 +1,8 @@
 // utils/walletClient.js
 import { createWalletClient, custom, publicActions } from 'viem';
 import { megaethTestnet } from 'viem/chains';
+import { InternalRpcError } from 'viem';
+
 let client = null;
 
 export const initWalletClient = async (embeddedWallet) => {
@@ -14,7 +16,7 @@ export const initWalletClient = async (embeddedWallet) => {
     //@ts-ignore
     account: embeddedWallet.address,
     chain: megaethTestnet,
-    transport: custom(provider),
+    transport: custom(provider, { retryCount: 1 }), //nb de retry quand une tx fail
   }).extend(publicActions);
 
   console.log('✅ walletClient initialized');

@@ -185,7 +185,7 @@ function TwitterShareButton({ score, totalClicks, themeMode, onClose }) {
 }
 
 
-export default function Game({ refreshCounter, setRefreshCounter, playerData, preSignedPool, isInitializing, error, initializePool, executeTransaction, getAvailableTransactions, isGameStarted, setIsGameStarted, onGameEnd, resetPool }) {
+export default function Game({ refreshCounter, setRefreshCounter, playerData, preSignedPool, isInitializing, error, initializePool, executeTransaction, getAvailableTransactions, isGameStarted, setIsGameStarted, onGameEnd }) {
   const [result, setResult] = useState('')
   const [errorStartGame, setErrorStartGame] = useState('')
   const [isExecuting, setIsExecuting] = useState(false)
@@ -239,7 +239,6 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
         if (prev <= 1) {
           clearInterval(interval)
           setShowTwitterShare(true)
-          //onGameEnd?.()  // 👈 Utilise le callback proprement
           return 0
         }
         return prev - 1

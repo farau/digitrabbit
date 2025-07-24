@@ -291,8 +291,8 @@ export default function Settings({ sound, setSound, volume, setVolume, volumePla
         </button>
       </div>
 
-      {/* Main Music Sound Selector */}
-      <div className="mt-4 mb-4">
+      {/* Main Music Sound Selector - Hidden on mobile */}
+      <div className="hidden md:block mt-4 mb-4">
         <div className="block mb-2 text-base font-medium flex items-center gap-2">
           <Music className="w-5 h-5 text-indigo-500" />
           Main Music

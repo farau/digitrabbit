@@ -268,9 +268,9 @@ function PointsModal({ isOpen, onClose, pointsData, onClaim, isClaiming, isNight
                   <Image
                     src={collection.image}
                     alt={collection.name}
+                    width={40}
+                    height={40}
                     style={{
-                      width: '40px',
-                      height: '40px',
                       borderRadius: '6px',
                       objectFit: 'cover',
                       border: `1px solid ${borderColor}`

@@ -1,9 +1,9 @@
 // hooks/usePreSignedPool.js - Version améliorée avec auto-initialisation
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { encodeFunctionData } from 'viem'
-import { megaethTestnet } from 'viem/chains'
 import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS } from '@/utils/constants'
 import { useWalletClient } from './useWalletClient'
+import { InternalRpcError } from 'viem';
 
 const play = encodeFunctionData({
     abi: DIGIT_RABBITS_ABI,
@@ -153,6 +153,8 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
 
     const executeTransaction = useCallback(async () => {
 
+        setError('')
+
         if (!preSignedPool || preSignedPool.currentIndex >= preSignedPool.transactions.length) {
             setError('No pre-signed transactions available')
             return null
@@ -208,6 +210,16 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
         } catch (err) {
             console.error('❌ Error executing:', err)
             setError(err.message)
+            if (err.details?.includes('nonce too low')) {
+                console.log("On incrémente l'index car erreur nonce too low")
+                incrementIndex();
+            }
+
+            if (err instanceof InternalRpcError && err.details?.includes('already known')) {
+                console.log("On incrémente l'index car erreur already known")
+                incrementIndex();
+            }
+
             throw err
         }
     }, [walletClient, embeddedWallet?.address, preSignedPool, extendPool])

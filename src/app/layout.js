@@ -8,7 +8,7 @@ export const metadata = {
   title: "Digit Rabbits",
   description: "Explore the wonderful world of Digit Rabbits!",
   icons: {
-    icon: "/img/favicon.ico",
+    icon: "/favicon.ico",
     apple: "/img/icon-apple.png", // iOS-specific icon
     shortcut: "/img/icon-192x192.png", // autre option pour certains navigateurs
   },
