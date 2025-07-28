@@ -35,7 +35,7 @@ export default function Roadmap({ embeddedWallet, refreshCounter, playerData }) 
         );
     }
 
-    const totalClicks = Number(playerData.totalClicks)
+    const totalClicks = Number(playerData.totalClicksGame)
     const target = 100000000;
     const progressPercentage = Math.min((totalClicks / target) * 100, 100);
 

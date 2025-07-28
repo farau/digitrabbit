@@ -60,7 +60,8 @@ export default function MainPage() {
     boost: 0,
     streak: 0,
     hasClaimedPoints: false,
-    maxClicks: 0
+    maxClicks: 0,
+    totalClicksGame: 0
   })
 
   // On récupère l'embedded wallet ici puis on propage ensuite
@@ -139,6 +140,14 @@ export default function MainPage() {
         args: [embeddedWallet.address, seasonId],
       })
 
+      // On récupère aussi le nombre total de clics
+      const totalClicksGame = await publicClient.readContract({
+        address: DIGIT_RABBITS_ADDRESS,
+        abi: DIGIT_RABBITS_ABI,
+        functionName: 'totalClicksGame',
+        args: [],
+      })
+
       const rabbitPoints = result[0] !== undefined ? Number(result[0]) / 1_000_000 : -1
       const [totalClicks, gameClicks, playerItems, sessionEndsAt, boost, streak, hasClaimedPoints, maxClicks] = result.slice(1)
 
@@ -151,7 +160,8 @@ export default function MainPage() {
         boost,
         streak,
         hasClaimedPoints,
-        maxClicks
+        maxClicks,
+        totalClicksGame
       }
       setPlayerData(data)
     }
