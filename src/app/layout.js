@@ -2,7 +2,6 @@ import "98.css";
 import "./globals.css";
 import { ContextProvider } from '@/context'
 import LeaderboardProvider from '@/context/LeaderboardProvider';
-import ClientOnlyAutoRefresh from "./components/ClientOnlyAutoRefresh";
 
 export const metadata = {
   title: "Digit Rabbits",
@@ -21,7 +20,6 @@ export default function RootLayout({ children }) {
       <body className="antialiased">
         <ContextProvider>
           <LeaderboardProvider>
-            <ClientOnlyAutoRefresh />
             {children}
           </LeaderboardProvider>
         </ContextProvider>

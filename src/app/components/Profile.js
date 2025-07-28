@@ -60,7 +60,6 @@ function XProfileDisplay() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: '12px'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           {profilePictureUrl && (
@@ -83,78 +82,10 @@ function XProfileDisplay() {
           <span className={`text-sm ${subTextColor}`}>Connected</span>
         </div>
       </div>
-
-      {/* Tweet button centered at bottom */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        paddingTop: '8px',
-        borderTop: `1px solid ${borderColor}`
-      }}>
-        <TweetAvatarButton isNight={isNight} />
-      </div>
     </div>
   );
 }
 
-function TweetAvatarButton({ isNight }) {
-
-  const handleTweetAvatar = async () => {
-
-    // Create the tweet text
-    const tweetText = encodeURIComponent(
-      "Just customized my Digit Rabbit on @digitrabbits website! 🐰✨ Check out my unique avatar and join the fun! #DigitRabbits #Rabbitio"
-    );
-
-    // Create the tweet URL
-    const tweetUrl = `https://twitter.com/intent/tweet?text=${tweetText}`;
-
-    // Open Twitter in a new window/tab
-    window.open(tweetUrl, '_blank', 'noopener,noreferrer');
-  };
-
-  const buttonStyle = {
-    background: isNight
-      ? 'linear-gradient(135deg, #000000 0%, #1a1a1a 100%)'
-      : 'linear-gradient(135deg, #000000 0%, #333333 100%)',
-    color: 'white',
-    border: 'none',
-    padding: '6px 12px',
-    borderRadius: '8px',
-    fontSize: '12px',
-    fontWeight: '500',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    transition: 'all 0.2s ease',
-    boxShadow: isNight
-      ? '0 2px 6px rgba(0, 0, 0, 0.5)'
-      : '0 2px 6px rgba(0, 0, 0, 0.3)',
-  };
-
-  return (
-    <button
-      onClick={handleTweetAvatar}
-      style={buttonStyle}
-      onMouseOver={(e) => {
-        e.target.style.transform = 'translateY(-1px)';
-        e.target.style.boxShadow = isNight
-          ? '0 3px 8px rgba(0, 0, 0, 0.6)'
-          : '0 3px 8px rgba(0, 0, 0, 0.4)';
-      }}
-      onMouseOut={(e) => {
-        e.target.style.transform = 'translateY(0)';
-        e.target.style.boxShadow = isNight
-          ? '0 2px 6px rgba(0, 0, 0, 0.5)'
-          : '0 2px 6px rgba(0, 0, 0, 0.3)';
-      }}
-    >
-      <XLogo size={14} />
-      RabbitTwittio
-    </button>
-  );
-}
 
 function PointsModal({ isOpen, onClose, pointsData, onClaim, isClaiming, isNight }) {
   if (!isOpen || !pointsData) return null;
@@ -598,13 +529,14 @@ export default function Profile({ playerData, setRefreshCounter }) {
 
   const { embeddedWallet, validationError, isValidating } = useGame()
 
-  const { rabbitPoints, playerItems, totalClicks, sessionEndsAt, boost, streak, hasClaimedPoints } = playerData
+  const { rabbitPoints, playerItems, totalClicks, sessionEndsAt, boost, streak, hasClaimedPoints, maxClicks } = playerData
 
   const rawStats = {
     clothes: playerItems.reduce((count, val) => count + (val > 0 ? 1 : 0), 0),
     boost: Number(boost),
     totalClicks: Number(totalClicks),
     streak: Number(streak),
+    maxClicks: Number(maxClicks)
   }
 
   const blockchainStats = [
@@ -620,7 +552,7 @@ export default function Profile({ playerData, setRefreshCounter }) {
     },
     {
       stat: 'Total clicks',
-      value: Math.min((rawStats.totalClicks ?? 0) / 10000, 1),
+      value: Math.min((rawStats.totalClicks ?? 0) / 100000, 1),
       real: `${rawStats.totalClicks ?? 0}`
     },
     {
@@ -633,7 +565,7 @@ export default function Profile({ playerData, setRefreshCounter }) {
   const renderVerticalLabels = ({ payload, x, y }) => {
     const angle = payload.coordinate?.angle ?? 0
     const label = payload.value
-    const shouldRotate = label === 'Streak' || label === 'Bonus'
+    const shouldRotate = label === 'Streak' || label === 'Boost'
     const isLeft = angle > 90 && angle < 270
 
     return (
@@ -1008,7 +940,7 @@ export default function Profile({ playerData, setRefreshCounter }) {
 
       {/* Stats */}
       <div className="flex-1 flex flex-col md:flex-row gap-8 items-start mt-4">
-        <div className="w-full" style={{ color: textColor }}>
+        <div className="w-full md:w-1/2" style={{ color: textColor }}>
           <div
             style={{
               background: cardBg,
@@ -1019,27 +951,170 @@ export default function Profile({ playerData, setRefreshCounter }) {
               boxShadow,
             }}
           >
-            <h4 className="text-lg font-semibold mb-3 text-center">
-              RabbitStatio
-            </h4>
-            <ul
+            <h3
               style={{
-                listStyle: 'none',
-                padding: 0,
+                fontSize: '18px',
+                fontWeight: '600',
                 margin: 0,
-                display: 'grid',
-                gap: 10,
-                color: textColor,
+                color: isNight ? '#e2e8f0' : '#334155',
               }}
+              className='text-center'
             >
-              <li>Number of clothes: <strong>{rawStats.clothes}/6</strong></li>
-              <li>Boost: <strong>{rawStats.boost}%</strong></li>
-              <li>Total clicks: <strong>{rawStats.totalClicks}</strong></li>
-              <li>Streak: <strong>{rawStats.streak} days</strong></li>
-            </ul>
+              RabbitStats
+            </h3>
+            <table className="w-full" style={{ background: 'transparent', fontFamily: 'inherit' }}>
+              <tbody style={{ background: 'transparent' }}>
+                <tr style={{ borderBottom: `1px solid ${isNight ? '#475569' : '#e2e8f0'}`, background: 'transparent' }}>
+                  <td
+                    style={{
+                      color: textColor,
+                      paddingTop: '12px',
+                      paddingBottom: '12px',
+                      fontSize: '16px',
+                      fontWeight: '500',
+                      background: 'transparent',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    Number of clothes
+                  </td>
+                  <td
+                    style={{
+                      color: textColor,
+                      paddingTop: '12px',
+                      paddingBottom: '12px',
+                      textAlign: 'right',
+                      fontSize: '16px',
+                      fontWeight: '500',
+                      background: 'transparent',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    <strong style={{ fontFamily: 'inherit' }}>{rawStats.clothes}/6</strong>
+                  </td>
+                </tr>
+                <tr style={{ borderBottom: `1px solid ${isNight ? '#475569' : '#e2e8f0'}`, background: 'transparent' }}>
+                  <td
+                    style={{
+                      color: textColor,
+                      paddingTop: '12px',
+                      paddingBottom: '12px',
+                      fontSize: '16px',
+                      fontWeight: '500',
+                      background: 'transparent',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    Boost
+                  </td>
+                  <td
+                    style={{
+                      color: textColor,
+                      paddingTop: '12px',
+                      paddingBottom: '12px',
+                      textAlign: 'right',
+                      fontSize: '16px',
+                      fontWeight: '500',
+                      background: 'transparent',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    <strong style={{ fontFamily: 'inherit' }}>{rawStats.boost}%</strong>
+                  </td>
+                </tr>
+                <tr style={{ borderBottom: `1px solid ${isNight ? '#475569' : '#e2e8f0'}`, background: 'transparent' }}>
+                  <td
+                    style={{
+                      color: textColor,
+                      paddingTop: '12px',
+                      paddingBottom: '12px',
+                      fontSize: '16px',
+                      fontWeight: '500',
+                      background: 'transparent',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    Total clicks
+                  </td>
+                  <td
+                    style={{
+                      color: textColor,
+                      paddingTop: '12px',
+                      paddingBottom: '12px',
+                      textAlign: 'right',
+                      fontSize: '16px',
+                      fontWeight: '500',
+                      background: 'transparent',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    <strong style={{ fontFamily: 'inherit' }}>{rawStats.totalClicks}</strong>
+                  </td>
+                </tr>
+                <tr style={{ borderBottom: `1px solid ${isNight ? '#475569' : '#e2e8f0'}`, background: 'transparent' }}>
+                  <td
+                    style={{
+                      color: textColor,
+                      paddingTop: '12px',
+                      paddingBottom: '12px',
+                      fontSize: '16px',
+                      fontWeight: '500',
+                      background: 'transparent',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    Streak
+                  </td>
+                  <td
+                    style={{
+                      color: textColor,
+                      paddingTop: '12px',
+                      paddingBottom: '12px',
+                      textAlign: 'right',
+                      fontSize: '16px',
+                      fontWeight: '500',
+                      background: 'transparent',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    <strong style={{ fontFamily: 'inherit' }}>{rawStats.streak} days</strong>
+                  </td>
+                </tr>
+                <tr style={{ background: 'transparent' }}>
+                  <td
+                    style={{
+                      color: textColor,
+                      paddingTop: '12px',
+                      fontSize: '16px',
+                      fontWeight: '500',
+                      background: 'transparent',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    Max clicks
+                  </td>
+                  <td
+                    style={{
+                      color: textColor,
+                      paddingTop: '12px',
+                      textAlign: 'right',
+                      fontSize: '16px',
+                      fontWeight: '500',
+                      background: 'transparent',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    <strong style={{ fontFamily: 'inherit' }}>{rawStats.maxClicks}</strong>
+                    <p style={{ fontFamily: 'inherit' }}>{Math.floor(1000 / (rawStats.maxClicks / 60))} ms/click</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
-        <RadarStatsChart />
+        <div className="w-full md:w-1/2">
+          <RadarStatsChart />
+        </div>
       </div>
     </Wrapper>
     : (

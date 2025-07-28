@@ -16,6 +16,13 @@ let leaderboardCache = {
     isUpdating: false
 };
 
+// Cache pour le top clicker
+let topClickerCache = {
+    data: null,
+    lastUpdate: 0,
+    isUpdating: false
+};
+
 const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes en millisecondes
 const PRECISION = 1000000; // 1e6 comme dans le contrat
 
@@ -61,6 +68,28 @@ async function getContractData() {
         };
     } catch (error) {
         console.error('Erreur lors de la récupération des données du contrat:', error);
+        throw error;
+    }
+}
+
+/**
+ * Récupère les données du top clicker depuis le contrat
+ */
+async function getTopClickerFromContract() {
+    try {
+        const topClickerData = await publicClient.readContract({
+            address: DIGIT_RABBITS_ADDRESS,
+            abi: DIGIT_RABBITS_ABI,
+            functionName: 'getTopClicker'
+        });
+
+        return {
+            topPlayer: topClickerData[0],
+            maxClicks: topClickerData[1],
+            totalClicks: topClickerData[2]
+        };
+    } catch (error) {
+        console.error('Erreur lors de la récupération du top clicker:', error);
         throw error;
     }
 }
@@ -168,10 +197,10 @@ async function calculateLeaderboard() {
                         avatar: twitterInfo.avatar,
                         displayName: twitterInfo.displayName
                     },
-                    user: {
+                    /*user: {
                         id: privyUser?.id,
                         createdAt: privyUser?.created_at
-                    }
+                    }*/
                 });
             }
 
@@ -199,6 +228,65 @@ async function calculateLeaderboard() {
 
     } catch (error) {
         console.error('Erreur lors du calcul du leaderboard:', error);
+        throw error;
+    }
+}
+
+/**
+ * Calcule les données du top clicker avec informations utilisateur
+ */
+async function calculateTopClicker() {
+    try {
+        console.log('Début du calcul du top clicker...');
+
+        // Récupération des données en parallèle
+        const [privyUsers, topClickerData] = await Promise.all([
+            getPrivyUsers(),
+            getTopClickerFromContract()
+        ]);
+
+        // Si aucun joueur n'est trouvé
+        if (topClickerData.topPlayer === '0x0000000000000000000000000000000000000000') {
+            return {
+                topClicker: null,
+                metadata: {
+                    lastUpdate: new Date().toISOString(),
+                    hasData: false
+                }
+            };
+        }
+
+        // Recherche de l'utilisateur Privy correspondant
+        const privyUser = findPrivyUserByWallet(privyUsers, topClickerData.topPlayer);
+        const twitterInfo = getTwitterInfo(privyUser);
+
+        const topClicker = {
+            walletAddress: topClickerData.topPlayer,
+            maxClicks: Number(topClickerData.maxClicks),
+            totalClicks: Number(topClickerData.totalClicks),
+            twitter: {
+                username: twitterInfo.username,
+                avatar: twitterInfo.avatar,
+                displayName: twitterInfo.displayName
+            },
+            user: {
+                id: privyUser?.id,
+                createdAt: privyUser?.created_at
+            }
+        };
+
+        console.log(`Top clicker calculé: ${topClicker.walletAddress} avec ${topClicker.maxClicks} max clicks`);
+
+        return {
+            topClicker,
+            metadata: {
+                lastUpdate: new Date().toISOString(),
+                hasData: true
+            }
+        };
+
+    } catch (error) {
+        console.error('Erreur lors du calcul du top clicker:', error);
         throw error;
     }
 }
@@ -243,18 +331,63 @@ export async function getLeaderboard(forceRefresh = false) {
 }
 
 /**
- * Démarre la mise à jour automatique du leaderboard
+ * Obtient le top clicker avec cache
+ */
+export async function getTopClicker(forceRefresh = false) {
+    const now = Date.now();
+
+    // Vérifier si le cache est valide
+    if (!forceRefresh &&
+        topClickerCache.data &&
+        (now - topClickerCache.lastUpdate) < CACHE_DURATION) {
+        console.log('Retour du top clicker depuis le cache');
+        return topClickerCache.data;
+    }
+
+    // Éviter les calculs multiples simultanés
+    if (topClickerCache.isUpdating) {
+        console.log('Calcul du top clicker en cours, attente...');
+        while (topClickerCache.isUpdating) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        return topClickerCache.data;
+    }
+
+    // Calcul du nouveau top clicker
+    topClickerCache.isUpdating = true;
+
+    try {
+        const result = await calculateTopClicker();
+
+        // Mise à jour du cache
+        topClickerCache.data = result;
+        topClickerCache.lastUpdate = now;
+
+        return result;
+    } finally {
+        topClickerCache.isUpdating = false;
+    }
+}
+
+/**
+ * Démarre la mise à jour automatique du leaderboard et du top clicker
  */
 export function startLeaderboardUpdater() {
-    console.log('Démarrage de la mise à jour automatique du leaderboard (15 min)');
+    console.log('Démarrage de la mise à jour automatique du leaderboard et top clicker (15 min)');
 
     // Première exécution
-    getLeaderboard(true).catch(console.error);
+    Promise.all([
+        getLeaderboard(true).catch(console.error),
+        getTopClicker(true).catch(console.error)
+    ]);
 
     // Puis toutes les 15 minutes
     setInterval(() => {
-        console.log('Mise à jour automatique du leaderboard...');
-        getLeaderboard(true).catch(console.error);
+        console.log('Mise à jour automatique du leaderboard et top clicker...');
+        Promise.all([
+            getLeaderboard(true).catch(console.error),
+            getTopClicker(true).catch(console.error)
+        ]);
     }, CACHE_DURATION);
 }
 
@@ -290,5 +423,30 @@ export async function getTopPlayers(limit = 10) {
     } catch (error) {
         console.error('Erreur lors de la récupération du top players:', error);
         return { topPlayers: [], metadata: null };
+    }
+}
+
+/**
+ * Obtient les données complètes du leaderboard avec le top clicker
+ */
+export async function getCompleteLeaderboardData(forceRefresh = false) {
+    try {
+        const [leaderboardData, topClickerData] = await Promise.all([
+            getLeaderboard(forceRefresh),
+            getTopClicker(forceRefresh)
+        ]);
+
+        return {
+            topPlayers: leaderboardData.leaderboard,
+            topClicker: topClickerData.topClicker,
+            metadata: {
+                ...leaderboardData.metadata,
+                topClickerLastUpdate: topClickerData.metadata.lastUpdate,
+                hasTopClickerData: topClickerData.metadata.hasData
+            }
+        };
+    } catch (error) {
+        console.error('Erreur lors de la récupération des données complètes:', error);
+        throw error;
     }
 }

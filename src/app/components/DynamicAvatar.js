@@ -19,7 +19,7 @@ const DynamicAvatar = ({
         <div className={`relative ${size}`}>
             {slotFolders.map((folder, index) => {
                 const itemLevel = playerItems[index] || 0
-                const imagePath = `/img/shop/${folder}/${itemLevel}.png`
+                const imagePath = `/img/shop/${folder}/${itemLevel}.webp`
 
                 // Ordre des z-index : background au plus bas, puis rabbit_color, clothes, glasses, hat au plus haut
                 const zIndexOrder = {

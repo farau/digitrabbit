@@ -26,7 +26,7 @@ export default function About() {
             </p>
 
             <Image
-                src={themeMode === 'light' ? "/img/banner.jpg" : "/img/banner_grey.png"}
+                src={themeMode === 'light' ? "/img/banner.jpg" : "/img/banner_grey.webp"}
                 alt="Logo"
                 width={500}
                 height={300}

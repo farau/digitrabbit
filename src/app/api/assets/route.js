@@ -5,7 +5,7 @@ import path from "path";
 export async function GET() {
   try {
     const assetsDir = path.join(process.cwd(), "public", "img", "assets");
-    const files = fs.readdirSync(assetsDir).filter((file) => file.endsWith(".png"));
+    const files = fs.readdirSync(assetsDir).filter((file) => file.endsWith(".webp"));
 
     return new Response(JSON.stringify(files), { status: 200 });
   } catch (error) {

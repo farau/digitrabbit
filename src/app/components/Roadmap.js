@@ -36,7 +36,7 @@ export default function Roadmap({ embeddedWallet, refreshCounter, playerData }) 
     }
 
     const totalClicks = Number(playerData.totalClicks)
-    const target = 1000000;
+    const target = 100000000;
     const progressPercentage = Math.min((totalClicks / target) * 100, 100);
 
     const formatNumber = (num) => {
@@ -130,7 +130,7 @@ export default function Roadmap({ embeddedWallet, refreshCounter, playerData }) 
                                 margin: '2px 0 0 0',
                                 fontWeight: '500'
                             }}>
-                                Create a beautiful community with degen vibes on MegaETH.
+                                Absolutely Nothing but Rabbitio. 🐰
                             </p>
                         </div>
 
@@ -165,7 +165,7 @@ export default function Roadmap({ embeddedWallet, refreshCounter, playerData }) 
                                 margin: '2px 0 0 0',
                                 fontWeight: '500'
                             }}>
-                                Like rabbits! 🐰
+                                Click, click, and click again to reach 100 million transactions! ✨
                             </p>
                         </div>
 
@@ -200,14 +200,17 @@ export default function Roadmap({ embeddedWallet, refreshCounter, playerData }) 
                                 margin: '2px 0 0 0',
                                 fontWeight: '500'
                             }}>
-                                Reach at least 1 million transactions on MegaETH, because we like doing degen things! 🚀
+                                Maybe release the collection...
                             </p>
                         </div>
 
                         {/* Step 4 */}
                         <div style={{
                             display: 'flex',
-                            alignItems: 'flex-start'
+                            alignItems: 'flex-start',
+                            marginBottom: '18px',
+                            paddingBottom: '18px',
+                            borderBottom: `1px solid ${isNight ? '#374151' : '#e5e7eb'}`
                         }}>
                             <div style={{
                                 background: isNight ? '#4f46e5' : '#6366f1',
@@ -232,7 +235,39 @@ export default function Roadmap({ embeddedWallet, refreshCounter, playerData }) 
                                 margin: '2px 0 0 0',
                                 fontWeight: '500'
                             }}>
-                                Nothing else. ✨
+                                Provide utility. (nah sorry)
+                            </p>
+                        </div>
+
+                        {/* Step 5 */}
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'flex-start'
+                        }}>
+                            <div style={{
+                                background: isNight ? '#4f46e5' : '#6366f1',
+                                color: 'white',
+                                width: '24px',
+                                height: '24px',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                marginRight: '16px',
+                                flexShrink: 0
+                            }}>
+                                5
+                            </div>
+                            <p style={{
+                                fontSize: '15px',
+                                color: isNight ? '#e2e8f0' : '#374155',
+                                lineHeight: '1.5',
+                                margin: '2px 0 0 0',
+                                fontWeight: '500'
+                            }}>
+                                Rug.
                             </p>
                         </div>
                     </div>
@@ -338,7 +373,7 @@ export default function Roadmap({ embeddedWallet, refreshCounter, playerData }) 
                         border: `1px solid ${isNight ? '#4f46e5' : '#a5b4fc'}`,
                         maxWidth: '350px'
                     }}>
-                        Every click brings us closer to our goal!
+                        Keep clicking!🐰
                     </div>
                 </div>
             </div>

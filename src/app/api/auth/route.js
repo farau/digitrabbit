@@ -29,7 +29,6 @@ export async function POST(request) {
         }
         // Comparer avec le hash stocké de manière sécurisée
         const isValidSHA = password === process.env.PASSWORD_HASH
-        console.log("isvalid?", isValidSHA)
         if (isValidSHA) {
             // Reset rate limit on success
             rateLimitMap.delete(clientIP)
@@ -40,7 +39,7 @@ export async function POST(request) {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: 'Lax',
-                maxAge: 3600 * 24, //24h
+                maxAge: 3600 * 24 * 7, //7 days
                 path: '/'
             })
             return response

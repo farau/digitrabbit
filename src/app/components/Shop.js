@@ -175,12 +175,16 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
   }
 
   // Prix des items
-  const getItemPrice = (level) => level === 5 ? 10000 * level : 1000 * level
+  const getItemPrice = (level) => level === 5 ? 30000 : 2000 * level
+
+  // Boost part item
+  const getItemBoost = (level) => level === 5 ? '+200%' : '+10%'
+
 
   // Fonction pour obtenir le chemin de l'image
   const getImagePath = (slotIndex, level) => {
     const folder = slotFolders[slotIndex]
-    return `/img/shop/${folder}/${level}.png`
+    return `/img/shop/${folder}/${level}.webp`
   }
 
   // Vérifie si un niveau est disponible à l'achat
@@ -201,7 +205,7 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
 
   return embeddedWallet ? (
     <Wrapper>
-      <div className={`min-h-screen px-4 pt-10 ${styles.bgBackground}`}>
+      <div className={`min-h-screen px-4 pt-4 ${styles.bgBackground}`}>
         <div className="flex justify-center">
           <div
             style={{
@@ -212,37 +216,55 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
               borderWidth: 1,
               borderStyle: 'solid',
               borderRadius: '0.75rem',
-              padding: '1rem',
+              padding: '1rem'
             }}
-            className="inline-block"
+            className="inline-block px-6 py-4 md:px-8 md:py-6 lg:px-12 lg:py-8"
           >
-            <p className="font-semibold">RabbitPoints : {rabbitPoints}</p>
+            <p
+              className="font-semibold"
+              style={{
+                fontSize: window.innerWidth >= 1024 ? '20px' : window.innerWidth >= 768 ? '18px' : '16px'
+              }}
+            >
+              RabbitPoints : {rabbitPoints}
+            </p>
           </div>
         </div>
 
         {/* TRAITS SELECTOR */}
-        <div className="text-center pt-10">
-          <p className="font-semibold mb-4" style={{ color: textColor }}>
-            Choose a Trait:
-          </p>
-          <div className="flex flex-wrap justify-center gap-2">
-            {slotLabels.map((label, index) => (
-              <button
-                key={index}
-                onClick={() => setSelectedSlot(index)}
-                className={`px-4 py-2 rounded-full border text-sm transition ${selectedSlot === index
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-white border-gray-300 dark:border-gray-600'
-                  }`}
-              >
-                {label}
-              </button>
-            ))}
+        <div className="text-center py-10">
+          <div
+            style={{
+              background: cardBg,
+              padding: '20px',
+              borderRadius: '10px',
+              border: `1px solid ${borderColor}`,
+              boxShadow,
+              textAlign: 'center',
+            }}
+          >
+            <p className="font-semibold mb-4" style={{ color: textColor }}>
+              Choose a Trait:
+            </p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {slotLabels.map((label, index) => (
+                <button
+                  key={index}
+                  onClick={() => setSelectedSlot(index)}
+                  className={`px-4 py-2 rounded-full border text-sm transition ${selectedSlot === index
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-white border-gray-300 dark:border-gray-600'
+                    }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
         {/* MAIN CONTENT */}
-        <div className="flex flex-col sm:flex-row gap-8 pt-10 items-start justify-center">
+        <div className="flex flex-col sm:flex-row gap-8 items-start justify-center">
           {/* LEFT : Digit Rabbit Canvas avec DynamicAvatar */}
           <div className="w-full sm:w-1/2">
             <h4 className="text-xs font-semibold mb-4 text-center" style={{ color: textColor }}>
@@ -289,6 +311,7 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
               const selected = selectedLevels[i]
               const owned = playerItems[i]
               const price = getItemPrice(selected)
+              const boost = getItemBoost(selected)
               const canBuy = isLevelAvailable(i, selected)
               const nextLevel = owned + 1
               const isPreview = selected !== owned
@@ -336,6 +359,9 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
                           <div className={`text-sm text-yellow-600 dark:text-yellow-400`}>
                             Price: {price}
                           </div>
+                          <div className={`text-sm text-green-600 dark:text-green-400 font-semibold`}>
+                            Boost: {boost}
+                          </div>
                           {!canBuy && (
                             <div className="text-xs text-red-500 dark:text-red-400 mt-1">
                               {selected > nextLevel ? `Buy Lv ${nextLevel} first` : 'Already owned'}
@@ -366,7 +392,7 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
                       {isWriting && (
                         <Loader2 size={16} className="animate-spin inline mr-2" />
                       )}
-                      {canBuy ? `Buy Lv ${selected}` :
+                      {canBuy ? `Buy Lv ${selected} (${boost} boost)` :
                         selected > nextLevel ? `Buy Lv ${nextLevel} first` :
                           owned >= MAX_LEVEL ? 'Max Level' :
                             `Buy Lv ${nextLevel}`}
@@ -450,6 +476,14 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
                   Buy <span className="font-semibold">Level {pendingBuy.level}</span> item in{' '}
                   <span className="font-semibold">{slotLabels[pendingBuy.slot]}</span>?
                 </p>
+                <div className="text-center mb-4">
+                  <div className="text-sm text-yellow-600 dark:text-yellow-400">
+                    Price: {getItemPrice(pendingBuy.level)}
+                  </div>
+                  <div className="text-sm text-green-600 dark:text-green-400 font-semibold">
+                    Boost: {getItemBoost(pendingBuy.level)}
+                  </div>
+                </div>
                 <div className="flex justify-center gap-4">
                   <button
                     onClick={() => {

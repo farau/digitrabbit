@@ -137,6 +137,10 @@ function GameProvider({ children }) {
 export function ContextProvider({ children }) {
   const [themeMode, setThemeMode] = useState('light');
   const [show3DEffects, setShow3DEffects] = useState(true);
+
+  // Variable qui gère la présence de la page d'introduction
+  const [hasEntered, setHasEntered] = useState(false);
+
   const queryClient = new QueryClient();
 
   // Initialiser le thème depuis localStorage ou système
@@ -193,7 +197,9 @@ export function ContextProvider({ children }) {
       toggleTheme,
       show3DEffects,
       toggle3DEffects,
-      setShow3DEffects
+      setShow3DEffects,
+      hasEntered,
+      setHasEntered
     }}>
       <StyledThemeProvider theme={theme}>
         <PrivyProvider

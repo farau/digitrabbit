@@ -49,7 +49,7 @@ export default function HomeIntro({ onEnter }) {
         ))}
       </div>
       <button className={styles.enterButton} onClick={handleClick}>
-        Enter to the DigitRabbit universe
+        Enter to the Digit Rabbits universe
       </button>
     </div>
 

@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Trophy, RotateCcw, Users, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Trophy, RotateCcw, Users, Calendar, ChevronLeft, ChevronRight, Zap } from 'lucide-react';
 import { useState } from 'react';
 import { useLeaderboard } from '../hooks/useLeaderboard';
 import { useTheme, useGame } from '@/context';
@@ -28,6 +28,10 @@ export default function Leaderboard({ limit = 100 }) {
       minimumFractionDigits: 1,
       maximumFractionDigits: 1
     }).format(score);
+  };
+
+  const formatNumber = (number) => {
+    return new Intl.NumberFormat('en-EN').format(number);
   };
 
   const getRankStyle = (rank, isCurrentUser = false) => {
@@ -67,6 +71,93 @@ export default function Leaderboard({ limit = 100 }) {
       color: isNight ? '#ccc' : '#666'
     };
   };
+
+  const renderTopClicker = (topClicker) => (
+    <div
+      key={`top-clicker-${topClicker.walletAddress}`}
+      className="p-3 sm:p-4 md:p-6"
+      style={{
+        background: isNight ? 'rgba(251, 191, 36, 0.15)' : 'rgba(251, 191, 36, 0.08)'
+      }}
+    >
+      <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
+        {/* Icon */}
+        <div className="flex-shrink-0">
+          <div
+            className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center"
+            style={{
+              background: isNight
+                ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)'
+                : 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+              color: '#000'
+            }}
+          >
+            <Zap className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
+          </div>
+        </div>
+
+        {/* Avatar */}
+        <div className="flex-shrink-0">
+          {topClicker.twitter.avatar ? (
+            <Image
+              src={topClicker.twitter.avatar}
+              alt={topClicker.twitter.displayName || 'Avatar'}
+              width={96}
+              height={96}
+              className="rounded-full w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12"
+              sizes="(min-width: 768px) 48px, (min-width: 640px) 40px, 32px"
+            />
+          ) : (
+            <div
+              className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold"
+              style={{
+                background: isNight ? '#444' : '#e5e7eb',
+                color: isNight ? '#ccc' : '#666'
+              }}
+            >
+              {topClicker.twitter.displayName?.[0] || '?'}
+            </div>
+          )}
+        </div>
+
+        {/* Player Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+            <p className="text-sm sm:text-base md:text-lg font-semibold truncate min-w-fit" style={{ color: textColor, margin: 0 }}>
+              {topClicker.twitter.displayName || 'Anonymous User'}
+              <span className="ml-1 sm:ml-2 text-xs font-normal px-1 sm:px-2 py-0.5 sm:py-1 rounded-full" style={{
+                background: isNight ? '#fbbf24' : '#fbbf24',
+                color: '#000'
+              }}>
+                Top Clicker
+              </span>
+            </p>
+            {topClicker.twitter.username && (
+              <span className="text-xs sm:text-sm" style={{ color: subTextColor }}>
+                @{topClicker.twitter.username}
+              </span>
+            )}
+          </div>
+          <p className="text-xs sm:text-sm truncate mt-0.5 sm:mt-1" style={{ color: subTextColor, margin: 0 }}>
+            {topClicker.walletAddress.slice(0, 5)}...{topClicker.walletAddress.slice(-4)}
+          </p>
+        </div>
+
+        {/* Stats */}
+        <div className="flex-shrink-0 text-right mt-6">
+          <div className="text-sm sm:text-lg md:text-xl font-bold" style={{ color: textColor }}>
+            {formatNumber(topClicker.maxClicks)}
+            <span className="text-xs sm:text-sm font-normal ml-1" style={{ color: subTextColor }}>
+              clicks
+            </span>
+          </div>
+          <div className="text-xs sm:text-sm mt-0.5 sm:mt-1" style={{ color: subTextColor }}>
+            <span className="ml-2">⚡ {Math.floor(1000 / (topClicker.maxClicks / 60))} ms/click</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   const renderPlayerCard = (player, isCurrentUser = false) => (
     <div
@@ -119,7 +210,7 @@ export default function Leaderboard({ limit = 100 }) {
         {/* Player Info */}
         <div className="flex-1 min-w-0">
           <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-            <p className="text-sm sm:text-base md:text-lg font-semibold truncate" style={{ color: textColor, margin: 0 }}>
+            <p className="text-sm sm:text-base md:text-lg font-semibold truncate min-w-fit" style={{ color: textColor, margin: 0 }}>
               {player.twitter.displayName || 'Anonymous User'}
               {isCurrentUser && (
                 <span className="ml-1 sm:ml-2 text-xs font-normal px-1 sm:px-2 py-0.5 sm:py-1 rounded-full" style={{
@@ -137,12 +228,12 @@ export default function Leaderboard({ limit = 100 }) {
             )}
           </div>
           <p className="text-xs sm:text-sm truncate mt-0.5 sm:mt-1" style={{ color: subTextColor, margin: 0 }}>
-            {player.walletAddress.slice(0, 6)}...{player.walletAddress.slice(-4)}
+            {player.walletAddress.slice(0, 5)}...{player.walletAddress.slice(-4)}
           </p>
         </div>
 
         {/* Stats */}
-        <div className="flex-shrink-0 text-right">
+        <div className="flex-shrink-0 text-right mt-6">
           <div className="text-sm sm:text-lg md:text-xl font-bold" style={{ color: textColor }}>
             {formatScore(player.score)}
             <span className="text-xs sm:text-sm font-normal ml-1" style={{ color: subTextColor }}>
@@ -278,7 +369,7 @@ export default function Leaderboard({ limit = 100 }) {
     );
   }
 
-  const { topPlayers: leaderboard, metadata } = data;
+  const { topPlayers: leaderboard, metadata, topClicker } = data;
 
   // Find current user in the leaderboard
   const currentUser = leaderboard?.find(player =>
@@ -354,6 +445,33 @@ export default function Leaderboard({ limit = 100 }) {
           )}
         </div>
       </div>
+
+      {/* Top Clicker */}
+      {topClicker && metadata?.hasTopClickerData && (
+        <div
+          style={{
+            background: cardBg,
+            borderRadius: '12px',
+            border: `1px solid ${borderColor}`,
+            boxShadow,
+            overflow: 'hidden',
+            marginBottom: '16px'
+          }}
+        >
+          <div
+            className="px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium border-b flex items-center gap-2"
+            style={{
+              background: isNight ? '#1a1a1a' : '#f9f9f9',
+              color: textColor,
+              borderColor: borderColor
+            }}
+          >
+            <Zap className="w-4 h-4 text-yellow-500" />
+            <span>Top Clicker</span>
+          </div>
+          {renderTopClicker(topClicker)}
+        </div>
+      )}
 
       {/* Current User Rank */}
       {currentUser && embeddedWallet?.address && (

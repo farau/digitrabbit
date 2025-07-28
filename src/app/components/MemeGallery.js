@@ -13,7 +13,10 @@ export default function MemeGallery({ memeList, setSelectedMemeIndex }) {
   return (
     <Wrapper>
       <p style={{ margin: 0, padding: 10, textAlign: "center", fontStyle: "italic" }}>
-        &quot;You&apos;re gonna see too much Rabbitio, you may even get tired of seeing them and you will say PLEASE PLEASE it&apos;s too much RABBITIOOOO&quot;
+        You&apos;re gonna see so much Digit Rabbits memes, you may even get tired of Digit Rabbits.
+      </p>
+      <p style={{ marginBottom: 10, textAlign: "center", fontStyle: "italic" }}>
+        And you&apos;ll say, &quot;Please, please. It&apos;s too much Digit Rabbits. I can&apos;t take it anymore. Mr. President, it&apos;s too much.&quot;
       </p>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 15, padding: 10, justifyContent: "center", maxHeight: 10000, overflowY: "auto" }}>
         {memeList.map((filename, index) => (
@@ -42,6 +45,6 @@ export default function MemeGallery({ memeList, setSelectedMemeIndex }) {
           />
         ))}
       </div>
-    </Wrapper>
+    </Wrapper >
   )
 }

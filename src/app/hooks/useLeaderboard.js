@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 
-export function useLeaderboard(limit = null, user = null) {
+export function useLeaderboard(limit = null, user = null, complete = true) {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -16,6 +16,8 @@ export function useLeaderboard(limit = null, user = null) {
             if (limit) params.append('limit', limit);
             if (user) params.append('user', user);
 
+            // On ajoute automatiquement le top clicker
+            params.append('complete', true);
             if (params.toString()) {
                 url += '?' + params.toString();
             }

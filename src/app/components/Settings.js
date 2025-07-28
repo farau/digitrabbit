@@ -23,7 +23,7 @@ function ExportWalletButton() {
   );
 
   return (
-    <button onClick={exportWallet} disabled={!isAuthenticated || !hasEmbeddedWallet}>
+    <button className='mt-2' onClick={exportWallet} disabled={!isAuthenticated || !hasEmbeddedWallet}>
       Export my wallet
     </button>
   );
@@ -123,10 +123,9 @@ function AllLinkedWallets() {
           ))}
         </div>
       ) : (
-        <p className={`text-base italic ${subTextColor}`}>No wallets have been linked to this account.</p>
+        <p className={`text-base italic ${subTextColor} mb-2`}>No wallets have been linked to this account.</p>
       )}
       <LinkButton />
-      <p className={`text-base italic ${subTextColor}`}>Keep in mind that a user can only unlink an account if they have at least one other linked account remaining.</p>
     </div>
   );
 }
@@ -136,7 +135,7 @@ function LinkButton() {
 
   return (
     <div className="link-options mb-4">
-      <p className='text-base'>Link wallets containing &quot;partnerships&quot; NFTs to get bonuses.</p>
+      <p className='text-base mb-2'>Link wallets containing &quot;partnerships&quot; NFTs to get bonuses.</p>
       <button onClick={linkWallet}>Link Wallet</button>
     </div>
   );

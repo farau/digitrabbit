@@ -39,7 +39,6 @@ export default function MainPage() {
 
   const { themeMode, toggleTheme, show3DEffects, toggle3DEffects } = useTheme();
   const { width } = useWindowSize();
-
   // Setters pour memes
   const [selectedMemeIndex, setSelectedMemeIndex] = useState(null);
   const [memeList, setMemeList] = useState([]);
@@ -60,7 +59,8 @@ export default function MainPage() {
     sessionEndsAt: null,
     boost: 0,
     streak: 0,
-    hasClaimedPoints: false
+    hasClaimedPoints: false,
+    maxClicks: 0
   })
 
   // On récupère l'embedded wallet ici puis on propage ensuite
@@ -87,14 +87,14 @@ export default function MainPage() {
     fetch("/api/assets")
       .then((res) => res.json())
       .then((data) => setAssetsList(data))
-      .catch((err) => console.error("Erreur de chargement des assets.", err));
+      .catch((err) => console.error("Error loading assets.", err));
   }, []);
 
   useEffect(() => {
     fetch("/api/memes")
       .then((res) => res.json())
       .then((data) => setMemeList(data))
-      .catch((err) => console.error("Erreur de chargement des memes", err));
+      .catch((err) => console.error("Error loading memes", err));
   }, []);
 
   useEffect(() => {
@@ -140,7 +140,7 @@ export default function MainPage() {
       })
 
       const rabbitPoints = result[0] !== undefined ? Number(result[0]) / 1_000_000 : -1
-      const [totalClicks, gameClicks, playerItems, sessionEndsAt, boost, streak, hasClaimedPoints] = result.slice(1)
+      const [totalClicks, gameClicks, playerItems, sessionEndsAt, boost, streak, hasClaimedPoints, maxClicks] = result.slice(1)
 
       const data = {
         rabbitPoints,
@@ -150,7 +150,8 @@ export default function MainPage() {
         sessionEndsAt,
         boost,
         streak,
-        hasClaimedPoints
+        hasClaimedPoints,
+        maxClicks
       }
       setPlayerData(data)
     }
@@ -431,11 +432,11 @@ export default function MainPage() {
             <Image
               src={`/img/memes/${encodeURIComponent(memeList[selectedMemeIndex])}`}
               alt="Full meme"
-              width={800}
-              height={600}
+              width={600}
+              height={450}
               style={{
-                maxHeight: "100%",
-                maxWidth: "100%",
+                maxHeight: "70vh", // Limite à 70% de la hauteur de l'écran
+                maxWidth: "70vw",   // Limite à 80% de la largeur de l'écran
                 borderRadius: "10px",
                 boxShadow: "0 0 20px black",
                 objectFit: "contain"

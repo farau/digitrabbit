@@ -451,7 +451,7 @@ export default function MobileBackground({ restoreApp, themeMode }) {
                 style={{ cursor: 'pointer' }}
             >
                 <Image
-                    src={themeMode === 'light' ? "/img/rabbit_angel.png" : "/img/rabbit_angel_sleeping.png"}
+                    src={themeMode === 'light' ? "/img/rabbit_angel.webp" : "/img/rabbit_angel_sleeping.webp"}
                     alt="Rabbit angel"
                     width={themeMode === 'light' ? 300 : 250}
                     height={themeMode === 'light' ? 300 : 250}

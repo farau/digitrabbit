@@ -102,6 +102,32 @@ export const DIGIT_RABBITS_ABI = [
       {
         "indexed": true,
         "internalType": "address",
+        "name": "by",
+        "type": "address"
+      }
+    ],
+    "name": "ContractPaused",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "by",
+        "type": "address"
+      }
+    ],
+    "name": "ContractUnpaused",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
         "name": "player",
         "type": "address"
       },
@@ -380,6 +406,11 @@ export const DIGIT_RABBITS_ABI = [
         "internalType": "bool[]",
         "name": "hasClaimedPoints",
         "type": "bool[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "maxClicks",
+        "type": "uint256[]"
       }
     ],
     "stateMutability": "view",
@@ -453,6 +484,11 @@ export const DIGIT_RABBITS_ABI = [
         "internalType": "bool",
         "name": "hasClaimedPoints",
         "type": "bool"
+      },
+      {
+        "internalType": "uint256",
+        "name": "maxClicks",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -512,6 +548,11 @@ export const DIGIT_RABBITS_ABI = [
         "internalType": "bool",
         "name": "hasClaimedPoints",
         "type": "bool"
+      },
+      {
+        "internalType": "uint256",
+        "name": "maxClicks",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -586,6 +627,71 @@ export const DIGIT_RABBITS_ABI = [
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "getTopClicker",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "topPlayer",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "maxClicks",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalClicks",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "seasonId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getTopClickerBySeason",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "topPlayer",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "maxClicks",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalClicks",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "isPaused",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "address",
@@ -627,6 +733,19 @@ export const DIGIT_RABBITS_ABI = [
     "name": "pauseContract",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "paused",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -740,6 +859,11 @@ export const DIGIT_RABBITS_ABI = [
         "internalType": "bool",
         "name": "hasClaimedPoints",
         "type": "bool"
+      },
+      {
+        "internalType": "uint256",
+        "name": "maxClicks",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -809,6 +933,13 @@ export const DIGIT_RABBITS_ABI = [
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "unpauseContract",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
