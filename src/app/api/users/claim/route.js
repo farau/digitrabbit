@@ -1,13 +1,9 @@
 // api/users/claim/route.js
 import { NextResponse } from 'next/server';
-import { BADBUNNZ_ADDRESS_ETH, MEGALIO_ADDRESS_ETH, publicClientEth } from '@/utils/constants.js';
-import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS } from '@/utils/constants.js';
-import { signMessage, signTypedData } from '@/lib/walletBackend';
-import { PrivyClient, User } from '@privy-io/server-auth';
-import { cookies, headers } from 'next/headers';
-import { megaethTestnet } from 'viem/chains';
-import { encodeFunctionData } from 'viem';
-
+import { publicClientEth, publicClientBera } from '@/utils/constants.js';
+import { signMessage } from '@/lib/walletBackend';
+import { PrivyClient } from '@privy-io/server-auth';
+import { cookies } from 'next/headers';
 
 // ABI minimal pour la fonction balanceOf
 const ERC721_ABI = [
@@ -20,33 +16,79 @@ const ERC721_ABI = [
     }
 ];
 
+// NFT Partners Collections on other chains - Tier 1
+const BADBUNNZ_ADDRESS_ETH = "0xbdb13add477e76c1df52192d4f5f4dd67f6a40d8"
+const FLUFFLES_ADDRESS_ETH = "0x4E502Ab1Bb313B3C1311eb0D11B31a6B62988b86"
+const PUDGYPENGUINS_ADDRESS_ETH = "0xbd3531da5cf5857e7cfaa92426877b022e612cf8"
+const MILADY_ADDRESS_ETH = "0x5af0d9827e0c53e4799bb226655a1de152a425a5"
+
+// NFT Partners Collections on other chains - Tier 2
+const MEGALIO_ADDRESS_ETH = "0x851b728e568c9e10ab8007f27a525fbbed29b259"
+const CYBERKONGZ_ADDRESS_ETH = "0x57a204aa1042f6e66dd7730813f4024114d74f37"
+const CHIMPERS_ADDRESS_ETH = "0x80336ad7a747236ef41f47ed2c7641828a480baa"
+const STEADYTEDDYS_ADDRESS_BERA = "0x88888888a9361f15aadbaca355a6b2938c6a674e"
+
+// NFT Partners Collections on other chains - Tier 3
+const BULLAS_ADDRESS_BERA = "0x333814f5e16eee61d0c0b03a5b6abbd424b381c2"
+
 // Initialize the Privy Server Client
 const privy = new PrivyClient(
     process.env.NEXT_PUBLIC_PRIVY_APP_ID,
     process.env.PRIVY_APP_SECRET
 );
 
-const badbunnzPoints = 8000;
-const megalioPoints = 1000;
+// Points par collection
+const COLLECTION_POINTS = {
+    // Tier 1
+    badbunnz: 7000,
+    fluffles: 7000,
+    pudgypenguins: 7000,
+    milady: 7000,
+    // Tier 2
+    cyberkongz: 5000,
+    chimpers: 5000,
+    steadyteddys: 5000,
+    // Tier 3
+    megalio: 2000,
+    bullas: 1000
+};
 
-
+// Configuration des collections
+const COLLECTIONS_CONFIG = [
+    // Tier 1 - Ethereum
+    { name: 'badbunnz', address: BADBUNNZ_ADDRESS_ETH, chain: 'eth', points: COLLECTION_POINTS.badbunnz },
+    { name: 'fluffles', address: FLUFFLES_ADDRESS_ETH, chain: 'eth', points: COLLECTION_POINTS.fluffles },
+    { name: 'pudgypenguins', address: PUDGYPENGUINS_ADDRESS_ETH, chain: 'eth', points: COLLECTION_POINTS.pudgypenguins },
+    { name: 'milady', address: MILADY_ADDRESS_ETH, chain: 'eth', points: COLLECTION_POINTS.milady },
+    // Tier 2 - Ethereum
+    { name: 'cyberkongz', address: CYBERKONGZ_ADDRESS_ETH, chain: 'eth', points: COLLECTION_POINTS.cyberkongz },
+    { name: 'chimpers', address: CHIMPERS_ADDRESS_ETH, chain: 'eth', points: COLLECTION_POINTS.chimpers },
+    // Tier 2 - Berachain
+    { name: 'steadyteddys', address: STEADYTEDDYS_ADDRESS_BERA, chain: 'bera', points: COLLECTION_POINTS.steadyteddys },
+    // Tier 3 - Ethereum
+    { name: 'megalio', address: MEGALIO_ADDRESS_ETH, chain: 'eth', points: COLLECTION_POINTS.megalio },
+    // Tier 3 - Berachain
+    { name: 'bullas', address: BULLAS_ADDRESS_BERA, chain: 'bera', points: COLLECTION_POINTS.bullas }
+];
 
 async function calculatePointsForUser(linkedWallets) {
     let claimablePoints = 0;
-    let totalBadbunnzCount = 0;
-    let claimableBadbunnzPoints = 0;
-    let claimableMegalioPoints = 0;
-    let totalMegalioCount = 0;
+    const collectionsBreakdown = {};
     const walletBreakdown = [];
+
+    // Initialize collections breakdown
+    COLLECTIONS_CONFIG.forEach(collection => {
+        collectionsBreakdown[collection.name] = {
+            totalCount: 0,
+            totalPoints: 0
+        };
+    });
 
     // Validate input
     if (!linkedWallets || !Array.isArray(linkedWallets) || linkedWallets.length === 0) {
         return {
             claimablePoints: 0,
-            totalBadbunnzCount: 0,
-            totalMegalioCount: 0,
-            claimableBadbunnzPoints: 0,
-            claimableMegalioPoints: 0,
+            collectionsBreakdown,
             walletBreakdown: [],
             walletsChecked: 0
         };
@@ -56,66 +98,84 @@ async function calculatePointsForUser(linkedWallets) {
         // Check each wallet address
         for (const walletAddress of linkedWallets) {
             let walletPoints = 0;
-            let walletBadbunnz = 0;
-            let walletMegalio = 0;
+            const walletCollections = {};
 
             // Validate wallet address before processing
             if (!validateAddress(walletAddress)) {
                 console.error('Invalid wallet address:', walletAddress);
                 walletBreakdown.push({
                     address: walletAddress || 'undefined',
-                    badbunnzCount: 0,
-                    megalioCount: 0,
-                    points: 0,
+                    collections: {},
+                    totalPoints: 0,
                     error: 'Invalid wallet address'
                 });
                 continue;
             }
 
             try {
-                // Rule 1: Check Badbunnz Collection for this wallet
-                const badbunnzCount = await publicClientEth.readContract({
-                    address: BADBUNNZ_ADDRESS_ETH,
-                    abi: ERC721_ABI,
-                    functionName: 'balanceOf',
-                    args: [walletAddress]
-                });
-                walletBadbunnz = Number(badbunnzCount);
-                claimableBadbunnzPoints += walletBadbunnz * badbunnzPoints;
-                walletPoints += walletBadbunnz * badbunnzPoints; // 8000 points per Badbunnz
+                // Check each collection for this wallet
+                for (const collection of COLLECTIONS_CONFIG) {
+                    try {
+                        // Sélectionner le bon client selon la chaîne
+                        const publicClient = collection.chain === 'eth' ? publicClientEth : publicClientBera;
 
-                // Rule 2: Check Megalio Collection for this wallet
-                const megalioCount = await publicClientEth.readContract({
-                    address: MEGALIO_ADDRESS_ETH,
-                    abi: ERC721_ABI,
-                    functionName: 'balanceOf',
-                    args: [walletAddress]
-                });
-                walletMegalio = Number(megalioCount);
-                claimableMegalioPoints += walletMegalio * megalioPoints;
-                walletPoints += walletMegalio * megalioPoints; // 1000 points per Megalio
+                        const balance = await publicClient.readContract({
+                            address: collection.address,
+                            abi: ERC721_ABI,
+                            functionName: 'balanceOf',
+                            args: [walletAddress]
+                        });
 
-                // Add to totals
+                        const nftCount = Number(balance);
+                        const collectionPoints = nftCount * collection.points;
+
+                        // Update wallet data
+                        walletCollections[collection.name] = {
+                            count: nftCount,
+                            points: collectionPoints
+                        };
+                        walletPoints += collectionPoints;
+
+                        // Update global collections breakdown
+                        collectionsBreakdown[collection.name].totalCount += nftCount;
+                        collectionsBreakdown[collection.name].totalPoints += collectionPoints;
+
+                    } catch (collectionError) {
+                        console.error(`Error checking ${collection.name} for wallet ${walletAddress}:`, collectionError);
+                        walletCollections[collection.name] = {
+                            count: 0,
+                            points: 0,
+                            error: 'Failed to check collection'
+                        };
+                    }
+                }
+
+                // Add to total points
                 claimablePoints += walletPoints;
-                totalBadbunnzCount += walletBadbunnz;
-                totalMegalioCount += walletMegalio;
 
                 // Store breakdown for this wallet
                 walletBreakdown.push({
                     address: walletAddress,
-                    badbunnzCount: walletBadbunnz,
-                    megalioCount: walletMegalio,
-                    points: walletPoints
+                    collections: walletCollections,
+                    totalPoints: walletPoints
                 });
 
             } catch (walletError) {
                 console.error(`Error checking wallet ${walletAddress}:`, walletError);
                 // Continue with other wallets even if one fails
+                const errorCollections = {};
+                COLLECTIONS_CONFIG.forEach(collection => {
+                    errorCollections[collection.name] = {
+                        count: 0,
+                        points: 0,
+                        error: 'Failed to check wallet'
+                    };
+                });
+
                 walletBreakdown.push({
                     address: walletAddress,
-                    badbunnzCount: 0,
-                    megalioCount: 0,
-                    points: 0,
+                    collections: errorCollections,
+                    totalPoints: 0,
                     error: 'Failed to check wallet'
                 });
             }
@@ -123,10 +183,7 @@ async function calculatePointsForUser(linkedWallets) {
 
         return {
             claimablePoints,
-            totalBadbunnzCount,
-            totalMegalioCount,
-            claimableBadbunnzPoints,
-            claimableMegalioPoints,
+            collectionsBreakdown,
             walletBreakdown,
             walletsChecked: linkedWallets.length
         };
@@ -221,8 +278,9 @@ export async function POST() {
             signature: signature,
             claimablePoints: result.claimablePoints,
             nonce: nonce,
+            collectionsBreakdown: result.collectionsBreakdown,
+            walletBreakdown: result.walletBreakdown
         });
-
 
     } catch (error) {
         console.error('Claim route error:', error);
@@ -232,7 +290,6 @@ export async function POST() {
         );
     }
 }
-
 
 export async function GET(request) {
     try {

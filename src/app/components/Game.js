@@ -136,7 +136,7 @@ function TwitterShareButton({ score, totalClicks, themeMode, onClose }) {
   const subTextColor = isNight ? 'text-zinc-400' : 'text-gray-600';
 
   const handleTwitterShare = () => {
-    const tweetText = `🐰 Just scored ${score} RabbitPoints in 1 minute on the @digitrabbits website! 🚀\n\nEach click represents a transaction on-chain on the MegaETH's testnet! ⚡️\n\nWen 1M total clicks?\n\nRabbitio`;
+    const tweetText = `🐰 Just scored ${score} RabbitPoints in 1 minute on the @digitrabbits website! 🚀\n\n1 click = 1 on-chain transaction on MegaETH testnet ⚡️\n\nThink you can beat me? Come play & climb the leaderboard! 🐰\n\nOnly at digitrabbits.com`;
     const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
     window.open(tweetUrl, '_blank', 'width=600,height=400');
     onClose();

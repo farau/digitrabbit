@@ -86,6 +86,56 @@ function XProfileDisplay() {
   );
 }
 
+// Configuration des collections avec leurs images
+const COLLECTIONS_CONFIG = [
+  {
+    name: 'badbunnz',
+    displayName: 'BadBunnz',
+    image: '/img/collections/badbunnz.png',
+  },
+  {
+    name: 'fluffles',
+    displayName: 'The Fluffle',
+    image: '/img/collections/fluffles.jpg',
+  },
+  {
+    name: 'pudgypenguins',
+    displayName: 'Pudgy Penguins',
+    image: '/img/collections/pudgypenguins.png',
+  },
+  {
+    name: 'milady',
+    displayName: 'Milady',
+    image: '/img/collections/milady.png',
+  },
+  // Tier 2
+  {
+    name: 'megalio',
+    displayName: 'Megalio',
+    image: '/img/collections/megalio.jpg',
+  },
+  {
+    name: 'cyberkongz',
+    displayName: 'CyberKongz',
+    image: '/img/collections/cyberkongz.png',
+  },
+  {
+    name: 'chimpers',
+    displayName: 'Chimpers',
+    image: '/img/collections/chimpers.png',
+  },
+  {
+    name: 'steadyteddys',
+    displayName: 'Steady Teddys',
+    image: '/img/collections/steadyteddys.jpg',
+  },
+  // Tier 3
+  {
+    name: 'bullas',
+    displayName: 'The Bullas',
+    image: '/img/collections/bullas.png',
+  }
+];
 
 function PointsModal({ isOpen, onClose, pointsData, onClaim, isClaiming, isNight }) {
   if (!isOpen || !pointsData) return null;
@@ -94,25 +144,18 @@ function PointsModal({ isOpen, onClose, pointsData, onClaim, isClaiming, isNight
   const cardBg = isNight ? '#222' : '#f3f3f3';
   const borderColor = isNight ? '#444' : '#ddd';
   const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)';
-  const overlayBg = isNight ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.5)';
+  const overlayBg = isNight ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.2)';
   const subTextColor = isNight ? '#ccc' : '#666';
 
-  const collections = [
-    {
-      name: 'BadBunnz',
-      count: pointsData.totalBadbunnzCount || 0,
-      points: pointsData.claimableBadbunnzPoints || 0,
-      image: '/img/collections/badbunnz.png'
-    },
-    {
-      name: 'Megalio',
-      count: pointsData.totalMegalioCount || 0,
-      points: pointsData.claimableMegalioPoints || 0,
-      image: '/img/collections/megalio.jpg'
-    }
-  ];
-
-  const activeCollections = collections.filter(c => c.count > 0);
+  // Créer la liste des collections avec leurs données
+  const collections = COLLECTIONS_CONFIG.map(config => {
+    const collectionData = pointsData.collectionsBreakdown?.[config.name];
+    return {
+      ...config,
+      count: collectionData?.totalCount || 0,
+      points: collectionData?.totalPoints || 0
+    };
+  }).filter(collection => collection.count > 0); // Filtrer seulement les collections avec des NFTs
 
   return (
     <div
@@ -120,9 +163,14 @@ function PointsModal({ isOpen, onClose, pointsData, onClaim, isClaiming, isNight
         position: 'fixed',
         top: 0,
         left: 0,
+        width: '100%',
+        height: '100%',
+        minHeight: '110vh',
         right: 0,
         bottom: 0,
         backgroundColor: overlayBg,
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)', // Support Safari
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -136,17 +184,17 @@ function PointsModal({ isOpen, onClose, pointsData, onClaim, isClaiming, isNight
           backgroundColor: cardBg,
           borderRadius: '12px',
           padding: '24px',
-          maxWidth: '480px',
+          maxWidth: '520px',
           width: '100%',
-          maxHeight: '90vh',
+          maxHeight: '75vh',
           overflowY: 'auto',
           border: `1px solid ${borderColor}`,
           boxShadow,
-          color: textColor
+          color: textColor,
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header épuré */}
+        {/* Header */}
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -180,17 +228,17 @@ function PointsModal({ isOpen, onClose, pointsData, onClaim, isClaiming, isNight
           </button>
         </div>
 
-        {/* Collections - Style simple avec images */}
+        {/* Collections */}
         <div style={{ marginBottom: '20px' }}>
-          {activeCollections.map((collection, index) => (
+          {collections.map((collection, index) => (
             <div
               key={collection.name}
               style={{
                 background: cardBg,
                 border: `1px solid ${borderColor}`,
                 borderRadius: '8px',
-                padding: '15px',
-                marginBottom: index < activeCollections.length - 1 ? '10px' : '0',
+                padding: '12px',
+                marginBottom: index < collections.length - 1 ? '8px' : '0',
                 boxShadow
               }}
             >
@@ -198,9 +246,9 @@ function PointsModal({ isOpen, onClose, pointsData, onClaim, isClaiming, isNight
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <Image
                     src={collection.image}
-                    alt={collection.name}
-                    width={40}
-                    height={40}
+                    alt={collection.displayName}
+                    width={36}
+                    height={36}
                     style={{
                       borderRadius: '6px',
                       objectFit: 'cover',
@@ -209,15 +257,15 @@ function PointsModal({ isOpen, onClose, pointsData, onClaim, isClaiming, isNight
                   />
                   <div>
                     <div style={{
-                      fontSize: '16px',
+                      fontSize: '15px',
                       fontWeight: '600',
                       color: textColor,
-                      marginBottom: '4px'
+                      marginBottom: '2px'
                     }}>
-                      {collection.name}
+                      {collection.displayName}
                     </div>
                     <div style={{
-                      fontSize: '13px',
+                      fontSize: '12px',
                       color: subTextColor
                     }}>
                       {collection.count} NFT{collection.count > 1 ? 's' : ''}
@@ -226,14 +274,14 @@ function PointsModal({ isOpen, onClose, pointsData, onClaim, isClaiming, isNight
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{
-                    fontSize: '18px',
+                    fontSize: '16px',
                     fontWeight: '600',
                     color: textColor
                   }}>
                     {collection.points.toLocaleString()}
                   </div>
                   <div style={{
-                    fontSize: '12px',
+                    fontSize: '11px',
                     color: subTextColor
                   }}>
                     points
@@ -244,7 +292,7 @@ function PointsModal({ isOpen, onClose, pointsData, onClaim, isClaiming, isNight
           ))}
         </div>
 
-        {/* Total - Style cohérent avec Profile */}
+        {/* Total */}
         <div
           style={{
             background: cardBg,
@@ -269,7 +317,7 @@ function PointsModal({ isOpen, onClose, pointsData, onClaim, isClaiming, isNight
           </div>
         </div>
 
-        {/* Claim Button - Style simple */}
+        {/* Claim Button */}
         <button
           onClick={onClaim}
           disabled={isClaiming || pointsData.claimablePoints === 0}
@@ -319,7 +367,7 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
   const [pointsData, setPointsData] = useState(null);
   const [error, setError] = useState(null);
   const [claimSuccess, setClaimSuccess] = useState(false);
-  const [showModal, setShowModal] = useState(false); // Nouvelle state pour la modale
+  const [showModal, setShowModal] = useState(false);
 
   const handleCheckPoints = async () => {
     if (!user?.linkedAccounts) return;
@@ -329,17 +377,13 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
     setClaimSuccess(false);
 
     try {
-      const linkedWallets = user.linkedAccounts
-        .filter(account => account.type === 'wallet')
-        .map(account => account.address);
-
-      if (linkedWallets.length === 0) {
-        setError('No linked wallets found');
-        return;
-      }
-
-      const linkedWalletsJson = JSON.stringify(linkedWallets);
-      const response = await fetch(`/api/users/claim?linkedWallets=${encodeURIComponent(linkedWalletsJson)}`);
+      // Utiliser l'endpoint GET mis à jour
+      const response = await fetch('/api/users/claim', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -375,19 +419,12 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
         throw new Error('Embedded wallet not found');
       }
 
-      const linkedWallets = user.linkedAccounts
-        .filter(account => account.type === 'wallet')
-        .map(account => account.address);
-
+      // Utiliser l'endpoint POST mis à jour
       const claimResponse = await fetch('/api/users/claim', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          linkedWallets: linkedWallets,
-          address: embeddedWallet.address
-        }),
+        }
       });
 
       if (!claimResponse.ok) {
@@ -416,7 +453,7 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
       setClaimSuccess(true);
       setRefreshCounter(c => c + 1);
       setPointsData(null);
-      setShowModal(false); // Fermer la modale après le claim
+      setShowModal(false);
 
     } catch (err) {
       console.error('Error claiming points:', err);
@@ -512,8 +549,6 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
   );
 }
 
-
-
 export default function Profile({ playerData, setRefreshCounter }) {
   const { user } = usePrivy();
   const { themeMode } = useTheme();
@@ -525,7 +560,6 @@ export default function Profile({ playerData, setRefreshCounter }) {
   const tooltipColor = isNight ? '#eee' : '#333'
   const borderColor = isNight ? '#444' : '#ddd'
   const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)'
-
 
   const { embeddedWallet, validationError, isValidating } = useGame()
 
@@ -701,7 +735,6 @@ export default function Profile({ playerData, setRefreshCounter }) {
       </Wrapper>
     )
   }
-
 
   const userAddress =
     embeddedWallet?.address || '0x0000000000000000000000000000000000000000'

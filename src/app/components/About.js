@@ -129,7 +129,7 @@ export default function About() {
                             margin: 0,
                             fontWeight: '400'
                         }}>
-                            Underpromise and just overdeliver (@hotpot_dao).
+                            Underpromise and just overdeliver.
                         </p>
                     </div>
                 </div>

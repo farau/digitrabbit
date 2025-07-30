@@ -1,5 +1,5 @@
 import { createPublicClient, http } from "viem"
-import { megaethTestnet, mainnet } from "viem/chains"
+import { megaethTestnet, mainnet, berachain } from "viem/chains"
 
 export const publicClient = createPublicClient({
   chain: megaethTestnet,
@@ -8,6 +8,11 @@ export const publicClient = createPublicClient({
 
 export const publicClientEth = createPublicClient({
   chain: mainnet,
+  transport: http(), // Utilise l’URL par défaut ou ajoute une RPC custom ici
+})
+
+export const publicClientBera = createPublicClient({
+  chain: berachain,
   transport: http(), // Utilise l’URL par défaut ou ajoute une RPC custom ici
 })
 
@@ -24,10 +29,6 @@ export const XLogo = ({ className = '', size = 20 }) => (
     <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
   </svg>
 )
-
-// NFT Partners Collections on other chains
-export const BADBUNNZ_ADDRESS_ETH = "0xbdb13add477e76c1df52192d4f5f4dd67f6a40d8"
-export const MEGALIO_ADDRESS_ETH = "0x851b728e568c9e10ab8007f27a525fbbed29b259"
 
 
 // Digit Rabbits smart contract on MegaETH Testnet
