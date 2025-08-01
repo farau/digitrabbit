@@ -784,7 +784,7 @@ export default function Profile({ playerData, setRefreshCounter }) {
 
                   for (const layer of layerOrder) {
                     const itemLevel = playerItems[layer.index] || 0;
-                    const imagePath = `/img/shop/${layer.folder}/${itemLevel}.png`;
+                    const imagePath = `/img/shop/${layer.folder}/${itemLevel}.webp`;
 
                     try {
                       const img = await loadImage(imagePath);

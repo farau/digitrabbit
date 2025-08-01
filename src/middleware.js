@@ -7,8 +7,151 @@ const privy = new PrivyClient(
     process.env.PRIVY_APP_SECRET
 );
 
+// Liste des User-Agents de bots à bloquer
+const BOT_USER_AGENTS = [
+    // Bots Python
+    'python-requests',
+    'python-urllib',
+    'python-httpx',
+    'python/3.',
+    'python/2.',
+    'urllib',
+    'requests/',
+    'httpx/',
+    'aiohttp/',
+    'scrapy',
+    'beautifulsoup',
+
+    // Bots JavaScript/Node.js
+    'node.js',
+    'nodejs',
+    'axios/',
+    'fetch/',
+    'undici',
+    'node-fetch',
+    'puppeteer',
+    'playwright',
+    'selenium',
+    'webdriver',
+    'phantom',
+    'headless',
+
+    // Autres bots courants
+    'curl/',
+    'wget',
+    'postman',
+    'insomnia',
+    'httpie',
+    'go-http-client',
+    'java/',
+    'okhttp',
+    'apache-httpclient',
+    'ruby',
+    'php/',
+    'perl/',
+    'bot',
+    'crawler',
+    'spider',
+    'scraper',
+    'automation',
+    'test',
+    'monitor',
+    'check',
+    'probe'
+];
+
+// User-Agents légitimes à autoriser (même s'ils contiennent des mots suspects)
+const ALLOWED_USER_AGENTS = [
+    'mozilla/',
+    'chrome/',
+    'safari/',
+    'firefox/',
+    'edge/',
+    'opera/',
+    'webkit'
+];
+
+function isBotUserAgent(userAgent) {
+    if (!userAgent) return true; // Pas de User-Agent = suspect
+
+    const ua = userAgent.toLowerCase();
+
+    // Si c'est un navigateur légitime, on autorise
+    const isLegitimaBrowser = ALLOWED_USER_AGENTS.some(allowed => ua.includes(allowed));
+    if (isLegitimaBrowser) return false;
+
+    // Sinon, on vérifie si c'est un bot
+    return BOT_USER_AGENTS.some(bot => ua.includes(bot));
+}
+
+function hasValidBrowserHeaders(req) {
+    const headers = req.headers;
+
+    // Vérifications basiques des headers de navigateur
+    const hasAccept = headers.get('accept');
+    const hasAcceptLanguage = headers.get('accept-language');
+    const hasAcceptEncoding = headers.get('accept-encoding');
+    const hasUserAgent = headers.get('user-agent');
+
+    // Un vrai navigateur a généralement ces headers
+    if (!hasAccept || !hasUserAgent) return false;
+
+    // Vérification de l'header Accept (les navigateurs acceptent HTML)
+    const accept = hasAccept.toLowerCase();
+    if (!accept.includes('text/html') && !accept.includes('*/*') && !accept.includes('application/json')) {
+        return false;
+    }
+
+    return true;
+}
+
 export async function middleware(req) {
     const cookieStore = await cookies();
+    const userAgent = req.headers.get('user-agent') || '';
+
+    // =============== PROTECTION ANTI-BOTS ===============
+    if (process.env.ENABLE_BOT_PROTECTION === 'true') {
+        // Vérification du User-Agent
+        if (isBotUserAgent(userAgent)) {
+            return new Response('Access Denied - Automated requests not allowed', {
+                status: 403,
+                headers: {
+                    'Content-Type': 'text/plain',
+                    'X-Blocked-Reason': 'Bot User-Agent detected'
+                }
+            });
+        }
+
+        // Vérification des headers de navigateur (pour les routes non-API)
+        if (!req.nextUrl.pathname.startsWith('/api/') && !hasValidBrowserHeaders(req)) {
+            return new Response('Access Denied - Invalid request headers', {
+                status: 403,
+                headers: {
+                    'Content-Type': 'text/plain',
+                    'X-Blocked-Reason': 'Invalid browser headers'
+                }
+            });
+        }
+
+        // Vérification de certains patterns suspects dans l'URL
+        const suspiciousPatterns = [
+            '/wp-admin',
+            '/phpinfo',
+            '/.env',
+            '/robots.txt',
+            '/sitemap.xml',
+            '/.well-known',
+            '/favicon.ico'
+        ];
+
+        // Pour ces patterns, on peut être plus strict
+        if (suspiciousPatterns.some(pattern => req.nextUrl.pathname.includes(pattern))) {
+            if (isBotUserAgent(userAgent) || !hasValidBrowserHeaders(req)) {
+                return new Response('Not Found', { status: 404 });
+            }
+        }
+    }
+
     const isPrivyProtectedRoute = ['/api/users', '/api/validate-wallet'].some(route =>
         req.nextUrl.pathname.startsWith(route)
     );
