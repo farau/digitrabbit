@@ -20,6 +20,7 @@ import { useWallets, usePrivy } from '@privy-io/react-auth'
 import { useWalletClient } from '../hooks/useWalletClient'
 import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS } from '@/utils/constants'
 import WalletButton from './WalletButton'
+import { useBalance } from 'wagmi'
 
 function XProfileDisplay() {
   const { user } = usePrivy();
@@ -565,6 +566,10 @@ export default function Profile({ playerData, setRefreshCounter }) {
 
   const { rabbitPoints, playerItems, totalClicks, sessionEndsAt, boost, streak, hasClaimedPoints, maxClicks } = playerData
 
+  const { data: balance, refetch: refetchBalance } = useBalance({
+    address: embeddedWallet?.address,
+  });
+
   const rawStats = {
     clothes: playerItems.reduce((count, val) => count + (val > 0 ? 1 : 0), 0),
     boost: Number(boost),
@@ -740,14 +745,20 @@ export default function Profile({ playerData, setRefreshCounter }) {
     embeddedWallet?.address || '0x0000000000000000000000000000000000000000'
   const displayAddress = userAddress.slice(0, 4) + '...' + userAddress.slice(-4)
 
+  // Formater la balance à 5 décimales maximum
+  const formatBalance = (value) => {
+    const num = parseFloat(value);
+    return num.toFixed(5).replace(/\.?0+$/, ''); // Supprime les zéros inutiles à la fin
+  };
+
   return (embeddedWallet ?
     <Wrapper>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+      <div className="flex flex-col md:flex-row md:items-start gap-5">
         {/* Avatar Dynamique */}
         <div className="flex flex-col items-center">
           <DynamicAvatar
             playerItems={playerItems}
-            size="w-24 h-24"
+            size="w-30 h-30"
             showBorder={true}
             width={96}
             height={96}
@@ -820,33 +831,52 @@ export default function Profile({ playerData, setRefreshCounter }) {
               background: cardBg,
               padding: '10px 15px',
               borderRadius: '10px',
-              marginBottom: 10,
               border: `1px solid ${borderColor}`,
               boxShadow,
             }}
+            className='mb-3'
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '15px',
+            }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <strong>Wallet Address: </strong>
-                <span style={{ wordBreak: 'break-all' }}>{displayAddress}</span>
+                <strong>Wallet Address:</strong>
+                <span style={{
+                  wordBreak: 'break-all',
+                  marginLeft: '8px'
+                }}>
+                  {displayAddress}
+                </span>
               </div>
-              <div style={{ flexShrink: 0 }}>
+              <div className="flex-shrink-0">
                 <CopyWalletButton address={userAddress} />
               </div>
             </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <strong>Balance:</strong>
+              <span style={{
+                wordBreak: 'break-all',
+                marginLeft: '8px'
+              }}>
+                {balance ? `${formatBalance(balance.formatted)} ${balance.symbol}` : 'Loading...'}
+              </span>
+            </div>
           </div>
-          <div
-            style={{
-              background: cardBg,
-              padding: '10px 15px',
-              borderRadius: '10px',
-              marginBottom: 10,
-              border: `1px solid ${borderColor}`,
-              boxShadow,
-            }}
-            className='mt-4'
+          <div style={{
+            background: cardBg,
+            padding: '10px 15px',
+            borderRadius: '10px',
+            border: `1px solid ${borderColor}`,
+            boxShadow,
+          }}
           >
-            <strong>RabbitPoints:</strong> {rabbitPoints} <br />
+            <strong>RabbitPoints:</strong>
+            <span className="md:inline ml-2 break-all">
+              {rabbitPoints}
+            </span>
           </div>
         </div>
       </div>

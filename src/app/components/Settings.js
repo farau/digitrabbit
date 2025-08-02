@@ -198,10 +198,24 @@ function WalletBalance({ embeddedWallet, themeMode }) {
   const hasBalance = balance?.value > 0n;
   const textColor = themeMode === 'dark' ? 'text-white' : 'text-black';
 
+  // Formater la balance à 5 décimales maximum
+  const formatBalance = (value) => {
+    const num = parseFloat(value);
+    return num.toFixed(5).replace(/\.?0+$/, ''); // Supprime les zéros inutiles à la fin
+  };
+
   return (
     <div className="mt-4 space-y-2">
       <p>
-        Balance: {balance.formatted} {balance.symbol}
+        Balance: {formatBalance(balance.formatted)} {balance.symbol}
+        {!hasBalance && (
+          <button
+            onClick={refetchBalance}
+            className="px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 text-base font-medium ml-2"
+          >
+            Reload
+          </button>
+        )}
       </p>
 
       {!hasBalance && (
@@ -213,17 +227,11 @@ function WalletBalance({ embeddedWallet, themeMode }) {
               href="https://testnet.megaeth.com/?faucet=true"
               target="_blank"
               rel="noopener noreferrer"
-              className="p-1.5 rounded transition focus:outline-none focus:ring-2 focus:ring-indigo-400 ml-2"
+              className="inline-flex items-center px-3 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-md shadow-sm hover:shadow transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ml-2"
+              style={{ color: 'white' }}
             >
               Get Tokens
             </a>
-
-            <button
-              onClick={refetchBalance}
-              className="px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 text-base font-medium ml-2"
-            >
-              Reload
-            </button>
           </p>
         </div>
       )}
