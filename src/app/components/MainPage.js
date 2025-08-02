@@ -399,7 +399,7 @@ export default function MainPage() {
       />
       <Icon
         name="assets"
-        label={"Assets.png"}
+        label={"Assets"}
         src="/img/icons/assets.png"
         onClick={() => restoreApp("Assets")}
         position={{ x: "10%", y: "6%" }}
