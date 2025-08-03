@@ -40,9 +40,10 @@ const privy = new PrivyClient(
 
 // Points par collection
 const COLLECTION_POINTS = {
+    // Tier S
+    badbunnz: 8000,
+    fluffles: 8000,
     // Tier 1
-    badbunnz: 7000,
-    fluffles: 7000,
     pudgypenguins: 7000,
     milady: 7000,
     // Tier 2
@@ -57,9 +58,10 @@ const COLLECTION_POINTS = {
 
 // Configuration des collections
 const COLLECTIONS_CONFIG = [
-    // Tier 1 - Ethereum
+    // Tier S - Ethereum
     { name: 'badbunnz', address: BADBUNNZ_ADDRESS_ETH, chain: 'eth', points: COLLECTION_POINTS.badbunnz },
     { name: 'fluffles', address: FLUFFLES_ADDRESS_ETH, chain: 'eth', points: COLLECTION_POINTS.fluffles },
+    // Tier 1 - Ethereum
     { name: 'pudgypenguins', address: PUDGYPENGUINS_ADDRESS_ETH, chain: 'eth', points: COLLECTION_POINTS.pudgypenguins },
     { name: 'milady', address: MILADY_ADDRESS_ETH, chain: 'eth', points: COLLECTION_POINTS.milady },
     { name: 'sprotogremlins', address: SPROTOGREMLINS_ADDRESS_ETH, chain: 'eth', points: COLLECTION_POINTS.sprotogremlins },

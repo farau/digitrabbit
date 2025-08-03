@@ -99,6 +99,7 @@ const COLLECTIONS_CONFIG = [
     displayName: 'The Fluffle',
     image: '/img/collections/fluffles.jpg',
   },
+  //
   {
     name: 'pudgypenguins',
     displayName: 'Pudgy Penguins',
@@ -109,7 +110,7 @@ const COLLECTIONS_CONFIG = [
     displayName: 'Milady',
     image: '/img/collections/milady.png',
   },
-  // Tier 2
+  //
   {
     name: 'cyberkongz',
     displayName: 'CyberKongz',
@@ -130,7 +131,7 @@ const COLLECTIONS_CONFIG = [
     displayName: 'Steady Teddys',
     image: '/img/collections/steadyteddys.jpg',
   },
-  // Tier 3
+  //
   {
     name: 'megalio',
     displayName: 'Megalio',
