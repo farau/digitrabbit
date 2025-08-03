@@ -26,6 +26,7 @@ const MILADY_ADDRESS_ETH = "0x5af0d9827e0c53e4799bb226655a1de152a425a5"
 const MEGALIO_ADDRESS_ETH = "0x851b728e568c9e10ab8007f27a525fbbed29b259"
 const CYBERKONGZ_ADDRESS_ETH = "0x57a204aa1042f6e66dd7730813f4024114d74f37"
 const CHIMPERS_ADDRESS_ETH = "0x80336ad7a747236ef41f47ed2c7641828a480baa"
+const SPROTOGREMLINS_ADDRESS_ETH = "0xeeca64ea9fcf99a22806cd99b3d29cf6e8d54925"
 const STEADYTEDDYS_ADDRESS_BERA = "0x88888888a9361f15aadbaca355a6b2938c6a674e"
 
 // NFT Partners Collections on other chains - Tier 3
@@ -48,6 +49,7 @@ const COLLECTION_POINTS = {
     cyberkongz: 5000,
     chimpers: 5000,
     steadyteddys: 5000,
+    sprotogremlins: 5000,
     // Tier 3
     megalio: 2000,
     bullas: 1000
@@ -60,6 +62,7 @@ const COLLECTIONS_CONFIG = [
     { name: 'fluffles', address: FLUFFLES_ADDRESS_ETH, chain: 'eth', points: COLLECTION_POINTS.fluffles },
     { name: 'pudgypenguins', address: PUDGYPENGUINS_ADDRESS_ETH, chain: 'eth', points: COLLECTION_POINTS.pudgypenguins },
     { name: 'milady', address: MILADY_ADDRESS_ETH, chain: 'eth', points: COLLECTION_POINTS.milady },
+    { name: 'sprotogremlins', address: SPROTOGREMLINS_ADDRESS_ETH, chain: 'eth', points: COLLECTION_POINTS.sprotogremlins },
     // Tier 2 - Ethereum
     { name: 'cyberkongz', address: CYBERKONGZ_ADDRESS_ETH, chain: 'eth', points: COLLECTION_POINTS.cyberkongz },
     { name: 'chimpers', address: CHIMPERS_ADDRESS_ETH, chain: 'eth', points: COLLECTION_POINTS.chimpers },

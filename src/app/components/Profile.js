@@ -111,11 +111,6 @@ const COLLECTIONS_CONFIG = [
   },
   // Tier 2
   {
-    name: 'megalio',
-    displayName: 'Megalio',
-    image: '/img/collections/megalio.jpg',
-  },
-  {
     name: 'cyberkongz',
     displayName: 'CyberKongz',
     image: '/img/collections/cyberkongz.png',
@@ -126,11 +121,21 @@ const COLLECTIONS_CONFIG = [
     image: '/img/collections/chimpers.png',
   },
   {
+    name: 'sprotogremlins',
+    displayName: 'Sproto Gremlins',
+    image: '/img/collections/sprotogremlins.jpg',
+  },
+  {
     name: 'steadyteddys',
     displayName: 'Steady Teddys',
     image: '/img/collections/steadyteddys.jpg',
   },
   // Tier 3
+  {
+    name: 'megalio',
+    displayName: 'Megalio',
+    image: '/img/collections/megalio.jpg',
+  },
   {
     name: 'bullas',
     displayName: 'The Bullas',
