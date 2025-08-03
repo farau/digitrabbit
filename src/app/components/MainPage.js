@@ -127,9 +127,38 @@ export default function MainPage() {
 
   // On charge playerData au démarrage et à chaque refresh
   useEffect(() => {
+
+    async function fetchTotalClicks() {
+      console.log("📥 Fetching total clicks of the game")
+      // On récupère le nombre total de clics
+      const totalClicksGame = await publicClient.readContract({
+        address: DIGIT_RABBITS_ADDRESS,
+        abi: DIGIT_RABBITS_ABI,
+        functionName: 'totalClicksGame',
+        args: [],
+      })
+
+      const data = {
+        rabbitPoints: 0,
+        totalClicks: 0,
+        gameClicks: 0,
+        playerItems: Array(NUM_SLOTS).fill(0),
+        sessionEndsAt: null,
+        boost: 0,
+        streak: 0,
+        hasClaimedPoints: false,
+        maxClicks: 0,
+        totalClicksGame: totalClicksGame
+      }
+      setPlayerData(data)
+    }
+
     if (!embeddedWallet?.address || seasonId === null) {
+      fetchTotalClicks()
       return
     }
+
+
 
     async function fetchPlayerData() {
       console.log("📥 Fetching player data for", embeddedWallet.address, "Season:", seasonId)
