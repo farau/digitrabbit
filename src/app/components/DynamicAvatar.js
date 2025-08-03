@@ -26,8 +26,8 @@ const DynamicAvatar = ({
                     'backgrounds': 1,
                     'rabbit_color': 2,
                     'clothes': 3,
-                    'glasses': 4,
-                    'hat': 5
+                    'glasses': 5,
+                    'hat': 4
                 }
 
                 return (
