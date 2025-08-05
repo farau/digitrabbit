@@ -125,12 +125,10 @@ export default function MainPage() {
   }, [embeddedWallet])
 
 
-  // On charge playerData au démarrage et à chaque refresh
-  useEffect(() => {
-
-    async function fetchTotalClicks() {
-      console.log("📥 Fetching total clicks of the game")
-      // On récupère le nombre total de clics
+  // Fonction séparée pour récupérer uniquement les clics totaux
+  const fetchTotalClicks = async () => {
+    console.log("📥 Fetching total clicks of the game")
+    try {
       const totalClicksGame = await publicClient.readContract({
         address: DIGIT_RABBITS_ADDRESS,
         abi: DIGIT_RABBITS_ABI,
@@ -151,17 +149,17 @@ export default function MainPage() {
         totalClicksGame: totalClicksGame
       }
       setPlayerData(data)
+    } catch (error) {
+      console.error("Error fetching total clicks:", error)
     }
+  }
 
-    if (!embeddedWallet?.address || seasonId === null) {
-      fetchTotalClicks()
-      return
-    }
+  // Fonction séparée pour récupérer toutes les données du joueur
+  const fetchPlayerData = async () => {
+    if (!embeddedWallet?.address || seasonId === null) return
 
-
-
-    async function fetchPlayerData() {
-      console.log("📥 Fetching player data for", embeddedWallet.address, "Season:", seasonId)
+    console.log("📥 Fetching player data for", embeddedWallet.address, "Season:", seasonId)
+    try {
       const result = await publicClient.readContract({
         address: DIGIT_RABBITS_ADDRESS,
         abi: DIGIT_RABBITS_ABI,
@@ -193,11 +191,40 @@ export default function MainPage() {
         totalClicksGame
       }
       setPlayerData(data)
+    } catch (error) {
+      console.error("Error fetching player data:", error)
+    }
+  }
+
+  // useEffect simplifié
+  useEffect(() => {
+    if (!embeddedWallet?.address || seasonId === null) {
+      fetchTotalClicks()
+      return
     }
 
     fetchPlayerData()
   }, [embeddedWallet?.address, seasonId, refreshCounter])
 
+  // Fonction pour recharger uniquement les clics totaux (pour le bouton reload)
+  const reloadTotalClicks = async () => {
+    try {
+      const totalClicksGame = await publicClient.readContract({
+        address: DIGIT_RABBITS_ADDRESS,
+        abi: DIGIT_RABBITS_ABI,
+        functionName: 'totalClicksGame',
+        args: [],
+      })
+
+      // Met à jour seulement le totalClicksGame dans playerData existant
+      setPlayerData(prevData => ({
+        ...prevData,
+        totalClicksGame: totalClicksGame
+      }))
+    } catch (error) {
+      console.error("Error reloading total clicks:", error)
+    }
+  }
 
   // MAJ du currentIndex de pool si refreshCounter est appelé en dehors du composant Game
   useEffect(() => {
@@ -339,7 +366,8 @@ export default function MainPage() {
           embeddedWallet={embeddedWallet}
           refreshCounter={refreshCounter}
           playerData={playerData}
-        />;
+          onReloadClicks={reloadTotalClicks}
+        />
       default:
         return null;
     }

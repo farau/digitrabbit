@@ -464,7 +464,11 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
 
     } catch (err) {
       console.error('Error claiming points:', err);
-      setError(`Failed to claim points: ${err.shortMessage}`);
+      if (err.shortMessage?.toLowerCase().includes("maximum limit")) {
+        setError("Please fund your wallet with testnet tokens. Go to the Settings section, copy your wallet address and paste it into the faucet.");
+      } else {
+        setError(`Failed to claim points: ${err.shortMessage}`);
+      }
     } finally {
       setIsClaiming(false);
     }

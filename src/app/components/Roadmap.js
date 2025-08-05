@@ -3,9 +3,12 @@
 import Image from "next/image"
 import Wrapper from "./Wrapper"
 import { useTheme } from '@/context'
+import { useState } from 'react'
+import { RotateCwIcon, Loader2 } from "lucide-react"
 
-export default function Roadmap({ embeddedWallet, refreshCounter, playerData }) {
+export default function Roadmap({ embeddedWallet, refreshCounter, playerData, onReloadClicks }) {
     const { themeMode } = useTheme();
+    const [isReloading, setIsReloading] = useState(false);
 
     const isNight = themeMode === 'dark';
     const textColor = isNight ? '#eee' : '#333';
@@ -13,6 +16,21 @@ export default function Roadmap({ embeddedWallet, refreshCounter, playerData }) 
     const borderColor = isNight ? '#444' : '#ddd';
     const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)';
     const subTextColor = isNight ? 'text-zinc-400' : 'text-gray-600';
+
+    const handleReloadClicks = async () => {
+        if (isReloading) return;
+
+        setIsReloading(true);
+        try {
+            if (onReloadClicks) {
+                await onReloadClicks();
+            }
+        } catch (error) {
+            console.error('Error reloading clicks:', error);
+        } finally {
+            setTimeout(() => setIsReloading(false), 1000); // Petit délai pour l'UX
+        }
+    };
 
     if (!playerData) {
         return (
@@ -300,19 +318,60 @@ export default function Roadmap({ embeddedWallet, refreshCounter, playerData }) 
                             }}>
                                 Progress
                             </span>
-                            <span style={{
-                                fontSize: '14px',
-                                fontWeight: '600',
-                                color: isNight ? '#fbbf24' : '#f59e0b',
-                                background: isNight
-                                    ? 'rgba(251, 191, 36, 0.1)'
-                                    : 'rgba(245, 158, 11, 0.1)',
-                                padding: '4px 8px',
-                                borderRadius: '6px',
-                                border: `1px solid ${isNight ? '#fbbf24' : '#f59e0b'}`
-                            }}>
-                                {progressPercentage.toFixed(1)}%
-                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                {/* Reload Button */}
+                                <button
+                                    onClick={handleReloadClicks}
+                                    disabled={isReloading}
+                                    style={{
+                                        fontSize: '14px',
+                                        fontWeight: '600',
+                                        fontFamily: 'inherit',
+                                        color: isNight ? '#10b981' : '#059669',
+                                        background: isNight
+                                            ? 'rgba(16, 185, 129, 0.1)'
+                                            : 'rgba(5, 150, 105, 0.1)',
+                                        padding: '4px 8px',
+                                        borderRadius: '6px',
+                                        border: `1px solid ${isNight ? '#10b981' : '#059669'}`,
+                                        cursor: isReloading ? 'not-allowed' : 'pointer',
+                                        transition: 'all 0.2s ease',
+                                        opacity: isReloading ? 0.6 : 1,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        if (!isReloading) {
+                                            e.target.style.background = isNight ? 'rgba(16, 185, 129, 0.2)' : 'rgba(5, 150, 105, 0.2)';
+                                        }
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.target.style.background = isNight ? 'rgba(16, 185, 129, 0.1)' : 'rgba(5, 150, 105, 0.1)';
+                                    }}
+                                >
+                                    {isReloading ? (
+                                        <Loader2 size={12} className="animate-spin" />
+                                    ) : (
+                                        <RotateCwIcon size={12} />
+                                    )}
+                                    {isReloading ? 'Loading...' : 'Reload'}
+                                </button>
+
+                                <span style={{
+                                    fontSize: '14px',
+                                    fontWeight: '600',
+                                    color: isNight ? '#fbbf24' : '#f59e0b',
+                                    background: isNight
+                                        ? 'rgba(251, 191, 36, 0.1)'
+                                        : 'rgba(245, 158, 11, 0.1)',
+                                    padding: '4px 8px',
+                                    borderRadius: '6px',
+                                    border: `1px solid ${isNight ? '#fbbf24' : '#f59e0b'}`
+                                }}>
+                                    {progressPercentage.toFixed(1)}%
+                                </span>
+                            </div>
                         </div>
 
                         {/* Progress Bar */}

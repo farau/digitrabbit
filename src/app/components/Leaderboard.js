@@ -152,6 +152,7 @@ export default function Leaderboard({ limit = 100 }) {
             </span>
           </div>
           <div className="text-xs sm:text-sm mt-0.5 sm:mt-1" style={{ color: subTextColor }}>
+            <span>⏲ {Number((topClicker.maxClicks / 60).toFixed(1))} clicks/sec</span>
             <span className="ml-2">⚡ {Math.floor(1000 / (topClicker.maxClicks / 60))} ms/click</span>
           </div>
         </div>

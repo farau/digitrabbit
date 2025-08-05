@@ -363,9 +363,13 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
         }
       });
       console.error('Contract write failed:', err)
-      if (err.shortMessage?.toLowerCase().includes("gas value exceeds maximum value")) {
-        setErrorStartGame("Please fund your wallet your testnet tokens. Go to the Settings section, copy your wallet address and paste it into the faucet.");
-      } else {
+      if (err.shortMessage?.toLowerCase().includes("maximum limit")) {
+        setErrorStartGame("Please fund your wallet with testnet tokens. Go to the Settings section, copy your wallet address and paste it into the faucet.");
+      }
+      else if (err.shortMessage?.toLowerCase().includes("not finished")) {
+        setErrorStartGame("Cooldown not finished yet. Please try again later.");
+      }
+      else {
         setErrorStartGame(err.message || err.shortMessage || 'Unknown error occurred');
       }
 
@@ -402,7 +406,7 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
       if (txResult) {
         setResult(`Hash: ${txResult.hash}\nTime: ${txResult.timeTaken}ms`)
         setCurrentTransactionHash(txResult.hash)
-        setShowSuccess(true)
+        setShowSuccess(!!txResult.hash)
       }
     } catch (err) {
       // Log dans Sentry

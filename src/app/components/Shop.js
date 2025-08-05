@@ -156,7 +156,11 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
       setRefreshCounter(c => c + 1)
 
     } catch (err) {
-      setError(err.shortMessage)
+      if (err.shortMessage?.toLowerCase().includes("maximum limit")) {
+        setError("Please fund your wallet with testnet tokens. Go to the Settings section, copy your wallet address and paste it into the faucet.");
+      } else {
+        setError(err.shortMessage)
+      }
     } finally {
       setIsWriting(false)
     }
