@@ -1,55 +1,31 @@
-// sentry.client.config.js
+// This file configures the initialization of Sentry on the client.
+// The added config here will be used whenever a users loads a page in their browser.
+// https://docs.sentry.io/platforms/javascript/guides/nextjs/
+
 import * as Sentry from "@sentry/nextjs";
 
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+  // 👈 Ces options peuvent bloquer en dev :
+  enabled: true, // Force l'activation même en dev
 
-  // Environnement explicite
-  environment: process.env.NODE_ENV || 'development',
-
+  // Add optional integrations for additional features
   integrations: [
     Sentry.replayIntegration(),
   ],
 
-  // IMPORTANT: Pour capturer TOUTES les erreurs en production
-  sampleRate: 1.0, // 100% des erreurs sont capturées
+  // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
+  tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.8 : 1,
 
-  tracesSampler: (samplingContext) => {
-    // Pour les transactions execute_transaction, on veut tout capturer
-    if (samplingContext.transactionContext.name.includes("execute") ||
-      samplingContext.transactionContext.tags?.action === 'execute_transaction') {
-      return 1.0; // 100%
-    }
+  // Define how likely Replay events are sampled.
+  // This sets the sample rate to be 10%. You may want this to be 100% while
+  // in development and sample at a lower rate in production
+  replaysSessionSampleRate: 0.1,
 
-    // En production, réduire les traces de performance mais garder les erreurs
-    if (process.env.NODE_ENV === "production") {
-      return 0.1; // 10% pour les performances
-    }
+  // Define how likely Replay events are sampled when an error occurs.
+  replaysOnErrorSampleRate: 1.0,
 
-    return 1.0; // 100% en dev
-  },
-
-  // Replay settings
-  replaysSessionSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
-  replaysOnErrorSampleRate: 1.0, // 100% des replays quand il y a une erreur
-
-  // Configuration pour capturer plus d'informations
-  beforeSend(event, hint) {
-    // En production, on veut TOUT capturer pour les erreurs de transaction
-    if (event.tags?.action === 'execute_transaction') {
-      console.log('🔍 Sentry capturing transaction error:', event);
-      return event;
-    }
-
-    // Pour les autres erreurs, appliquer la logique normale
-    return event;
-  },
-
-  // Capture plus de contexte
-  maxBreadcrumbs: 100,
-  attachStacktrace: true,
-
-  // Debug uniquement en dev
+  // Setting this option to true will print useful information to the console while you're setting up Sentry.
   debug: process.env.NODE_ENV === 'development',
 
   // Filtres pour éviter le spam mais garder les erreurs importantes
