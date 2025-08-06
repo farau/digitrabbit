@@ -226,15 +226,6 @@ export default function MainPage() {
     }
   }
 
-  // MAJ du currentIndex de pool si refreshCounter est appelé en dehors du composant Game
-  useEffect(() => {
-    if (isGameStarted || !preSignedPool) return
-
-    incrementIndex()
-    console.log("On incrémente l'index de la pool initialisée car une tx a été effectuée ailleurs")
-  }, [refreshCounter])
-
-
   function BackgroundSwitcher() {
 
     return (
@@ -328,7 +319,10 @@ export default function MainPage() {
       case "Assets":
         return <Assets assetsList={assetsList} setSelectedAssetsIndex={setSelectedAssetsIndex} />;
       case "Profile":
-        return <Profile playerData={playerData} setRefreshCounter={setRefreshCounter} />;
+        return <Profile playerData={playerData}
+          setRefreshCounter={setRefreshCounter}
+          isGameStarted={isGameStarted}
+        />;
       case "Game":
         return <Game
           refreshCounter={refreshCounter}
@@ -345,7 +339,11 @@ export default function MainPage() {
           getAvailableTransactions={getAvailableTransactions}
         />;
       case "Shop":
-        return <Shop refreshCounter={refreshCounter} setRefreshCounter={setRefreshCounter} playerData={playerData} />;
+        return <Shop refreshCounter={refreshCounter}
+          setRefreshCounter={setRefreshCounter}
+          playerData={playerData}
+          isGameStarted={isGameStarted}
+        />;
       case "Leaderboard":
         return <Leaderboard />;
       case "Settings":

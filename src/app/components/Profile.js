@@ -366,7 +366,7 @@ function PointsModal({ isOpen, onClose, pointsData, onClaim, isClaiming, isNight
   );
 }
 
-function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCounter }) {
+function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCounter, isGameStarted }) {
   const { wallets } = useWallets();
   const { walletClient } = useWalletClient(embeddedWallet);
   const [isChecking, setIsChecking] = useState(false);
@@ -460,7 +460,6 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
       setClaimSuccess(true);
       setRefreshCounter(c => c + 1);
       setPointsData(null);
-      setShowModal(false);
 
     } catch (err) {
       console.error('Error claiming points:', err);
@@ -471,6 +470,7 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
       }
     } finally {
       setIsClaiming(false);
+      setShowModal(false);
     }
   };
 
@@ -500,7 +500,7 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
       <div className="flex flex-col items-center gap-3">
         <button
           onClick={handleCheckPoints}
-          disabled={isChecking || isClaiming}
+          disabled={isChecking || isClaiming || isGameStarted}
           style={buttonStyle}
           onMouseOver={(e) => {
             if (!isChecking && !isClaiming) {
@@ -560,7 +560,7 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
   );
 }
 
-export default function Profile({ playerData, setRefreshCounter }) {
+export default function Profile({ playerData, setRefreshCounter, isGameStarted }) {
   const { user } = usePrivy();
   const { themeMode } = useTheme();
   const isNight = themeMode === 'dark';
@@ -960,6 +960,7 @@ export default function Profile({ playerData, setRefreshCounter }) {
                 user={user}
                 embeddedWallet={embeddedWallet}
                 setRefreshCounter={setRefreshCounter}
+                isGameStarted={isGameStarted}
               />
             </div>
           ) : (

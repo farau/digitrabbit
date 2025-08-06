@@ -89,7 +89,7 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
         }
     }, [walletClient, embeddedWallet?.address, preSignedPool])
 
-    const initializePool = useCallback(async () => {
+    const initializePool = useCallback(async (degraded = false) => {
         setIsInitializing(true)
         setError('')
         setPreSignedPool(null)
@@ -104,12 +104,19 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
                 address: embeddedWallet?.address,
                 blockTag: 'pending'
             })
-            nonce = nonce + 1 // On ajoute 1 car la 1ere transaction est pour le démarrage du jeu
+            let sizePool = 10;
+            if (!degraded) {
+                nonce = nonce + 1 // On ajoute 1 car la 1ere transaction est pour le démarrage du joueur
+            }
+
+            if (degraded) {
+                sizePool = 5;
+            }
 
             const { gasPrice, gasLimit } = await defineGasPrice(walletClient)
 
             console.log(`Pre-signing 10 transactions...`)
-            const signingPromises = Array.from({ length: 10 }, async (_, i) => {
+            const signingPromises = Array.from({ length: sizePool }, async (_, i) => {
                 return await walletClient.signTransaction({
                     account: embeddedWallet?.address,
                     to: DIGIT_RABBITS_ADDRESS,
@@ -185,8 +192,8 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
 
                 const newCurrentIndex = prev.currentIndex + 1
 
-                // Refill every 7 transactions (50% of initial 15), but only once per batch
-                if (newCurrentIndex % 7 === 0 && !prev.hasTriggeredRefill) {
+                // Refill every 5 transactions (50% of initial 10), but only once per batch
+                if (newCurrentIndex % 5 === 0 && !prev.hasTriggeredRefill) {
                     console.log(`🔔 Triggering refill at ${newCurrentIndex} transactions used`)
                     setTimeout(() => extendPool(), 0)
                     return {
@@ -210,13 +217,13 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
         } catch (err) {
             console.error('❌ Error executing:', err)
             setError(err.message)
-            if (err.details?.includes('nonce too low')) {
+            if (err.details?.includes('already known')) {
                 console.log("On incrémente l'index car erreur nonce too low")
                 incrementIndex();
             }
 
             if (err instanceof InternalRpcError && err.details?.includes('already known')) {
-                console.log("On incrémente l'index car erreur already known")
+                console.log("On incrémente l'index car erreur already known : ", preSignedPool.currentIndex, " baseNonce: ", preSignedPool.baseNonce)
                 incrementIndex();
             }
 

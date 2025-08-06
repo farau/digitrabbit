@@ -1,4 +1,4 @@
-// src/app/test-megaeth/page.tsx
+// src/app/components/Game.js
 'use client'
 
 import styles from './Game.module.css'
@@ -190,6 +190,8 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
   const [errorStartGame, setErrorStartGame] = useState('')
   const [isExecuting, setIsExecuting] = useState(false)
   const [isWritingContract, setIsWritingContract] = useState(false)
+  const [isRelaunchingPool, setIsRelaunchingPool] = useState(false)
+  const [isButtonDisabled, setIsButtonDisabled] = useState(false); // etat du bouton stuck
   const [showSuccess, setShowSuccess] = useState(false)
   const [signedTx, setSignedTx] = useState('')
   const [currentTransactionHash, setCurrentTransactionHash] = useState('')
@@ -283,7 +285,7 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
         console.log("Initializing pool before starting game...")
 
         try {
-          const pool = await initializePool();
+          const pool = await initializePool(false);
 
           // Vérifier que l'initialisation a réussi
           const newAvailableCount = pool.transactions.length - pool.currentIndex
@@ -380,10 +382,77 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
     }
   }
 
+  // Relancer la pool en cas de problème 
+  const handleRelaunchPool = async () => {
+    try {
+      // 1. Vérification du wallet
+      if (!walletClient || !embeddedWallet || !embeddedWallet.address) {
+        throw new Error('No wallet client set')
+      }
+
+      setIsRelaunchingPool(true)
+      setIsButtonDisabled(true) // Désactiver le bouton immédiatement
+      console.log("Initializing a new pool...")
+
+      try {
+        const pool = await initializePool(true);
+
+        // Vérifier que l'initialisation a réussi
+        const newAvailableCount = pool.transactions.length - pool.currentIndex
+
+        if (newAvailableCount === 0) {
+          throw new Error('Pool initialization completed but no transaction available. Please try again.')
+        }
+
+        console.log("Pool successfully initialized:", {
+          availableCount: newAvailableCount,
+          timestamp: new Date().toISOString()
+        });
+      } catch (poolError) {
+        console.error('Pool initialization failed:', poolError)
+        throw new Error('Failed to initialize transaction pool. Please try again.')
+      }
+
+    } catch (err) {
+      // Log l'erreur dans Sentry avec contexte
+      Sentry.captureException(err, {
+        tags: {
+          action: 'relaunch_pool',
+          component: 'Game'
+        },
+        extra: {
+          walletAddress: embeddedWallet?.address,
+          availableTransactions: getAvailableTransactions(),
+          // Seulement les métriques utiles du pool
+          poolStats: preSignedPool ? {
+            totalTransactions: preSignedPool.transactions?.length || 0,
+            currentIndex: preSignedPool.currentIndex || 0,
+            baseNonce: preSignedPool.baseNonce || 0,
+            hasTransactions: Array.isArray(preSignedPool.transactions)
+          } : null
+        }
+      });
+      console.error('Relaunch pool failed:', err)
+      throw err
+    } finally {
+      // Arrêter l'état "Relaunching..." après 1 seconde
+      setTimeout(() => {
+        setIsRelaunchingPool(false)
+      }, 1000)
+
+      // Mais garder le bouton désactivé pendant 10 secondes
+      setTimeout(() => {
+        setIsButtonDisabled(false)
+      }, 10000)
+    }
+  }
+
   // Fonction simplifiée pour l'état du bouton
   const getButtonText = () => {
     if (isWritingContract) return "Starting...";
-    if (isGameStarted) return "Game Started";
+    else if (isRelaunchingPool && isGameStarted) return "Relaunching...";
+    else if (isButtonDisabled && isGameStarted) return "Synchronized ✓"; // Indique une synchronisation de la pool après relaunch
+    else if (isGameStarted) return "Stuck? 🥕";
     return "Start Game";
   }
 
@@ -576,8 +645,8 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
           // Bouton Start Game simplifié
           <div className="mb-10">
             <button
-              onClick={handleStartGame}
-              disabled={isWritingContract || isGameStarted}
+              onClick={!isGameStarted ? handleStartGame : handleRelaunchPool}
+              disabled={isWritingContract || isButtonDisabled} // Utiliser isButtonDisabled au lieu de isRelaunchingPool
               className="px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed z-10"
               style={{
                 background: cardBg,
@@ -594,6 +663,15 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
                 <div className="flex items-center justify-center gap-2">
                   <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
                   <span>Preparing game...</span>
+                </div>
+              </div>
+            )}
+
+            {isRelaunchingPool && (
+              <div className="mt-2 text-sm opacity-70" style={{ color: textColor }}>
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                  <span>Syncing with blockchain state...</span>
                 </div>
               </div>
             )}

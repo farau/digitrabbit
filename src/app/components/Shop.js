@@ -13,7 +13,7 @@ import { XLogo } from '@/utils/constants'
 import { useWalletClient } from '../hooks/useWalletClient'
 import WalletButton from './WalletButton'
 
-export default function Shop({ refreshCounter, setRefreshCounter, playerData }) {
+export default function Shop({ refreshCounter, setRefreshCounter, playerData, isGameStarted }) {
   const [selectedLevels, setSelectedLevels] = useState(Array(NUM_SLOTS).fill(1))
   const [isWriting, setIsWriting] = useState(false)
   const [error, setError] = useState('')
@@ -381,7 +381,7 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData }) 
                     </div>
 
                     <button
-                      disabled={isWriting || !canBuy || selected === 0}
+                      disabled={isWriting || !canBuy || selected === 0 || isGameStarted}
                       onClick={() => {
                         if (canBuy) {
                           setPendingBuy({ slot: i, level: selected })
