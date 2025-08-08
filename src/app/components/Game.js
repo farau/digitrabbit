@@ -11,8 +11,10 @@ import React from 'react'
 import Wrapper from './Wrapper'
 import RabbitImage from './RabbitImage'
 import TransactionStack from './TransactionStack'
+import BlockchainHealthIndicator from './BlockchainHealthIndicator'
 import { useTheme, useGame } from '@/context'
 import { useWalletClient } from '../hooks/useWalletClient'
+import { useBlockchainHealth } from '../hooks/useBlockchainHealth'
 import * as Sentry from '@sentry/nextjs'
 import WalletButton from './WalletButton'
 
@@ -191,7 +193,7 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
   const [isExecuting, setIsExecuting] = useState(false)
   const [isWritingContract, setIsWritingContract] = useState(false)
   const [isRelaunchingPool, setIsRelaunchingPool] = useState(false)
-  const [isButtonDisabled, setIsButtonDisabled] = useState(false); // etat du bouton stuck
+  const [isButtonDisabled, setIsButtonDisabled] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false)
   const [signedTx, setSignedTx] = useState('')
   const [currentTransactionHash, setCurrentTransactionHash] = useState('')
@@ -199,6 +201,16 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
   const [timer, setTimer] = useState(60)
   const [showTwitterShare, setShowTwitterShare] = useState(false)
   const [finalScore, setFinalScore] = useState(0)
+
+  // Hook pour la vérification de la blockchain
+  const {
+    healthStatus,
+    isCheckingHealth,
+    healthError,
+    checkBlockchainHealth,
+    getStatusInfo,
+    canPlay
+  } = useBlockchainHealth();
 
   // Design
   const isNight = themeMode === 'dark';
@@ -212,18 +224,14 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
 
   // Gestion de l'effet 3D
   useEffect(() => {
-    // Récupère l'état global enregistré dans sessionStorage (true, false ou null)
     const previouslyManuallyDisabled = sessionStorage.getItem('show3DEffects') === 'true';
 
-    // Si l'utilisateur n'a jamais désactivé manuellement, on laisse l'effet actif
     if (!previouslyManuallyDisabled && show3DEffects) {
-      // On le désactive temporairement et on mémorise qu'on doit le restaurer
       toggle3DEffects();
       sessionStorage.setItem('3d_temp_disabled', 'true');
     }
 
     return () => {
-      // Si l'effet a été désactivé temporairement, on le réactive au démontage
       const wasTempDisabled = sessionStorage.getItem('3d_temp_disabled') === 'true';
       if (wasTempDisabled) {
         toggle3DEffects();
@@ -264,9 +272,18 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
     }
   }, [showTwitterShare, playerData?.gameClicks, setFinalScore])
 
-  // Démarrage du jeu
+  // Démarrage du jeu avec vérification de la blockchain
   const handleStartGame = async () => {
     try {
+      // 0. Vérification de l'état de la blockchain avant de commencer
+      if (!canPlay) {
+        if (healthStatus?.status === 'down') {
+          throw new Error('Blockchain is currently down. Please try again later.');
+        } else if (healthStatus?.status === 'degraded') {
+          throw new Error('Blockchain performance is degraded. Game may not work optimally.');
+        }
+      }
+
       // 1. Vérification du wallet
       if (!walletClient || !embeddedWallet || !embeddedWallet.address) {
         throw new Error('No wallet client set')
@@ -274,20 +291,17 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
 
       // 2. Vérification et initialisation du pool si nécessaire
       setIsWritingContract(true)
-      setErrorStartGame('') // Reset les erreurs précédentes
+      setErrorStartGame('')
 
       let currentPool = preSignedPool
 
       const hasValidePool = currentPool?.transactions?.length > 0 && getAvailableTransactions() > 0;
 
-      // Si le pool n'est pas valide, l'initialiser
       if (!hasValidePool) {
         console.log("Initializing pool before starting game...")
 
         try {
-          const pool = await initializePool(false);
-
-          // Vérifier que l'initialisation a réussi
+          const pool = await initializePool(false)
           const newAvailableCount = pool.transactions.length - pool.currentIndex
 
           if (newAvailableCount === 0) {
@@ -306,7 +320,7 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
 
       console.log(`Starting game on MegaETH Testnet...`)
 
-      // 4. Démarrer le jeu 
+      // 3. Démarrer le jeu 
       const result = await walletClient.writeContract({
         account: embeddedWallet.address,
         address: DIGIT_RABBITS_ADDRESS,
@@ -330,6 +344,7 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
           transactionHash: result.transactionHash || result,
           walletAddress: embeddedWallet.address,
           availableTransactions: getAvailableTransactions(),
+          blockchainHealth: healthStatus?.status,
           poolStats: preSignedPool ? {
             totalTransactions: preSignedPool.transactions?.length || 0,
             currentIndex: preSignedPool.currentIndex || 0,
@@ -355,7 +370,7 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
         extra: {
           walletAddress: embeddedWallet?.address,
           availableTransactions: getAvailableTransactions(),
-          // Seulement les métriques utiles du pool
+          blockchainHealth: healthStatus?.status,
           poolStats: preSignedPool ? {
             totalTransactions: preSignedPool.transactions?.length || 0,
             currentIndex: preSignedPool.currentIndex || 0,
@@ -385,19 +400,16 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
   // Relancer la pool en cas de problème 
   const handleRelaunchPool = async () => {
     try {
-      // 1. Vérification du wallet
       if (!walletClient || !embeddedWallet || !embeddedWallet.address) {
         throw new Error('No wallet client set')
       }
 
       setIsRelaunchingPool(true)
-      setIsButtonDisabled(true) // Désactiver le bouton immédiatement
+      setIsButtonDisabled(true)
       console.log("Initializing a new pool...")
 
       try {
         const pool = await initializePool(true);
-
-        // Vérifier que l'initialisation a réussi
         const newAvailableCount = pool.transactions.length - pool.currentIndex
 
         if (newAvailableCount === 0) {
@@ -414,7 +426,6 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
       }
 
     } catch (err) {
-      // Log l'erreur dans Sentry avec contexte
       Sentry.captureException(err, {
         tags: {
           action: 'relaunch_pool',
@@ -423,7 +434,7 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
         extra: {
           walletAddress: embeddedWallet?.address,
           availableTransactions: getAvailableTransactions(),
-          // Seulement les métriques utiles du pool
+          blockchainHealth: healthStatus?.status,
           poolStats: preSignedPool ? {
             totalTransactions: preSignedPool.transactions?.length || 0,
             currentIndex: preSignedPool.currentIndex || 0,
@@ -435,31 +446,48 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
       console.error('Relaunch pool failed:', err)
       throw err
     } finally {
-      // Arrêter l'état "Relaunching..." après 1 seconde
       setTimeout(() => {
         setIsRelaunchingPool(false)
       }, 1000)
 
-      // Mais garder le bouton désactivé pendant 10 secondes
       setTimeout(() => {
         setIsButtonDisabled(false)
       }, 10000)
     }
   }
 
+  // Fonction pour rafraîchir l'état de la blockchain
+  const handleRefreshBlockchainHealth = () => {
+    checkBlockchainHealth(true); // Force refresh
+  }
+
   // Fonction simplifiée pour l'état du bouton
   const getButtonText = () => {
     if (isWritingContract) return "Starting...";
     else if (isRelaunchingPool && isGameStarted) return "Relaunching...";
-    else if (isButtonDisabled && isGameStarted) return "Synchronized ✓"; // Indique une synchronisation de la pool après relaunch
+    else if (isButtonDisabled && isGameStarted) return "Synchronized ✓";
     else if (isGameStarted) return "Stuck? 🥕";
     return "Start Game";
+  }
+
+  // Vérifier si le bouton de démarrage doit être désactivé
+  const isStartGameDisabled = () => {
+    return (
+      isWritingContract ||
+      isButtonDisabled
+    );
   }
 
   // Exécution d'une transaction de jeu
   const handleExecuteTransaction = async () => {
     if (!preSignedPool || getAvailableTransactions() === 0) {
       return
+    }
+
+    // Vérifier l'état de la blockchain avant d'exécuter
+    if (healthStatus?.status === 'down') {
+      console.warn('Blockchain is down, skipping transaction execution');
+      return;
     }
 
     const currentTxId = `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -478,7 +506,6 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
         setShowSuccess(!!txResult.hash)
       }
     } catch (err) {
-      // Log dans Sentry
       Sentry.captureException(err, {
         tags: {
           action: 'execute_transaction',
@@ -488,7 +515,7 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
           currentTxId,
           availableTransactions: getAvailableTransactions(),
           walletAddress: embeddedWallet?.address,
-          // Seulement les métriques utiles du pool
+          blockchainHealth: healthStatus?.status,
           poolStats: preSignedPool ? {
             totalTransactions: preSignedPool.transactions?.length || 0,
             currentIndex: preSignedPool.currentIndex || 0,
@@ -575,15 +602,13 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
           </p>
           <WalletButton />
         </div>
-
       </Wrapper>
     )
   }
 
   return embeddedWallet ? (
     <Wrapper>
-      <div className={`flex flex-col items-center text-center justify-start pt-28 p-4 sm:p-8 ${styles.bgBackground}`}>
-
+      <div className={`flex flex-col items-center text-center justify-start pt-10 p-4 sm:p-8 ${styles.bgBackground}`}>
         {/* Player Info */}
         <div className="mb-6">
           <PlayerData
@@ -599,7 +624,7 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
           <div className="z-50 relative cursor-pointer">
             <RabbitImage
               isClicked={() => {
-                if (isGameStarted && !isExecuting && !isInitializing && preSignedPool && getAvailableTransactions() > 0) {
+                if (isGameStarted && !isExecuting && !isInitializing && preSignedPool && getAvailableTransactions() > 0 && canPlay) {
                   handleExecuteTransaction();
                 }
               }}
@@ -625,6 +650,27 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
           />
         )}
 
+        {/* Blockchain Warning */}
+        {healthStatus && !canPlay && (
+          <div
+            className="mb-6 p-4 rounded-lg flex items-center gap-3"
+            style={{
+              background: isNight ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+              border: `1px solid ${isNight ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+              boxShadow,
+              color: isNight ? '#ef4444' : '#dc2626'
+            }}
+          >
+            <span>⚠️</span>
+            <span className="text-sm">
+              {healthStatus.status === 'down'
+                ? 'RPC/connectivity issue. Game may be unavailable.'
+                : 'Blockchain performance is degraded. Game may not work optimally.'
+              }
+            </span>
+          </div>
+        )}
+
         {/* Initialization Status */}
         {isInitializing ? (
           <div
@@ -642,11 +688,11 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
             </span>
           </div>
         ) : (
-          // Bouton Start Game simplifié
+          // Bouton Start Game
           <div className="mb-10">
             <button
               onClick={!isGameStarted ? handleStartGame : handleRelaunchPool}
-              disabled={isWritingContract || isButtonDisabled} // Utiliser isButtonDisabled au lieu de isRelaunchingPool
+              disabled={isStartGameDisabled()}
               className="px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed z-10"
               style={{
                 background: cardBg,
@@ -685,8 +731,19 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
             <p className="text-red-700 dark:text-red-300 break-all">{errorStartGame}</p>
           </div>
         )}
-
       </div>
+      {/* Blockchain Health Status */}
+      <div className="w-full flex justify-center">
+        <div className="w-fit max-w-md">
+          <BlockchainHealthIndicator
+            healthStatus={healthStatus}
+            isCheckingHealth={isCheckingHealth}
+            onRefresh={handleRefreshBlockchainHealth}
+            getStatusInfo={getStatusInfo}
+          />
+        </div>
+      </div>
+
     </Wrapper>
   ) : (
     <Wrapper>

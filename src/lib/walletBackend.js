@@ -1,9 +1,8 @@
-// utils/walletBackend.js
+// lib/walletBackend.js
 import { createWalletClient, createPublicClient, http } from 'viem';
 import { megaethTestnet } from 'viem/chains'; // Signer will be used especially on MegaETH Testnet
 import { privateKeyToAccount } from 'viem/accounts'
 import { encodePacked, keccak256, hashMessage } from 'viem';
-
 import { recoverAddress } from 'viem'
 
 // Singleton pattern for wallet clients

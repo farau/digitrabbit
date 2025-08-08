@@ -1,7 +1,6 @@
-// utils/walletClient.js
+// lib/walletClient.js
 import { createWalletClient, custom, publicActions } from 'viem';
 import { megaethTestnet } from 'viem/chains';
-import { InternalRpcError } from 'viem';
 
 let client = null;
 
