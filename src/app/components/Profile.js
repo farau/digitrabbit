@@ -581,7 +581,7 @@ export default function Profile({ playerData, setRefreshCounter, isGameStarted }
   });
 
   const rawStats = {
-    clothes: playerItems.reduce((count, val) => count + (val > 0 ? 1 : 0), 0),
+    clothes: playerItems.reduce((count, val) => count + (val > 0 ? val : 0), 0),
     boost: Number(boost),
     totalClicks: Number(totalClicks),
     streak: Number(streak),
@@ -591,8 +591,8 @@ export default function Profile({ playerData, setRefreshCounter, isGameStarted }
   const blockchainStats = [
     {
       stat: 'Clothes',
-      value: (rawStats.clothes ?? 0) / 6,
-      real: `${rawStats.clothes ?? 0}/6`
+      value: (rawStats.clothes ?? 0) / 25,
+      real: `${rawStats.clothes ?? 0}/25`
     },
     {
       stat: 'Boost',
@@ -1064,7 +1064,7 @@ export default function Profile({ playerData, setRefreshCounter, isGameStarted }
                       fontFamily: 'inherit',
                     }}
                   >
-                    <strong style={{ fontFamily: 'inherit' }}>{rawStats.clothes}/6</strong>
+                    <strong style={{ fontFamily: 'inherit' }}>{rawStats.clothes}/25</strong>
                   </td>
                 </tr>
                 <tr style={{ borderBottom: `1px solid ${isNight ? '#475569' : '#e2e8f0'}`, background: 'transparent' }}>

@@ -129,7 +129,7 @@ export default function Leaderboard({ limit = 100 }) {
                 background: isNight ? '#fbbf24' : '#fbbf24',
                 color: '#000'
               }}>
-                Top Clicker
+                Best Clicker
               </span>
             </p>
             {topClicker.twitter.username && (
@@ -447,7 +447,7 @@ export default function Leaderboard({ limit = 100 }) {
         </div>
       </div>
 
-      {/* Top Clicker */}
+      {/* Best Clicker */}
       {topClicker && metadata?.hasTopClickerData && (
         <div
           style={{
@@ -468,7 +468,7 @@ export default function Leaderboard({ limit = 100 }) {
             }}
           >
             <Zap className="w-4 h-4 text-yellow-500" />
-            <span>Top Clicker</span>
+            <span>Best Clicker</span>
           </div>
           {renderTopClicker(topClicker)}
         </div>
