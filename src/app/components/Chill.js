@@ -3,8 +3,9 @@
 import { useRef, useState, useEffect } from 'react'
 
 const videoSources = [
+  '/video/rarible_digit_rabbits_showcase.mp4',
   '/video/digit_rabbits_showcase.mp4',
-  '/video/digit_rabbits_showcase2.mp4',
+  '/video/digit_rabbits_showcase2.mp4'
 ]
 
 export default function Chill() {
