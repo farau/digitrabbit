@@ -1,96 +1,246 @@
 // lib/leaderboard.js
 import { PrivyClient } from '@privy-io/server-auth';
-import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, publicClient } from '@/utils/constants';
 
 // Configuration
 const PRIVY_APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
 const PRIVY_APP_SECRET = process.env.PRIVY_APP_SECRET;
+const GRAPHQL_ENDPOINT = process.env.GRAPHQL_ENDPOINT || process.env.NEXT_PUBLIC_GRAPHQL_ENDPOINT;
 
 // Client Privy
 const privy = new PrivyClient(PRIVY_APP_ID, PRIVY_APP_SECRET);
 
-// Cache pour éviter les appels répétés
-let leaderboardCache = {
-    data: null,
-    lastUpdate: 0,
-    isUpdating: false
+// Cache unifié avec gestion des états
+let cacheStore = {
+    privyUsers: {
+        data: null,
+        lastUpdate: 0,
+        isUpdating: false
+    },
+    leaderboard: {
+        data: null,
+        lastUpdate: 0,
+        isUpdating: false
+    }
 };
 
-// Cache pour le top clicker
-let topClickerCache = {
-    data: null,
-    lastUpdate: 0,
-    isUpdating: false
-};
-
-const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes en millisecondes
-const PRECISION = 1000000; // 1e6 comme dans le contrat
+const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
+const REQUEST_TIMEOUT = 25000; // 25 secondes timeout pour GraphQL
+const PRIVY_TIMEOUT = 15000; // 15 secondes timeout pour Privy
 
 /**
- * Récupère tous les utilisateurs de Privy
+ * Vérifie si le cache est encore valide
  */
-async function getPrivyUsers() {
+function isCacheValid(cacheKey) {
+    const cache = cacheStore[cacheKey];
+    return cache.data && (Date.now() - cache.lastUpdate) < CACHE_DURATION;
+}
+
+/**
+ * Attend qu'une mise à jour en cours se termine
+ */
+async function waitForUpdate(cacheKey, maxWait = 30000) {
+    const cache = cacheStore[cacheKey];
+    const startTime = Date.now();
+
+    while (cache.isUpdating && (Date.now() - startTime) < maxWait) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+    }
+
+    return cache.data;
+}
+
+/**
+ * Exécute une requête GraphQL avec timeout
+ */
+async function executeGraphQLQuery(query, variables = {}) {
+    if (!GRAPHQL_ENDPOINT) {
+        throw new Error('GRAPHQL_ENDPOINT non configuré');
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+
     try {
-        const users = await privy.getUsers();
+        console.log('GraphQL Query executing...');
+
+        const response = await fetch(GRAPHQL_ENDPOINT, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                query,
+                variables
+            }),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            throw new Error(`GraphQL request failed: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        if (data.errors) {
+            console.error('GraphQL errors:', data.errors);
+            throw new Error(`GraphQL errors: ${data.errors.map(e => e.message).join(', ')}`);
+        }
+
+        return data.data;
+    } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+            throw new Error('Requête GraphQL expirée (timeout)');
+        }
+        throw error;
+    }
+}
+
+/**
+ * Récupère toutes les données du leaderboard via GraphQL avec pagination
+ */
+async function getLeaderboardFromGraphQL(seasonId = "0") {
+    try {
+        console.log(`Récupération GraphQL complète: seasonId=${seasonId}`);
+
+        let allResults = [];
+        let hasMore = true;
+        let skip = 0;
+        const limit = 1000; // Taille de page (ajustez selon les limites de votre API)
+
+        while (hasMore) {
+            console.log(`Récupération page: skip=${skip}, limit=${limit}`);
+
+            const query = `
+                query GetLeaderboard($seasonId: String!, $skip: Int!, $limit: Int!) {
+                    playerSeasonStats_collection(
+                        orderBy: leaderboardScore
+                        orderDirection: desc
+                        where: { seasonId: $seasonId, gamesPlayed_gt: 0 }
+                        skip: $skip
+                        first: $limit
+                    ) {
+                        leaderboardScore
+                        totalClicks
+                        bestClicksInGame
+                        averageClicks
+                        currentStreak
+                        longestStreak
+                        player {
+                            walletAddress
+                            totalPointsClaimed
+                            itemsBought {
+                                id
+                            }
+                        }
+                    }
+                }
+            `;
+
+            const variables = {
+                seasonId: seasonId,
+                skip: skip,
+                limit: limit
+            };
+
+            const data = await executeGraphQLQuery(query, variables);
+
+            if (!data.playerSeasonStats_collection) {
+                throw new Error('Format de réponse GraphQL invalide');
+            }
+
+            const currentResults = data.playerSeasonStats_collection;
+            allResults = allResults.concat(currentResults);
+
+            // Vérifier s'il y a encore des données
+            hasMore = currentResults.length === limit;
+            skip += limit;
+
+            console.log(`Page récupérée: ${currentResults.length} éléments, Total: ${allResults.length}`);
+
+            // Petite pause pour éviter de surcharger l'API (optionnel)
+            if (hasMore) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+        }
+
+        console.log(`Récupération terminée: ${allResults.length} éléments au total`);
+
+        return {
+            playerSeasonStats_collection: allResults
+        };
+
+    } catch (error) {
+        console.error('Erreur getLeaderboardFromGraphQL:', error);
+        throw error;
+    }
+}
+
+/**
+ * Récupère tous les utilisateurs de Privy avec cache et protection contre les appels multiples
+ */
+async function getPrivyUsers(forceRefresh = false) {
+    const cache = cacheStore.privyUsers;
+
+    // Vérifier le cache d'abord
+    if (!forceRefresh && isCacheValid('privyUsers')) {
+        console.log('Utilisation du cache Privy');
+        return cache.data;
+    }
+
+    // Si une mise à jour est déjà en cours, attendre
+    if (cache.isUpdating) {
+        console.log('Mise à jour Privy en cours, attente...');
+        return await waitForUpdate('privyUsers');
+    }
+
+    // Marquer comme en cours de mise à jour
+    cache.isUpdating = true;
+
+    try {
+        console.log('Récupération des utilisateurs Privy...');
+
+        // Créer une Promise avec timeout pour Privy
+        const privyPromise = new Promise((resolve, reject) => {
+            const timeoutId = setTimeout(() => {
+                reject(new Error('Timeout Privy'));
+            }, PRIVY_TIMEOUT);
+
+            privy.getUsers()
+                .then(users => {
+                    clearTimeout(timeoutId);
+                    resolve(users);
+                })
+                .catch(error => {
+                    clearTimeout(timeoutId);
+                    reject(error);
+                });
+        });
+
+        const users = await privyPromise;
+
+        console.log(`${users.length} utilisateurs Privy récupérés`);
+
+        // Mise à jour du cache
+        cache.data = users;
+        cache.lastUpdate = Date.now();
+
         return users;
     } catch (error) {
         console.error('Erreur lors de la récupération des utilisateurs Privy:', error);
-        throw error;
-    }
-}
 
-/**
- * Récupère les données du contrat
- */
-async function getContractData() {
-    try {
-        const [currentSeasonId, playersData] = await Promise.all([
-            publicClient.readContract({
-                address: DIGIT_RABBITS_ADDRESS,
-                abi: DIGIT_RABBITS_ABI,
-                functionName: 'currentSeasonId'
-            }),
-            publicClient.readContract({
-                address: DIGIT_RABBITS_ADDRESS,
-                abi: DIGIT_RABBITS_ABI,
-                functionName: 'getAllPlayersSeasonData'
-            })
-        ]);
+        // En cas d'erreur, retourner les données du cache si disponibles
+        if (cache.data) {
+            console.log('Utilisation des données Privy en cache suite à l\'erreur');
+            return cache.data;
+        }
 
-        return {
-            currentSeasonId,
-            addresses: playersData[0],
-            scores: playersData[1],
-            totalClicks: playersData[2],
-            itemsList: playersData[3],
-            streak: playersData[4],
-            hasClaimedPoints: playersData[5]
-        };
-    } catch (error) {
-        console.error('Erreur lors de la récupération des données du contrat:', error);
-        throw error;
-    }
-}
-
-/**
- * Récupère les données du top clicker depuis le contrat
- */
-async function getTopClickerFromContract() {
-    try {
-        const topClickerData = await publicClient.readContract({
-            address: DIGIT_RABBITS_ADDRESS,
-            abi: DIGIT_RABBITS_ABI,
-            functionName: 'getTopClicker'
-        });
-
-        return {
-            topPlayer: topClickerData[0],
-            maxClicks: topClickerData[1],
-            totalClicks: topClickerData[2]
-        };
-    } catch (error) {
-        console.error('Erreur lors de la récupération du top clicker:', error);
-        throw error;
+        // Sinon retourner un tableau vide
+        return [];
+    } finally {
+        cache.isUpdating = false;
     }
 }
 
@@ -98,17 +248,15 @@ async function getTopClickerFromContract() {
  * Trouve un utilisateur Privy par son adresse wallet
  */
 function findPrivyUserByWallet(users, walletAddress) {
-    // The address to find, in lowercase for case-insensitive comparison.
+    if (!users || users.length === 0) return null;
+
     const lowercasedWalletAddress = walletAddress.toLowerCase();
 
     return users.find(user => {
-        // First, check if the user has an embedded wallet and if its address matches.
-        // The embedded wallet is a top-level property on the user object.
         if (user.wallet && user.wallet.address.toLowerCase() === lowercasedWalletAddress) {
             return true;
         }
 
-        // If no match is found, check the user's externally linked accounts.
         if (user.linked_accounts) {
             return user.linked_accounts.some(account =>
                 account.type === 'wallet' &&
@@ -125,7 +273,7 @@ function findPrivyUserByWallet(users, walletAddress) {
  * Extrait les informations Twitter d'un utilisateur
  */
 function getTwitterInfo(user) {
-    if (!user || !user.linkedAccounts) {
+    if (!user) {
         return {
             username: null,
             avatar: null,
@@ -133,7 +281,7 @@ function getTwitterInfo(user) {
         };
     }
 
-    const twitterAccount = user.twitter
+    const twitterAccount = user.twitter;
     if (twitterAccount) {
         return {
             username: twitterAccount.username || twitterAccount.name,
@@ -150,246 +298,135 @@ function getTwitterInfo(user) {
 }
 
 /**
- * Calcule le leaderboard principal
+ * Calcule le leaderboard principal avec cache unifié
  */
-async function calculateLeaderboard() {
+async function calculateLeaderboard(forceRefresh = false) {
+    const cache = cacheStore.leaderboard;
+
+    // Vérifier le cache d'abord
+    if (!forceRefresh && isCacheValid('leaderboard')) {
+        console.log('Utilisation du cache leaderboard');
+        return cache.data;
+    }
+
+    // Si une mise à jour est déjà en cours, attendre
+    if (cache.isUpdating) {
+        console.log('Calcul du leaderboard en cours, attente...');
+        return await waitForUpdate('leaderboard');
+    }
+
+    // Marquer comme en cours de mise à jour
+    cache.isUpdating = true;
+    const startTime = Date.now();
+
     try {
-        console.log('Début du calcul du leaderboard...');
+        console.log('Calcul du leaderboard...');
 
         // Récupération des données en parallèle
-        const [privyUsers, contractData] = await Promise.all([
-            getPrivyUsers(),
-            getContractData()
+        const [privyUsers, graphqlData] = await Promise.all([
+            getPrivyUsers(forceRefresh).catch(err => {
+                console.warn('Erreur Privy, continue sans:', err.message);
+                return [];
+            }),
+            getLeaderboardFromGraphQL()
         ]);
 
-        console.log(`Utilisateurs Privy trouvés: ${privyUsers.length}`);
-        console.log(`Joueurs dans le contrat: ${contractData.addresses.length}`);
+        console.log(`GraphQL: ${graphqlData.playerSeasonStats_collection.length} joueurs`);
+        console.log(`Privy: ${privyUsers.length} utilisateurs`);
 
         // Construction du leaderboard
         const leaderboard = [];
 
-        for (let i = 0; i < contractData.addresses.length; i++) {
-            const walletAddress = contractData.addresses[i];
-            const score = contractData.scores[i];
-            const totalClicks = contractData.totalClicks[i];
-            const streak = contractData.streak[i];
-            const hasClaimedPoints = contractData.hasClaimedPoints[i];
-
-            // Conversion des points (diviser par PRECISION)
-            const displayScore = Number(score) / PRECISION;
-
+        graphqlData.playerSeasonStats_collection.forEach((playerData, index) => {
+            const walletAddress = playerData.player.walletAddress;
             // Recherche de l'utilisateur Privy correspondant
             const privyUser = findPrivyUserByWallet(privyUsers, walletAddress);
             const twitterInfo = getTwitterInfo(privyUser);
 
-            // Si l'utilisateur n'existe pas dans notre liste privy il est exclu du leaderboard
-            if (twitterInfo) {
-                // Ajout au leaderboard
-                leaderboard.push({
-                    rank: 0, // Sera calculé après le tri
-                    walletAddress,
-                    score: displayScore,
-                    totalClicks: parseInt(totalClicks, 10),
-                    streak: Number(streak),
-                    hasClaimedPoints,
-                    twitter: {
-                        username: twitterInfo.username,
-                        avatar: twitterInfo.avatar,
-                        displayName: twitterInfo.displayName
-                    },
-                    /*user: {
-                        id: privyUser?.id,
-                        createdAt: privyUser?.created_at
-                    }*/
-                });
-            }
+            // Traitement des items achetés
+            const itemsBought = playerData.player.itemsBought || [];
+            const itemsCount = itemsBought.length;
+            const itemIds = itemsBought.map(item => item.id);
 
-        }
-
-        // Tri par score décroissant
-        leaderboard.sort((a, b) => b.score - a.score);
-
-        // Attribution des rangs
-        leaderboard.forEach((player, index) => {
-            player.rank = index + 1;
+            // Inclure tous les joueurs, même sans Twitter
+            leaderboard.push({
+                rank: index + 1,
+                walletAddress,
+                score: playerData.leaderboardScore / 10 ** 6,
+                totalClicks: playerData.totalClicks,
+                totalPointsClaimed: playerData.player.totalPointsClaimed,
+                bestClicksInGame: playerData.bestClicksInGame,
+                averageClicks: playerData.averageClicks,
+                currentStreak: playerData.currentStreak,
+                longestStreak: playerData.longestStreak,
+                itemsBought: {
+                    count: itemsCount,
+                    items: itemIds
+                },
+                twitter: {
+                    username: twitterInfo.username,
+                    avatar: twitterInfo.avatar,
+                    displayName: twitterInfo.displayName
+                },
+                user: {
+                    createdAt: privyUser?.createdAt
+                }
+            });
         });
 
-        console.log(`Leaderboard calculé avec ${leaderboard.length} joueurs`);
+        const processingTime = Date.now() - startTime;
+        console.log(`Leaderboard calculé en ${processingTime}ms avec ${leaderboard.length} joueurs`);
 
-        return {
+        const result = {
             leaderboard,
             metadata: {
                 totalPlayers: leaderboard.length,
-                currentSeasonId: Number(contractData.currentSeasonId),
+                seasonId: "0",
                 lastUpdate: new Date().toISOString(),
-                topScore: leaderboard[0]?.score || 0
+                topScore: leaderboard[0]?.score || 0,
+                source: 'graphql',
+                processingTimeMs: processingTime,
+                privyUsersCount: privyUsers.length,
+                graphqlPlayersCount: graphqlData.playerSeasonStats_collection.length,
+                totalItemsBought: leaderboard.reduce((sum, player) => sum + player.itemsBought.count, 0)
             }
         };
+
+        // Mise à jour du cache
+        cache.data = result;
+        cache.lastUpdate = Date.now();
+
+        return result;
 
     } catch (error) {
         console.error('Erreur lors du calcul du leaderboard:', error);
-        throw error;
-    }
-}
 
-/**
- * Calcule les données du top clicker avec informations utilisateur
- */
-async function calculateTopClicker() {
-    try {
-        console.log('Début du calcul du top clicker...');
-
-        // Récupération des données en parallèle
-        const [privyUsers, topClickerData] = await Promise.all([
-            getPrivyUsers(),
-            getTopClickerFromContract()
-        ]);
-
-        // Si aucun joueur n'est trouvé
-        if (topClickerData.topPlayer === '0x0000000000000000000000000000000000000000') {
-            return {
-                topClicker: null,
-                metadata: {
-                    lastUpdate: new Date().toISOString(),
-                    hasData: false
-                }
-            };
+        // En cas d'erreur, retourner les données du cache si disponibles
+        if (cache.data) {
+            console.log('Utilisation des données leaderboard en cache suite à l\'erreur');
+            return cache.data;
         }
 
-        // Recherche de l'utilisateur Privy correspondant
-        const privyUser = findPrivyUserByWallet(privyUsers, topClickerData.topPlayer);
-        const twitterInfo = getTwitterInfo(privyUser);
-
-        const topClicker = {
-            walletAddress: topClickerData.topPlayer,
-            maxClicks: Number(topClickerData.maxClicks),
-            totalClicks: Number(topClickerData.totalClicks),
-            twitter: {
-                username: twitterInfo.username,
-                avatar: twitterInfo.avatar,
-                displayName: twitterInfo.displayName
-            },
-            user: {
-                id: privyUser?.id,
-                createdAt: privyUser?.created_at
-            }
-        };
-
-        console.log(`Top clicker calculé: ${topClicker.walletAddress} avec ${topClicker.maxClicks} max clicks`);
-
-        return {
-            topClicker,
-            metadata: {
-                lastUpdate: new Date().toISOString(),
-                hasData: true
-            }
-        };
-
-    } catch (error) {
-        console.error('Erreur lors du calcul du top clicker:', error);
         throw error;
+    } finally {
+        cache.isUpdating = false;
     }
 }
 
+
 /**
- * Obtient le leaderboard avec cache
+ * Obtient le leaderboard
  */
 export async function getLeaderboard(forceRefresh = false) {
-    const now = Date.now();
-
-    // Vérifier si le cache est valide
-    if (!forceRefresh &&
-        leaderboardCache.data &&
-        (now - leaderboardCache.lastUpdate) < CACHE_DURATION) {
-        console.log('Retour du leaderboard depuis le cache');
-        return leaderboardCache.data;
+    if (forceRefresh) {
+        console.log('Force refresh demandé - invalidation des caches');
+        // Invalider seulement les caches concernés, pas Privy qui peut être réutilisé
+        cacheStore.leaderboard.lastUpdate = 0;
     }
 
-    // Éviter les calculs multiples simultanés
-    if (leaderboardCache.isUpdating) {
-        console.log('Calcul en cours, attente...');
-        while (leaderboardCache.isUpdating) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-        }
-        return leaderboardCache.data;
-    }
-
-    // Calcul du nouveau leaderboard
-    leaderboardCache.isUpdating = true;
-
-    try {
-        const result = await calculateLeaderboard();
-
-        // Mise à jour du cache
-        leaderboardCache.data = result;
-        leaderboardCache.lastUpdate = now;
-
-        return result;
-    } finally {
-        leaderboardCache.isUpdating = false;
-    }
+    return await calculateLeaderboard(forceRefresh);
 }
 
-/**
- * Obtient le top clicker avec cache
- */
-export async function getTopClicker(forceRefresh = false) {
-    const now = Date.now();
-
-    // Vérifier si le cache est valide
-    if (!forceRefresh &&
-        topClickerCache.data &&
-        (now - topClickerCache.lastUpdate) < CACHE_DURATION) {
-        console.log('Retour du top clicker depuis le cache');
-        return topClickerCache.data;
-    }
-
-    // Éviter les calculs multiples simultanés
-    if (topClickerCache.isUpdating) {
-        console.log('Calcul du top clicker en cours, attente...');
-        while (topClickerCache.isUpdating) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-        }
-        return topClickerCache.data;
-    }
-
-    // Calcul du nouveau top clicker
-    topClickerCache.isUpdating = true;
-
-    try {
-        const result = await calculateTopClicker();
-
-        // Mise à jour du cache
-        topClickerCache.data = result;
-        topClickerCache.lastUpdate = now;
-
-        return result;
-    } finally {
-        topClickerCache.isUpdating = false;
-    }
-}
-
-/**
- * Démarre la mise à jour automatique du leaderboard et du top clicker
- */
-export function startLeaderboardUpdater() {
-    console.log('Démarrage de la mise à jour automatique du leaderboard et top clicker (15 min)');
-
-    // Première exécution
-    Promise.all([
-        getLeaderboard(true).catch(console.error),
-        getTopClicker(true).catch(console.error)
-    ]);
-
-    // Puis toutes les 15 minutes
-    setInterval(() => {
-        console.log('Mise à jour automatique du leaderboard et top clicker...');
-        Promise.all([
-            getLeaderboard(true).catch(console.error),
-            getTopClicker(true).catch(console.error)
-        ]);
-    }, CACHE_DURATION);
-}
 
 /**
  * Obtient le classement d'un utilisateur spécifique
@@ -418,7 +455,10 @@ export async function getTopPlayers(limit = 10) {
 
         return {
             topPlayers: leaderboard.slice(0, limit),
-            metadata
+            metadata: {
+                ...metadata,
+                isLimited: leaderboard.length > limit
+            }
         };
     } catch (error) {
         console.error('Erreur lors de la récupération du top players:', error);
@@ -427,26 +467,121 @@ export async function getTopPlayers(limit = 10) {
 }
 
 /**
- * Obtient les données complètes du leaderboard avec le top clicker
+ * Obtient les joueurs ayant acheté le plus d'items
+ */
+export async function getTopItemBuyers(limit = 10) {
+    try {
+        const { leaderboard } = await getLeaderboard();
+
+        // Trier par nombre d'items achetés
+        const sortedByItems = leaderboard
+            .filter(player => player.itemsBought.count > 0)
+            .sort((a, b) => b.itemsBought.count - a.itemsBought.count)
+            .slice(0, limit);
+
+        return {
+            topItemBuyers: sortedByItems,
+            metadata: {
+                totalPlayersWithItems: leaderboard.filter(p => p.itemsBought.count > 0).length,
+                lastUpdate: new Date().toISOString()
+            }
+        };
+    } catch (error) {
+        console.error('Erreur lors de la récupération des top item buyers:', error);
+        return { topItemBuyers: [], metadata: null };
+    }
+}
+
+/**
+ * Obtient les statistiques sur les items achetés
+ */
+export async function getItemsStats() {
+    try {
+        const { leaderboard } = await getLeaderboard();
+
+        const playersWithItems = leaderboard.filter(p => p.itemsBought.count > 0);
+        const totalItems = leaderboard.reduce((sum, p) => sum + p.itemsBought.count, 0);
+
+        // Comptage des items par ID
+        const itemsCountById = {};
+        leaderboard.forEach(player => {
+            player.itemsBought.items.forEach(itemId => {
+                itemsCountById[itemId] = (itemsCountById[itemId] || 0) + 1;
+            });
+        });
+
+        // Items les plus populaires
+        const popularItems = Object.entries(itemsCountById)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10)
+            .map(([itemId, count]) => ({ itemId, count }));
+
+        return {
+            totalItems,
+            playersWithItems: playersWithItems.length,
+            averageItemsPerPlayer: totalItems / leaderboard.length,
+            averageItemsPerBuyer: totalItems / playersWithItems.length,
+            popularItems,
+            uniqueItems: Object.keys(itemsCountById).length,
+            metadata: {
+                lastUpdate: new Date().toISOString()
+            }
+        };
+    } catch (error) {
+        console.error('Erreur lors de la récupération des stats items:', error);
+        return null;
+    }
+}
+
+/**
+ * Obtient les données complètes du leaderboard
  */
 export async function getCompleteLeaderboardData(forceRefresh = false) {
     try {
-        const [leaderboardData, topClickerData] = await Promise.all([
-            getLeaderboard(forceRefresh),
-            getTopClicker(forceRefresh)
+        const [leaderboardData] = await Promise.all([
+            getLeaderboard(forceRefresh)
         ]);
 
         return {
             topPlayers: leaderboardData.leaderboard,
-            topClicker: topClickerData.topClicker,
             metadata: {
                 ...leaderboardData.metadata,
-                topClickerLastUpdate: topClickerData.metadata.lastUpdate,
-                hasTopClickerData: topClickerData.metadata.hasData
             }
         };
     } catch (error) {
         console.error('Erreur lors de la récupération des données complètes:', error);
         throw error;
     }
+}
+
+/**
+ * Démarre la mise à jour automatique (comme dans l'ancien fichier)
+ */
+export function startLeaderboardUpdater() {
+    console.log('Démarrage de la mise à jour automatique du leaderboard (15 min)');
+
+    // Première exécution
+    Promise.all([
+        getLeaderboard(true).catch(console.error)
+    ]);
+
+    // Puis toutes les 15 minutes
+    setInterval(() => {
+        console.log('Mise à jour automatique du leaderboard et top clicker...');
+        Promise.all([
+            getLeaderboard(true).catch(console.error)
+        ]);
+    }, CACHE_DURATION);
+}
+
+/**
+ * Fonction utilitaire pour vider le cache manuellement
+ */
+export function clearCache() {
+    Object.keys(cacheStore).forEach(key => {
+        cacheStore[key].data = null;
+        cacheStore[key].lastUpdate = 0;
+        cacheStore[key].isUpdating = false;
+    });
+    console.log('Cache vidé manuellement');
 }

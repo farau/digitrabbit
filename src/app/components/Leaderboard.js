@@ -1,17 +1,32 @@
 'use client';
 
 import Image from 'next/image';
-import { Trophy, RotateCcw, Users, Calendar, ChevronLeft, ChevronRight, Zap } from 'lucide-react';
-import { useState } from 'react';
+import { Trophy, RotateCcw, Users, Calendar, ChevronLeft, ChevronRight, Zap, Target, Flame, ShoppingBag, Gift } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useLeaderboard } from '../hooks/useLeaderboard';
 import { useTheme, useGame } from '@/context';
 import Wrapper from '@/app/components/Wrapper';
 
-// Top 100 displayed by default
-export default function Leaderboard({ limit = 100 }) {
-  const { data, loading, error, refresh } = useLeaderboard(limit);
+
+export default function Leaderboard({ }) {
+  const {
+    leaderboard,
+    metadata,
+    loading,
+    error,
+    refresh,
+    retry,
+    getUserData,
+    getTopItemBuyers,
+    getItemsStats,
+    stats,
+    canRetry
+  } = useLeaderboard();
+
   const { themeMode } = useTheme();
   const [currentPage, setCurrentPage] = useState(1);
+  const [viewMode, setViewMode] = useState('score'); // 'score', 'items', 'clicks'
+  const [initialLoadTimeout, setInitialLoadTimeout] = useState(false);
   const itemsPerPage = 10;
 
   const isNight = themeMode === 'dark';
@@ -21,7 +36,20 @@ export default function Leaderboard({ limit = 100 }) {
   const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)';
   const subTextColor = isNight ? '#999' : '#666';
 
-  const { embeddedWallet } = useGame()
+  const { embeddedWallet } = useGame();
+
+  // Timeout pour le chargement initial (2 minutes)
+  useEffect(() => {
+    if (!loading && !stats.hasData && !error) {
+      const timeout = setTimeout(() => {
+        setInitialLoadTimeout(true);
+      }, 120000); // 2 minutes
+
+      return () => clearTimeout(timeout);
+    } else if (stats.hasData || error) {
+      setInitialLoadTimeout(false);
+    }
+  }, [loading, stats.hasData, error]);
 
   const formatScore = (score) => {
     return new Intl.NumberFormat('en-EN', {
@@ -32,6 +60,30 @@ export default function Leaderboard({ limit = 100 }) {
 
   const formatNumber = (number) => {
     return new Intl.NumberFormat('en-EN').format(number);
+  };
+
+  // Fonction pour obtenir le top des joueurs par total de clics
+  const getTopClickPlayers = (limit = null) => {
+    return [...leaderboard]
+      .filter(player => player.totalClicks && player.totalClicks > 0)
+      .sort((a, b) => (b.totalClicks || 0) - (a.totalClicks || 0))
+      .map((player, index) => ({
+        ...player,
+        rank: index + 1
+      }))
+      .slice(0, limit || leaderboard.length);
+  };
+
+  // Fonction améliorée pour obtenir le top des acheteurs d'items avec recalcul du rang
+  const getTopItemBuyersWithRank = (limit = null) => {
+    return [...leaderboard]
+      .filter(player => player.itemsBought && player.itemsBought.count > 0)
+      .sort((a, b) => (b.itemsBought?.count || 0) - (a.itemsBought?.count || 0))
+      .map((player, index) => ({
+        ...player,
+        rank: index + 1
+      }))
+      .slice(0, limit || leaderboard.length);
   };
 
   const getRankStyle = (rank, isCurrentUser = false) => {
@@ -72,94 +124,6 @@ export default function Leaderboard({ limit = 100 }) {
     };
   };
 
-  const renderTopClicker = (topClicker) => (
-    <div
-      key={`top-clicker-${topClicker.walletAddress}`}
-      className="p-3 sm:p-4 md:p-6"
-      style={{
-        background: isNight ? 'rgba(251, 191, 36, 0.15)' : 'rgba(251, 191, 36, 0.08)'
-      }}
-    >
-      <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
-        {/* Icon */}
-        <div className="flex-shrink-0">
-          <div
-            className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center"
-            style={{
-              background: isNight
-                ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)'
-                : 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
-              color: '#000'
-            }}
-          >
-            <Zap className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
-          </div>
-        </div>
-
-        {/* Avatar */}
-        <div className="flex-shrink-0">
-          {topClicker.twitter.avatar ? (
-            <Image
-              src={topClicker.twitter.avatar}
-              alt={topClicker.twitter.displayName || 'Avatar'}
-              width={96}
-              height={96}
-              className="rounded-full w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12"
-              sizes="(min-width: 768px) 48px, (min-width: 640px) 40px, 32px"
-            />
-          ) : (
-            <div
-              className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold"
-              style={{
-                background: isNight ? '#444' : '#e5e7eb',
-                color: isNight ? '#ccc' : '#666'
-              }}
-            >
-              {topClicker.twitter.displayName?.[0] || '?'}
-            </div>
-          )}
-        </div>
-
-        {/* Player Info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-            <p className="text-sm sm:text-base md:text-lg font-semibold truncate min-w-fit" style={{ color: textColor, margin: 0 }}>
-              {topClicker.twitter.displayName || 'Anonymous User'}
-              <span className="ml-1 sm:ml-2 text-xs font-normal px-1 sm:px-2 py-0.5 sm:py-1 rounded-full" style={{
-                background: isNight ? '#fbbf24' : '#fbbf24',
-                color: '#000'
-              }}>
-                Best Clicker
-              </span>
-            </p>
-            {topClicker.twitter.username && (
-              <span className="text-xs sm:text-sm" style={{ color: subTextColor }}>
-                @{topClicker.twitter.username}
-              </span>
-            )}
-          </div>
-          <p className="text-xs sm:text-sm truncate mt-0.5 sm:mt-1" style={{ color: subTextColor, margin: 0 }}>
-            {topClicker.walletAddress.slice(0, 5)}...{topClicker.walletAddress.slice(-4)}
-          </p>
-        </div>
-
-        {/* Stats */}
-        <div className="flex-shrink-0 text-right mt-6">
-          <div className="text-sm sm:text-lg md:text-xl font-bold" style={{ color: textColor }}>
-            {formatNumber(topClicker.maxClicks)}
-            <span className="text-xs sm:text-sm font-normal ml-1" style={{ color: subTextColor }}>
-              clicks
-            </span>
-          </div>
-          <div className="text-xs sm:text-sm mt-0.5 sm:mt-1" style={{ color: subTextColor }}>
-            <span>⏲ {Number((topClicker.maxClicks / 60).toFixed(1))} clicks/sec</span>
-            <span className="ml-2">⚡ {Math.floor(1000 / (topClicker.maxClicks / 60))} ms/click</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
   const renderPlayerCard = (player, isCurrentUser = false) => (
     <div
       key={player.walletAddress}
@@ -186,7 +150,7 @@ export default function Leaderboard({ limit = 100 }) {
 
         {/* Avatar */}
         <div className="flex-shrink-0">
-          {player.twitter.avatar ? (
+          {player.twitter?.avatar ? (
             <Image
               src={player.twitter.avatar}
               alt={player.twitter.displayName || 'Avatar'}
@@ -203,54 +167,146 @@ export default function Leaderboard({ limit = 100 }) {
                 color: isNight ? '#ccc' : '#666'
               }}
             >
-              {player.twitter.displayName?.[0] || '?'}
+              {player.twitter?.displayName?.[0] || '?'}
             </div>
           )}
         </div>
 
         {/* Player Info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-            <p className="text-sm sm:text-base md:text-lg font-semibold truncate min-w-fit" style={{ color: textColor, margin: 0 }}>
-              {player.twitter.displayName || 'Anonymous User'}
+        <div className="flex-1 min-w-0 overflow-hidden">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-1">
+            <div className="flex items-center gap-1 min-w-0 flex-1">
+              <p className="text-xs sm:text-sm md:text-base font-semibold truncate flex-shrink" style={{ color: textColor, margin: 0 }}>
+                {(() => {
+                  const displayName = player.twitter?.displayName || 'Anonymous User';
+                  // Réserver de l'espace pour le badge "You" si nécessaire
+                  const reservedSpace = isCurrentUser ? 35 : 0; // ~35px pour le badge "You"
+                  let maxLength;
+                  if (window.innerWidth < 640) { // mobile
+                    maxLength = Math.max(8, 15 - (reservedSpace / 8)); // Ajuster selon l'espace réservé
+                  } else if (window.innerWidth < 768) { // sm
+                    maxLength = Math.max(10, 18 - (reservedSpace / 10));
+                  } else if (window.innerWidth < 1024) { // md
+                    maxLength = Math.max(12, 22 - (reservedSpace / 12));
+                  } else { // lg+
+                    maxLength = Math.max(15, 25 - (reservedSpace / 15));
+                  }
+                  return displayName.length > maxLength ?
+                    `${displayName.slice(0, maxLength)}...` :
+                    displayName;
+                })()}
+              </p>
               {isCurrentUser && (
-                <span className="ml-1 sm:ml-2 text-xs font-normal px-1 sm:px-2 py-0.5 sm:py-1 rounded-full" style={{
+                <span className="flex-shrink-0 text-xs font-normal px-1 py-0.5 rounded-full whitespace-nowrap" style={{
                   background: isNight ? '#4f46e5' : '#4f46e5',
                   color: 'white'
                 }}>
                   You
                 </span>
               )}
-            </p>
-            {player.twitter.username && (
-              <span className="text-xs sm:text-sm" style={{ color: subTextColor }}>
-                @{player.twitter.username}
-              </span>
+            </div>
+            {player.twitter?.username && (
+              <div className="min-w-0 flex-shrink-0">
+                <span className="text-xs truncate block sm:inline whitespace-nowrap" style={{ color: subTextColor }}>
+                  @{(() => {
+                    const username = player.twitter.username;
+                    // Longueur adaptative pour le username selon la taille d'écran
+                    let maxUsernameLength;
+                    if (window.innerWidth < 640) { // mobile
+                      maxUsernameLength = 10;
+                    } else if (window.innerWidth < 768) { // sm
+                      maxUsernameLength = 12;
+                    } else if (window.innerWidth < 1024) { // md
+                      maxUsernameLength = 15;
+                    } else { // lg+
+                      maxUsernameLength = 18;
+                    }
+                    return username.length > maxUsernameLength ?
+                      `${username.slice(0, maxUsernameLength)}...` :
+                      username;
+                  })()}
+                </span>
+              </div>
             )}
           </div>
-          <p className="text-xs sm:text-sm truncate mt-0.5 sm:mt-1" style={{ color: subTextColor, margin: 0 }}>
+          <p className="text-xs truncate mt-0.5" style={{ color: subTextColor, margin: 0 }}>
             {player.walletAddress.slice(0, 5)}...{player.walletAddress.slice(-4)}
           </p>
         </div>
 
         {/* Stats */}
-        <div className="flex-shrink-0 text-right mt-6">
+        <div className="flex-shrink-0 text-right">
           <div className="text-sm sm:text-lg md:text-xl font-bold" style={{ color: textColor }}>
-            {formatScore(player.score)}
-            <span className="text-xs sm:text-sm font-normal ml-1" style={{ color: subTextColor }}>
-              pts
-            </span>
+            {viewMode === 'score' ? (
+              <>
+                {formatScore(player.score)}
+                <span className="text-xs sm:text-sm font-normal ml-1" style={{ color: subTextColor }}>
+                  pts
+                </span>
+              </>
+            ) : viewMode === 'items' ? (
+              <>
+                {formatNumber(player.itemsBought?.count || 0)}
+                <span className="text-xs sm:text-sm font-normal ml-1" style={{ color: subTextColor }}>
+                  items
+                </span>
+              </>
+            ) : (
+              <>
+                {formatNumber(player.totalClicks || 0)}
+                <span className="text-xs sm:text-sm font-normal ml-1" style={{ color: subTextColor }}>
+                  clicks
+                </span>
+              </>
+            )}
           </div>
           <div className="text-xs sm:text-sm mt-0.5 sm:mt-1" style={{ color: subTextColor }}>
-            <span className="mr-1 sm:mr-2">🔥 {player.streak}</span>
-            <span>👆 {player.totalClicks}</span>
+            <div className="flex flex-wrap gap-1 sm:gap-2 justify-end">
+              {/* Total clicks (sauf si c'est le mode clicks) */}
+              {viewMode !== 'clicks' && (
+                <span className="flex items-center gap-1 whitespace-nowrap">
+                  <Target className="w-3 h-3 text-blue-500" />
+                  {formatNumber(player.totalClicks || 0)}
+                </span>
+              )}
+              {/* Best clicks si disponible */}
+              {player.bestClicksInGame && (
+                <span className="flex items-center gap-1 whitespace-nowrap">
+                  <Zap className="w-3 h-3 text-yellow-500" />
+                  {formatNumber(player.bestClicksInGame)}
+                </span>
+              )}
+              {/* Items bought (sauf si c'est le mode items) */}
+              {viewMode !== 'items' && player.itemsBought?.count > 0 && (
+                <span className="flex items-center gap-1 whitespace-nowrap">
+                  <ShoppingBag className="w-3 h-3 text-green-500" />
+                  {formatNumber(player.itemsBought.count)}
+                </span>
+              )}
+            </div>
+            {/* Informations supplémentaires sur une nouvelle ligne */}
+            {(player.averageClicks || player.longestStreak || player.totalPointsClaimed) && (
+              <div className="flex flex-wrap gap-1 sm:gap-2 justify-end mt-1 text-xs" style={{ color: subTextColor }}>
+                {/* Streak */}
+                <span className="flex items-center gap-1 whitespace-nowrap">
+                  <Flame className="w-3 h-3 text-orange-500" />
+                  {player.currentStreak || 0}
+                </span>
+                {player.totalPointsClaimed && (
+                  <span className="flex items-center gap-1 whitespace-nowrap">
+                    <Gift className="w-3 h-3 text-violet-500" />
+                    {formatNumber(player.totalPointsClaimed)}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
     </div>
   );
 
-  if (loading) {
+  if (loading || (!stats.hasData && !error && !initialLoadTimeout)) {
     return (
       <Wrapper>
         <div
@@ -265,7 +321,14 @@ export default function Leaderboard({ limit = 100 }) {
         >
           <div className="flex flex-col items-center gap-4">
             <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-2 border-transparent border-t-blue-500"></div>
-            <p className="text-sm sm:text-base" style={{ color: textColor, margin: 0 }}>Loading leaderboard...</p>
+            <p className="text-sm sm:text-base" style={{ color: textColor, margin: 0 }}>
+              {loading ? 'Loading leaderboard...' : 'Connecting to leaderboard...'}
+            </p>
+            {!loading && !stats.hasData && !error && (
+              <p className="text-xs" style={{ color: subTextColor, margin: 0 }}>
+                This may take a few moments...
+              </p>
+            )}
           </div>
         </div>
       </Wrapper>
@@ -289,44 +352,82 @@ export default function Leaderboard({ limit = 100 }) {
             <p className="text-sm sm:text-base" style={{ color: isNight ? '#ef4444' : '#dc2626', margin: 0 }}>
               Error: {error}
             </p>
-            <button
-              onClick={refresh}
-              style={{
-                background: isNight
-                  ? 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)'
-                  : 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
-                color: 'white',
-                border: 'none',
-                padding: '8px 16px',
-                borderRadius: '8px',
-                fontSize: '13px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.2s ease',
-                boxShadow: '0 2px 6px rgba(79, 70, 229, 0.3)',
-              }}
-              onMouseOver={(e) => {
-                e.target.style.transform = 'translateY(-1px)';
-                e.target.style.boxShadow = '0 3px 8px rgba(79, 70, 229, 0.4)';
-              }}
-              onMouseOut={(e) => {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 2px 6px rgba(79, 70, 229, 0.3)';
-              }}
-            >
-              <RotateCcw className="w-4 h-4" />
-              Retry
-            </button>
+            <div className="flex gap-2">
+              {canRetry && (
+                <button
+                  onClick={retry}
+                  style={{
+                    background: isNight
+                      ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+                      : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s ease',
+                    boxShadow: '0 2px 6px rgba(245, 158, 11, 0.3)',
+                  }}
+                  onMouseOver={(e) => {
+                    e.target.style.transform = 'translateY(-1px)';
+                    e.target.style.boxShadow = '0 3px 8px rgba(245, 158, 11, 0.4)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.target.style.transform = 'translateY(0)';
+                    e.target.style.boxShadow = '0 2px 6px rgba(245, 158, 11, 0.3)';
+                  }}
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Retry
+                </button>
+              )}
+              <button
+                onClick={refresh}
+                style={{
+                  background: isNight
+                    ? 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)'
+                    : 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 2px 6px rgba(79, 70, 229, 0.3)',
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.transform = 'translateY(-1px)';
+                  e.target.style.boxShadow = '0 3px 8px rgba(79, 70, 229, 0.4)';
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = '0 2px 6px rgba(79, 70, 229, 0.3)';
+                }}
+              >
+                <RotateCcw className="w-4 h-4" />
+                Refresh
+              </button>
+            </div>
           </div>
         </div>
       </Wrapper>
     );
   }
 
-  if (!data || !data.topPlayers) {
+  if (!stats.hasData && (error || initialLoadTimeout)) {
+    const isTimeout = initialLoadTimeout && !error;
+    const displayError = error || (isTimeout ? 'Connection timeout - Unable to load leaderboard data after 2 minutes' : 'No data available');
+
     return (
       <Wrapper>
         <div
@@ -340,47 +441,177 @@ export default function Leaderboard({ limit = 100 }) {
           }}
         >
           <div className="flex flex-col items-center gap-4">
-            <p className="text-sm sm:text-base" style={{ color: subTextColor, margin: 0 }}>No data available</p>
-            <button
-              onClick={refresh}
-              style={{
-                background: isNight
-                  ? 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)'
-                  : 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
-                color: 'white',
-                border: 'none',
-                padding: '8px 16px',
-                borderRadius: '8px',
-                fontSize: '13px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.2s ease',
-                boxShadow: '0 2px 6px rgba(79, 70, 229, 0.3)',
-              }}
-            >
-              <RotateCcw className="w-4 h-4" />
-              Refresh
-            </button>
+            <div className="text-4xl mb-2">
+              {isTimeout ? '⏰' : error ? '⚠️' : '📭'}
+            </div>
+            <p className="text-sm sm:text-base font-medium" style={{
+              color: (error && !isTimeout) ? (isNight ? '#ef4444' : '#dc2626') : textColor,
+              margin: 0
+            }}>
+              {isTimeout ? 'Connection Timeout' : error ? 'Error Loading Data' : 'No Data Available'}
+            </p>
+            <p className="text-xs sm:text-sm text-center max-w-md" style={{ color: subTextColor, margin: 0 }}>
+              {displayError}
+            </p>
+            <div className="flex gap-2 flex-wrap justify-center">
+              {canRetry && (
+                <button
+                  onClick={retry}
+                  style={{
+                    background: isNight
+                      ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+                      : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s ease',
+                    boxShadow: '0 2px 6px rgba(245, 158, 11, 0.3)',
+                  }}
+                  onMouseOver={(e) => {
+                    e.target.style.transform = 'translateY(-1px)';
+                    e.target.style.boxShadow = '0 3px 8px rgba(245, 158, 11, 0.4)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.target.style.transform = 'translateY(0)';
+                    e.target.style.boxShadow = '0 2px 6px rgba(245, 158, 11, 0.3)';
+                  }}
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Retry
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setInitialLoadTimeout(false);
+                  refresh();
+                }}
+                style={{
+                  background: isNight
+                    ? 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)'
+                    : 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 2px 6px rgba(79, 70, 229, 0.3)',
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.transform = 'translateY(-1px)';
+                  e.target.style.boxShadow = '0 3px 8px rgba(79, 70, 229, 0.4)';
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = '0 2px 6px rgba(79, 70, 229, 0.3)';
+                }}
+              >
+                <RotateCcw className="w-4 h-4" />
+                {isTimeout ? 'Try Again' : 'Refresh'}
+              </button>
+            </div>
+            {isTimeout && (
+              <p className="text-xs mt-2" style={{ color: subTextColor, margin: 0 }}>
+                The server might be experiencing high load. Please try again.
+              </p>
+            )}
           </div>
         </div>
       </Wrapper>
     );
   }
 
-  const { topPlayers: leaderboard, metadata, topClicker } = data;
+  // Find current user in the leaderboard using the hook helper
+  const currentUser = embeddedWallet?.address ? getUserData(embeddedWallet.address) : null;
 
-  // Find current user in the leaderboard
-  const currentUser = leaderboard?.find(player =>
-    player.walletAddress.toLowerCase() === embeddedWallet?.address?.toLowerCase()
-  );
+  // Get data based on view mode
+  let displayData = leaderboard;
+  let currentUserForView = currentUser;
+
+  if (viewMode === 'items') {
+    displayData = getTopItemBuyersWithRank(leaderboard.length);
+    // Recalculer le rang du current user dans le classement items
+    if (currentUser && embeddedWallet?.address) {
+      const itemsLeaderboard = getTopItemBuyersWithRank(leaderboard.length);
+      const userInItemsLeaderboard = itemsLeaderboard.find(p =>
+        p.walletAddress.toLowerCase() === embeddedWallet.address.toLowerCase()
+      );
+      currentUserForView = userInItemsLeaderboard || null;
+
+      // Si l'utilisateur n'est pas trouvé dans le classement items mais a des items
+      if (!currentUserForView && currentUser.itemsBought?.count > 0) {
+        // Calculer le rang parmi tous les acheteurs d'items
+        const allItemBuyers = [...leaderboard]
+          .filter(player => player.itemsBought && player.itemsBought.count > 0)
+          .sort((a, b) => (b.itemsBought?.count || 0) - (a.itemsBought?.count || 0));
+
+        const userRankInItems = allItemBuyers.findIndex(p =>
+          p.walletAddress.toLowerCase() === embeddedWallet.address.toLowerCase()
+        ) + 1;
+
+        if (userRankInItems > 0) {
+          currentUserForView = {
+            ...currentUser,
+            rank: userRankInItems
+          };
+        }
+      }
+    }
+  } else if (viewMode === 'clicks') {
+    displayData = getTopClickPlayers(leaderboard.length);
+    // Recalculer le rang du current user dans le classement clicks
+    if (currentUser && embeddedWallet?.address) {
+      const clicksLeaderboard = getTopClickPlayers(leaderboard.length);
+      const userInClicksLeaderboard = clicksLeaderboard.find(p =>
+        p.walletAddress.toLowerCase() === embeddedWallet.address.toLowerCase()
+      );
+      currentUserForView = userInClicksLeaderboard || null;
+
+      // Si l'utilisateur n'est pas trouvé dans le classement clicks mais a des clicks
+      if (!currentUserForView && currentUser.totalClicks > 0) {
+        // Calculer le rang parmi tous les clickers
+        const allClickers = [...leaderboard]
+          .filter(player => player.totalClicks && player.totalClicks > 0)
+          .sort((a, b) => (b.totalClicks || 0) - (a.totalClicks || 0));
+
+        const userRankInClicks = allClickers.findIndex(p =>
+          p.walletAddress.toLowerCase() === embeddedWallet.address.toLowerCase()
+        ) + 1;
+
+        if (userRankInClicks > 0) {
+          currentUserForView = {
+            ...currentUser,
+            rank: userRankInClicks
+          };
+        }
+      }
+    }
+  } else if (viewMode === 'score') {
+    // S'assurer que currentUserForView a le bon rang même en mode score
+    if (currentUser && embeddedWallet?.address) {
+      const userInScoreLeaderboard = leaderboard.find(p =>
+        p.walletAddress.toLowerCase() === embeddedWallet.address.toLowerCase()
+      );
+      currentUserForView = userInScoreLeaderboard || currentUser;
+    }
+  }
 
   // Filter out current user from top players if they're in the top 10
-  const topPlayersWithoutCurrentUser = currentUser ?
-    leaderboard.filter(player => player.walletAddress.toLowerCase() !== embeddedWallet?.address?.toLowerCase()) :
-    leaderboard;
+  const topPlayersWithoutCurrentUser = currentUserForView ?
+    displayData.filter(player => player.walletAddress.toLowerCase() !== embeddedWallet?.address?.toLowerCase()) :
+    displayData;
 
   // Pagination logic
   const totalPages = Math.ceil(topPlayersWithoutCurrentUser.length / itemsPerPage);
@@ -404,6 +635,24 @@ export default function Leaderboard({ limit = 100 }) {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
     }
+  };
+
+  // Switch view mode and reset pagination
+  const switchViewMode = (mode) => {
+    setViewMode(mode);
+    setCurrentPage(1);
+  };
+
+  // Get items stats for display
+  const itemsStats = getItemsStats();
+
+  // Get clicks stats
+  const clicksStats = {
+    totalClicks: leaderboard.reduce((sum, player) => sum + (parseInt(player.totalClicks) || 0), 0),
+    playersWithClicks: leaderboard.filter(player => parseInt(player.totalClicks) > 0).length,
+    averageClicks: leaderboard.length > 0 ?
+      leaderboard.reduce((sum, player) => sum + (parseInt(player.totalClicks) || 0), 0) / leaderboard.length : 0,
+    topClicker: displayData[0] || null
   };
 
   return (
@@ -436,46 +685,145 @@ export default function Leaderboard({ limit = 100 }) {
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-xs sm:text-sm" style={{ color: subTextColor }}>
               <div className="flex items-center gap-1 sm:gap-2">
                 <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span>Season {metadata.currentSeasonId}</span>
+                <span>Season {metadata.seasonId || '0'}</span>
               </div>
               <div className="flex items-center gap-1 sm:gap-2">
                 <Users className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span>{metadata.totalPlayers} players</span>
+                <span>{stats.totalPlayers} players</span>
               </div>
+              {stats.hasItemsData && itemsStats && (
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <ShoppingBag className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span>{formatNumber(itemsStats.totalItems)} items bought</span>
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
 
-      {/* Best Clicker */}
-      {topClicker && metadata?.hasTopClickerData && (
-        <div
-          style={{
-            background: cardBg,
-            borderRadius: '12px',
-            border: `1px solid ${borderColor}`,
-            boxShadow,
-            overflow: 'hidden',
-            marginBottom: '16px'
-          }}
-        >
-          <div
-            className="px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium border-b flex items-center gap-2"
-            style={{
-              background: isNight ? '#1a1a1a' : '#f9f9f9',
-              color: textColor,
-              borderColor: borderColor
-            }}
-          >
-            <Zap className="w-4 h-4 text-yellow-500" />
-            <span>Best Clicker</span>
+      {/* View Mode Toggle */}
+      <div
+        style={{
+          background: cardBg,
+          padding: '12px 16px',
+          borderRadius: '12px',
+          border: `1px solid ${borderColor}`,
+          boxShadow,
+          marginBottom: '16px'
+        }}
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium whitespace-nowrap" style={{ color: textColor }}>
+            View by:
+          </span>
+          <div className="flex gap-1">
+            <button
+              onClick={() => switchViewMode('score')}
+              title="Sort by total score points"
+              style={{
+                background: viewMode === 'score' ? (isNight ? '#4f46e5' : '#4f46e5') : 'transparent',
+                color: viewMode === 'score' ? 'white' : textColor,
+                border: `1px solid ${viewMode === 'score' ? (isNight ? '#4f46e5' : '#4f46e5') : borderColor}`,
+                padding: '4px 8px',
+                borderRadius: '6px',
+                fontSize: '11px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '3px',
+                transition: 'all 0.2s ease',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <Trophy className="w-3 h-3" />
+              <span>Score</span>
+            </button>
+            <button
+              onClick={() => switchViewMode('clicks')}
+              title="Sort by total clicks made"
+              style={{
+                background: viewMode === 'clicks' ? (isNight ? '#4f46e5' : '#4f46e5') : 'transparent',
+                color: viewMode === 'clicks' ? 'white' : textColor,
+                border: `1px solid ${viewMode === 'clicks' ? (isNight ? '#4f46e5' : '#4f46e5') : borderColor}`,
+                padding: '4px 8px',
+                borderRadius: '6px',
+                fontSize: '11px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '3px',
+                transition: 'all 0.2s ease',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <Target className="w-3 h-3" />
+              <span>Clicks</span>
+            </button>
+            {stats.hasItemsData && (
+              <button
+                onClick={() => switchViewMode('items')}
+                title="Sort by number of items purchased"
+                style={{
+                  background: viewMode === 'items' ? (isNight ? '#4f46e5' : '#4f46e5') : 'transparent',
+                  color: viewMode === 'items' ? 'white' : textColor,
+                  border: `1px solid ${viewMode === 'items' ? (isNight ? '#4f46e5' : '#4f46e5') : borderColor}`,
+                  padding: '4px 8px',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '3px',
+                  transition: 'all 0.2s ease',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                <ShoppingBag className="w-3 h-3" />
+                <span>Items</span>
+              </button>
+            )}
           </div>
-          {renderTopClicker(topClicker)}
         </div>
-      )}
+
+        {/* Légende des icônes */}
+        <div className="mt-2 pt-2 border-t text-xs flex flex-wrap gap-4 justify-center" style={{
+          borderColor: borderColor,
+          color: subTextColor
+        }}>
+          <div className="flex items-center gap-1">
+            <Target className="w-3 h-3 text-blue-500" />
+            <span>Total clicks</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Zap className="w-3 h-3 text-yellow-500" />
+            <span>Best in-game clicks</span>
+          </div>
+          {stats.hasItemsData && (
+            <div className="flex items-center gap-1">
+              <ShoppingBag className="w-3 h-3 text-green-500" />
+              <span>Items bought</span>
+            </div>
+          )}
+          <div className="flex items-center gap-1">
+            <Flame className="w-3 h-3 text-orange-500" />
+            <span>Streak</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Gift className="w-3 h-3 text-violet-500" />
+            <span>Points claimed</span>
+          </div>
+        </div>
+      </div>
 
       {/* Current User Rank */}
-      {currentUser && embeddedWallet?.address && (
+      {currentUserForView && embeddedWallet?.address && (
         <div
           style={{
             background: cardBg,
@@ -496,7 +844,7 @@ export default function Leaderboard({ limit = 100 }) {
           >
             My Rank
           </div>
-          {renderPlayerCard(currentUser, true)}
+          {renderPlayerCard(currentUserForView, true)}
         </div>
       )}
 
@@ -518,7 +866,11 @@ export default function Leaderboard({ limit = 100 }) {
             borderColor: borderColor
           }}
         >
-          <span>Top Players</span>
+          <span>
+            {viewMode === 'score' && 'Top players'}
+            {viewMode === 'clicks' && 'Top clickers'}
+            {viewMode === 'items' && 'Top item buyers'}
+          </span>
           <span style={{ color: subTextColor }}>
             Page {currentPage} of {totalPages}
           </span>
@@ -634,7 +986,37 @@ export default function Leaderboard({ limit = 100 }) {
               borderColor: borderColor
             }}
           >
-            Last update: {new Date(metadata.lastUpdate).toLocaleString('en-EN')}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div>
+                Last update: {stats.lastUpdate ? new Date(stats.lastUpdate).toLocaleString('en-EN') : 'N/A'}
+              </div>
+              <div className="flex flex-wrap gap-3 text-xs">
+                {/* Stats spécifiques au mode */}
+                {viewMode === 'items' && stats.hasItemsData && itemsStats && (
+                  <>
+                    <span>📊 {itemsStats.playersWithItems} buyers</span>
+                    <span>🏪 {itemsStats.uniqueItems} items bought</span>
+                    <span>📈 {formatScore(itemsStats.averageItemsPerBuyer)} items bought in avg/user</span>
+                  </>
+                )}
+                {viewMode === 'clicks' && clicksStats.totalClicks > 0 && (
+                  <>
+                    <span>🎯 {clicksStats.playersWithClicks} clickers</span>
+                    {clicksStats.topClicker && (
+                      <span>👑 Top: {formatNumber(clicksStats.topClicker.totalClicks)} clicks</span>
+                    )}
+                  </>
+                )}
+                {viewMode === 'score' && (
+                  <>
+                    <span>🏆 {stats.totalPlayers} competitors</span>
+                    {leaderboard[0] && (
+                      <span>👑 Top: {formatScore(leaderboard[0].score)} pts</span>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>
