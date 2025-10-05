@@ -174,61 +174,64 @@ export default function Leaderboard({ }) {
 
         {/* Player Info */}
         <div className="flex-1 min-w-0 overflow-hidden">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-1">
-            <div className="flex items-center gap-1 min-w-0 flex-1">
-              <p className="text-xs sm:text-sm md:text-base font-semibold truncate flex-shrink" style={{ color: textColor, margin: 0 }}>
-                {(() => {
-                  const displayName = player.twitter?.displayName || 'Anonymous User';
-                  // Réserver de l'espace pour le badge "You" si nécessaire
-                  const reservedSpace = isCurrentUser ? 35 : 0; // ~35px pour le badge "You"
-                  let maxLength;
-                  if (window.innerWidth < 640) { // mobile
-                    maxLength = Math.max(8, 15 - (reservedSpace / 8)); // Ajuster selon l'espace réservé
-                  } else if (window.innerWidth < 768) { // sm
-                    maxLength = Math.max(10, 18 - (reservedSpace / 10));
-                  } else if (window.innerWidth < 1024) { // md
-                    maxLength = Math.max(12, 22 - (reservedSpace / 12));
-                  } else { // lg+
-                    maxLength = Math.max(15, 25 - (reservedSpace / 15));
-                  }
-                  return displayName.length > maxLength ?
-                    `${displayName.slice(0, maxLength)}...` :
-                    displayName;
-                })()}
-              </p>
-              {isCurrentUser && (
-                <span className="flex-shrink-0 text-xs font-normal px-1 py-0.5 rounded-full whitespace-nowrap" style={{
-                  background: isNight ? '#4f46e5' : '#4f46e5',
-                  color: 'white'
-                }}>
-                  You
-                </span>
-              )}
-            </div>
-            {player.twitter?.username && (
-              <div className="min-w-0 flex-shrink-0">
-                <span className="text-xs truncate block sm:inline whitespace-nowrap" style={{ color: subTextColor }}>
-                  @{(() => {
-                    const username = player.twitter.username;
-                    // Longueur adaptative pour le username selon la taille d'écran
-                    let maxUsernameLength;
-                    if (window.innerWidth < 640) { // mobile
-                      maxUsernameLength = 10;
-                    } else if (window.innerWidth < 768) { // sm
-                      maxUsernameLength = 12;
-                    } else if (window.innerWidth < 1024) { // md
-                      maxUsernameLength = 15;
-                    } else { // lg+
-                      maxUsernameLength = 18;
-                    }
-                    return username.length > maxUsernameLength ?
-                      `${username.slice(0, maxUsernameLength)}...` :
-                      username;
-                  })()}
-                </span>
-              </div>
+          {/* Display Name avec badge "You" */}
+          <div className="flex items-center gap-1 min-w-0">
+            <p className="text-xs sm:text-sm md:text-base font-semibold truncate flex-shrink" style={{ color: textColor, margin: 0 }}>
+              {(() => {
+                const displayName = player.twitter?.displayName || 'Anonymous User';
+                // Réserver de l'espace pour le badge "You" si nécessaire
+                const reservedSpace = isCurrentUser ? 35 : 0; // ~35px pour le badge "You"
+                let maxLength;
+                if (window.innerWidth < 640) { // mobile
+                  maxLength = Math.max(8, 15 - (reservedSpace / 8)); // Ajuster selon l'espace réservé
+                } else if (window.innerWidth < 768) { // sm
+                  maxLength = Math.max(10, 18 - (reservedSpace / 10));
+                } else if (window.innerWidth < 1024) { // md
+                  maxLength = Math.max(12, 22 - (reservedSpace / 12));
+                } else { // lg+
+                  maxLength = Math.max(15, 25 - (reservedSpace / 15));
+                }
+                return displayName.length > maxLength ?
+                  `${displayName.slice(0, maxLength)}...` :
+                  displayName;
+              })()}
+            </p>
+            {isCurrentUser && (
+              <span className="flex-shrink-0 text-xs font-normal px-1 py-0.5 rounded-full whitespace-nowrap" style={{
+                background: isNight ? '#4f46e5' : '#4f46e5',
+                color: 'white'
+              }}>
+                You
+              </span>
             )}
           </div>
+
+          {/* Username toujours en dessous */}
+          {player.twitter?.username && (
+            <div className="min-w-0 mt-0.5">
+              <span className="text-xs truncate block" style={{ color: subTextColor }}>
+                @{(() => {
+                  const username = player.twitter.username;
+                  // Longueur adaptative pour le username selon la taille d'écran
+                  let maxUsernameLength;
+                  if (window.innerWidth < 640) { // mobile
+                    maxUsernameLength = 10;
+                  } else if (window.innerWidth < 768) { // sm
+                    maxUsernameLength = 12;
+                  } else if (window.innerWidth < 1024) { // md
+                    maxUsernameLength = 15;
+                  } else { // lg+
+                    maxUsernameLength = 18;
+                  }
+                  return username.length > maxUsernameLength ?
+                    `${username.slice(0, maxUsernameLength)}...` :
+                    username;
+                })()}
+              </span>
+            </div>
+          )}
+
+          {/* Wallet Address */}
           <p className="text-xs truncate mt-0.5" style={{ color: subTextColor, margin: 0 }}>
             {player.walletAddress.slice(0, 5)}...{player.walletAddress.slice(-4)}
           </p>

@@ -278,9 +278,9 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
       // 0. Vérification de l'état de la blockchain avant de commencer
       if (!canPlay) {
         if (healthStatus?.status === 'down') {
-          throw new Error('Blockchain is currently down. Please try again later.');
+          setErrorStartGame('Blockchain is currently down. Please try again later.');
         } else if (healthStatus?.status === 'degraded') {
-          throw new Error('Blockchain performance is degraded. Game may not work optimally.');
+          setErrorStartGame('Blockchain performance is degraded. Game may not work optimally.');
         }
       }
 
