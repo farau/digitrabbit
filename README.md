@@ -1,36 +1,83 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
-## Getting Started
+# Digit Rabbits
 
-First, run the development server:
+This repository contains the Digit Rabbits website — a Next.js application showcasing the Digit Rabbits project. The site provides an interactive front-end for the collection, including a game built on MegaETH network, a shop, a profile section, a leaderboard and a wallet integration powered by Privy.
+
+## What you'll find here
+
+- A modern Next.js 15 app using the App Router (`app/`).
+- Interactive 3D and visual components under `src/app/components/` (Three.js + react-three-fiber).
+- Wallet and authentication integrations (`@privy-io`, `wagmi`, `ethers`, `viem`).
+- API routes for assets, memes, leaderboard, and wallet validation in `src/app/api/`.
+- Utilities and libs for blockchain interactions in `src/lib` and `src/utils`.
+
+## Features
+
+- Home / Landing page with animated visuals and effects.
+- Profile pages showing your avatar and blockchain statistics.
+- An addictive clicker game to showcase speed of the MegaETH network.
+- Shop for customizing your Digital rabbit (images & assets under `public/img/shop`).
+- Leaderboard and community features backed by on-chain data and The Graph.
+- Auth and wallet-based flows for claiming and interacting with the shop and the game.
+
+## Development
+
+Requirements:
+
+- Node.js (recommended 18+)
+- pnpm, npm or yarn
+
+Install dependencies and run locally:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Or with npm:
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+```bash
+npm install
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open http://localhost:3000 to view the site.
 
-## Learn More
+Important NPM scripts (from `package.json`):
 
-To learn more about Next.js, take a look at the following resources:
+- `dev` - development server (uses Turbopack)
+- `build` - production build
+- `start` - start built app
+- `lint` - run ESLint
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Environment
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+This app uses environment variables stored in `.env.local`. A sample file is provided as `.env.local.example` in the project root. It contains the variable names used by the application; copy it and fill values for your environment:
 
-## Deploy on Vercel
+```bash
+cp .env.local.example .env.local
+# then edit .env.local and fill in values
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Example variables used in the project include:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `NEXT_PUBLIC_PRIVY_APP_ID`, `NEXT_PUBLIC_PRIVY_CLIENT_ID` - Privy auth config
+- `PRIVY_APP_SECRET` - Privy secret (server-only)
+- `NEXT_PUBLIC_DIGIT_RABBITS_ADDRESS` - contract address for on-chain data
+- `GRAPHQL_ENDPOINT` - The Graph endpoint for indexing/queries
+- Sentry and other monitoring keys
+
+Do not commit secrets. Keep `.env.local` out of version control.
+
+## Project Structure (high level)
+
+- `src/app` - Next.js app routes and components
+- `src/app/components` - UI components (game, shop, profile, etc.)
+- `src/app/api` - API routes used by the front-end
+- `src/lib` - blockchain and backend helpers
+- `public` - static assets, 3D models and images
+
+
+## License
+
+This repository does not include a license file. 
