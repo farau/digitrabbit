@@ -10,6 +10,7 @@ import { XLogo } from '@/utils/constants'
 import React from 'react'
 import Wrapper from './Wrapper'
 import RabbitImage from './RabbitImage'
+import Image from 'next/image'
 import TransactionStack from './TransactionStack'
 import BlockchainHealthIndicator from './BlockchainHealthIndicator'
 import { useTheme, useGame } from '@/context'
@@ -201,6 +202,9 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
   const [timer, setTimer] = useState(60)
   const [showTwitterShare, setShowTwitterShare] = useState(false)
   const [finalScore, setFinalScore] = useState(0)
+  const [isPaused, setIsPaused] = useState(false)
+  const [isCheckingPause, setIsCheckingPause] = useState(true)
+  const [seasonId, setSeasonId] = useState(null)
 
   // Hook pour la vérification de la blockchain
   const {
@@ -221,6 +225,52 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
 
   const { embeddedWallet, isValidating, validationError } = useGame();
   const { walletClient } = useWalletClient(embeddedWallet)
+
+  // Vérifier l'état paused du contrat et la saison
+  useEffect(() => {
+    const checkPausedState = async () => {
+      if (!walletClient) {
+        setIsCheckingPause(false)
+        return
+      }
+
+      try {
+        setIsCheckingPause(true)
+        const paused = await walletClient.readContract({
+          address: DIGIT_RABBITS_ADDRESS,
+          abi: DIGIT_RABBITS_ABI,
+          functionName: 'isPaused',
+        })
+        setIsPaused(paused)
+      } catch (err) {
+        console.error('Error checking paused state:', err)
+        Sentry.captureException(err, {
+          tags: {
+            action: 'check_paused_state',
+            component: 'Game'
+          }
+        })
+      } finally {
+        setIsCheckingPause(false)
+      }
+    }
+
+    checkPausedState()
+
+    async function fetchSeason() {
+      if (!walletClient) return
+      console.log("📦 Fetching season ID...")
+      const season = await walletClient.readContract({
+        address: DIGIT_RABBITS_ADDRESS,
+        abi: DIGIT_RABBITS_ABI,
+        functionName: 'currentSeasonId',
+      })
+      console.log("✅ Season ID fetched:", season)
+      setSeasonId(Number(season))
+    }
+    fetchSeason()
+  }, [walletClient, refreshCounter, seasonId])
+
 
   // Gestion de l'effet 3D
   useEffect(() => {
@@ -601,6 +651,66 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
             Please log in your <XLogo size={16} className={isNight ? 'text-white' : 'text-black'} /> account to enjoy the benefits of MegaETH in our game.
           </p>
           <WalletButton />
+        </div>
+      </Wrapper>
+    )
+  }
+
+  // Afficher l'état de pause du contrat
+  if (isPaused) {
+    return (
+      <Wrapper>
+        <div className="flex flex-col items-center justify-center p-8 min-h-[60vh]">
+          <div
+            style={{
+              background: cardBg,
+              padding: '20px',
+              borderRadius: '16px',
+              border: `2px solid ${borderColor}`,
+              boxShadow,
+              textAlign: 'center',
+              maxWidth: '800px',
+            }}
+          >
+            <Image
+              src="/img/season-ended-rabbit.webp"
+              alt="Maintenance"
+              width={500}
+              height={500}
+              className="mx-auto object-contain mb-4"
+              onError={(e) => {
+                e.target.style.display = 'none'
+                e.target.nextElementSibling.style.display = 'block'
+              }}
+            />
+
+            <h2
+              style={{
+                color: textColor,
+                fontSize: '24px',
+                fontWeight: 'bold',
+                marginBottom: '16px'
+              }}
+            >
+              Season {seasonId - 1} is over
+            </h2>
+
+            <p style={{ color: textColor, opacity: 0.8, marginBottom: '24px' }}>
+              See you soon on mainnet for another great adventure !
+            </p>
+
+            <button
+              className="px-6 py-3 rounded-lg font-medium transition-all hover:scale-105"
+              style={{
+                background: cardBg,
+                color: textColor,
+                border: `2px solid ${borderColor}`,
+                boxShadow
+              }}
+            >
+              But you can continue to click here for fun because you are a rabbit degen.
+            </button>
+          </div>
         </div>
       </Wrapper>
     )
