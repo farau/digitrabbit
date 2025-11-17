@@ -1,9 +1,24 @@
 import { createPublicClient, http } from "viem"
 import { megaethTestnet, mainnet, berachain } from "viem/chains"
+// Configuration customisée du Megaeth Testnet avec une URL RPC spécifique
+const customMegaethTestnet = {
+  ...megaethTestnet,
+  id: 6343, // Viem utilise 'id' plutôt que 'chainId'
+  chainId: 6343, // Garder aussi chainId pour compatibilité
+  name: 'MegaETH Testnet v2', // Optionnel mais recommandé
+  rpcUrls: {
+    default: {
+      http: ['https://timothy.megaeth.com/rpc'],
+    },
+    public: {
+      http: ['https://timothy.megaeth.com/rpc'],
+    },
+  },
+};
 
 export const publicClient = createPublicClient({
-  chain: megaethTestnet,
-  transport: http(), // Utilise l’URL par défaut ou ajoute une RPC custom ici
+  chain: customMegaethTestnet,
+  transport: http(),
 })
 
 export const publicClientEth = createPublicClient({
@@ -294,17 +309,22 @@ export const DIGIT_RABBITS_ABI = [
   {
     "inputs": [
       {
-        "internalType": "uint8",
-        "name": "slot",
-        "type": "uint8"
+        "internalType": "uint256",
+        "name": "seasonId",
+        "type": "uint256"
       },
       {
-        "internalType": "uint8",
-        "name": "level",
-        "type": "uint8"
+        "internalType": "address",
+        "name": "player",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
       }
     ],
-    "name": "buyItem",
+    "name": "adminRemovePoints",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -394,11 +414,6 @@ export const DIGIT_RABBITS_ABI = [
         "type": "uint256[]"
       },
       {
-        "internalType": "uint8[5][]",
-        "name": "itemsList",
-        "type": "uint8[5][]"
-      },
-      {
         "internalType": "uint256[]",
         "name": "streak",
         "type": "uint256[]"
@@ -415,25 +430,6 @@ export const DIGIT_RABBITS_ABI = [
       }
     ],
     "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint8[5]",
-        "name": "items",
-        "type": "uint8[5]"
-      }
-    ],
-    "name": "getBoostPercent",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "pure",
     "type": "function"
   },
   {
@@ -462,18 +458,8 @@ export const DIGIT_RABBITS_ABI = [
         "type": "uint256"
       },
       {
-        "internalType": "uint8[5]",
-        "name": "items",
-        "type": "uint8[5]"
-      },
-      {
         "internalType": "uint256",
         "name": "sessionEndsAt",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "boostPercent",
         "type": "uint256"
       },
       {
@@ -526,18 +512,8 @@ export const DIGIT_RABBITS_ABI = [
         "type": "uint256"
       },
       {
-        "internalType": "uint8[5]",
-        "name": "items",
-        "type": "uint8[5]"
-      },
-      {
         "internalType": "uint256",
         "name": "sessionEndsAt",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "boostPercent",
         "type": "uint256"
       },
       {

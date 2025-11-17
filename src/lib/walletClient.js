@@ -2,6 +2,22 @@
 import { createWalletClient, custom, publicActions } from 'viem';
 import { megaethTestnet } from 'viem/chains';
 
+// Configuration customisée du Megaeth Testnet avec une URL RPC spécifique
+const customMegaethTestnet = {
+  ...megaethTestnet,
+  id: 6343, // Viem utilise 'id' plutôt que 'chainId'
+  chainId: 6343, // Garder aussi chainId pour compatibilité
+  name: 'MegaETH Testnet v2', // Optionnel mais recommandé
+  rpcUrls: {
+    default: {
+      http: ['https://timothy.megaeth.com/rpc'],
+    },
+    public: {
+      http: ['https://timothy.megaeth.com/rpc'],
+    },
+  },
+};
+
 let client = null;
 
 export const initWalletClient = async (embeddedWallet) => {
@@ -14,7 +30,7 @@ export const initWalletClient = async (embeddedWallet) => {
   client = createWalletClient({
     //@ts-ignore
     account: embeddedWallet.address,
-    chain: megaethTestnet,
+    chain: customMegaethTestnet,
     transport: custom(provider, { retryCount: 1 }), //nb de retry quand une tx fail
   }).extend(publicActions);
 

@@ -2,6 +2,7 @@
 
 import { appId, clientId } from '@/config';
 import { megaethTestnet } from 'viem/chains';
+
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 import { ThemeProvider as StyledThemeProvider } from 'styled-components';
@@ -13,6 +14,22 @@ import { wagmiConfig } from '@/wagmi-config';
 import { useWallets, usePrivy, getEmbeddedConnectedWallet } from '@privy-io/react-auth';
 
 if (!appId) throw new Error('App ID is not defined');
+
+// Configuration customisée du Megaeth Testnet avec une URL RPC spécifique
+const customMegaethTestnet = {
+  ...megaethTestnet,
+  id: 6343, // Viem utilise 'id' plutôt que 'chainId'
+  chainId: 6343, // Garder aussi chainId pour compatibilité
+  name: 'MegaETH Testnet v2', // Optionnel mais recommandé
+  rpcUrls: {
+    default: {
+      http: ['https://timothy.megaeth.com/rpc'],
+    },
+    public: {
+      http: ['https://timothy.megaeth.com/rpc'],
+    },
+  },
+};
 
 const ThemeContext = createContext();
 export const useTheme = () => useContext(ThemeContext);
@@ -208,8 +225,8 @@ export function ContextProvider({ children }) {
           config={
             {
               // Create embedded wallets for users who don't have a wallet
-              defaultChain: megaethTestnet, // Use the first network as default
-              supportedChains: [megaethTestnet],
+              defaultChain: customMegaethTestnet, // Use the first network as default
+              supportedChains: [customMegaethTestnet],
               embeddedWallets: {
                 ethereum: {
                   createOnLogin: 'users-without-wallets', // Create embedded wallets for all users

@@ -1,12 +1,11 @@
 'use client';
 
 import Image from 'next/image';
-import { Trophy, RotateCcw, Users, Calendar, ChevronLeft, ChevronRight, Zap, Target, Flame, ShoppingBag, Gift } from 'lucide-react';
+import { Trophy, RotateCcw, Users, Calendar, ChevronLeft, ChevronRight, Zap, Target, Flame } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useLeaderboard } from '../hooks/useLeaderboard';
 import { useTheme, useGame } from '@/context';
 import Wrapper from '@/app/components/Wrapper';
-
 
 export default function Leaderboard({ }) {
   const {
@@ -17,15 +16,13 @@ export default function Leaderboard({ }) {
     refresh,
     retry,
     getUserData,
-    getTopItemBuyers,
-    getItemsStats,
     stats,
     canRetry
   } = useLeaderboard();
 
   const { themeMode } = useTheme();
   const [currentPage, setCurrentPage] = useState(1);
-  const [viewMode, setViewMode] = useState('score'); // 'score', 'items', 'clicks'
+  const [viewMode, setViewMode] = useState('score');
   const [initialLoadTimeout, setInitialLoadTimeout] = useState(false);
   const itemsPerPage = 10;
 
@@ -38,16 +35,27 @@ export default function Leaderboard({ }) {
 
   const { embeddedWallet } = useGame();
 
-  // Timeout pour le chargement initial (2 minutes)
+  // ===== FIX: Timeout pour le chargement initial avec condition améliorée =====
   useEffect(() => {
+    // Si les données sont chargées (même vides), ne pas activer le timeout
+    if (!loading && stats.hasData) {
+      setInitialLoadTimeout(false);
+      return;
+    }
+
+    // Si erreur, ne pas attendre le timeout
+    if (error) {
+      setInitialLoadTimeout(false);
+      return;
+    }
+
+    // Sinon, mettre un timeout de 2 minutes
     if (!loading && !stats.hasData && !error) {
       const timeout = setTimeout(() => {
         setInitialLoadTimeout(true);
       }, 120000); // 2 minutes
 
       return () => clearTimeout(timeout);
-    } else if (stats.hasData || error) {
-      setInitialLoadTimeout(false);
     }
   }, [loading, stats.hasData, error]);
 
@@ -62,11 +70,10 @@ export default function Leaderboard({ }) {
     return new Intl.NumberFormat('en-EN').format(number);
   };
 
-  // Fonction pour obtenir le top des joueurs par total de clics
-  const getTopClickPlayers = (limit = null) => {
+  const getTopStreakPlayers = (limit = null) => {
     return [...leaderboard]
-      .filter(player => player.totalClicks && player.totalClicks > 0)
-      .sort((a, b) => (b.totalClicks || 0) - (a.totalClicks || 0))
+      .filter(player => player.streak && player.streak > 0)
+      .sort((a, b) => (b.streak || 0) - (a.streak || 0))
       .map((player, index) => ({
         ...player,
         rank: index + 1
@@ -74,11 +81,10 @@ export default function Leaderboard({ }) {
       .slice(0, limit || leaderboard.length);
   };
 
-  // Fonction améliorée pour obtenir le top des acheteurs d'items avec recalcul du rang
-  const getTopItemBuyersWithRank = (limit = null) => {
+  const getTopClickPlayers = (limit = null) => {
     return [...leaderboard]
-      .filter(player => player.itemsBought && player.itemsBought.count > 0)
-      .sort((a, b) => (b.itemsBought?.count || 0) - (a.itemsBought?.count || 0))
+      .filter(player => player.totalClicks && player.totalClicks > 0)
+      .sort((a, b) => (b.totalClicks || 0) - (a.totalClicks || 0))
       .map((player, index) => ({
         ...player,
         rank: index + 1
@@ -179,16 +185,15 @@ export default function Leaderboard({ }) {
             <p className="text-xs sm:text-sm md:text-base font-semibold truncate flex-shrink" style={{ color: textColor, margin: 0 }}>
               {(() => {
                 const displayName = player.twitter?.displayName || 'Anonymous User';
-                // Réserver de l'espace pour le badge "You" si nécessaire
-                const reservedSpace = isCurrentUser ? 35 : 0; // ~35px pour le badge "You"
+                const reservedSpace = isCurrentUser ? 35 : 0;
                 let maxLength;
-                if (window.innerWidth < 640) { // mobile
-                  maxLength = Math.max(8, 15 - (reservedSpace / 8)); // Ajuster selon l'espace réservé
-                } else if (window.innerWidth < 768) { // sm
+                if (window.innerWidth < 640) {
+                  maxLength = Math.max(8, 15 - (reservedSpace / 8));
+                } else if (window.innerWidth < 768) {
                   maxLength = Math.max(10, 18 - (reservedSpace / 10));
-                } else if (window.innerWidth < 1024) { // md
+                } else if (window.innerWidth < 1024) {
                   maxLength = Math.max(12, 22 - (reservedSpace / 12));
-                } else { // lg+
+                } else {
                   maxLength = Math.max(15, 25 - (reservedSpace / 15));
                 }
                 return displayName.length > maxLength ?
@@ -206,21 +211,20 @@ export default function Leaderboard({ }) {
             )}
           </div>
 
-          {/* Username toujours en dessous */}
+          {/* Username */}
           {player.twitter?.username && (
             <div className="min-w-0 mt-0.5">
               <span className="text-xs truncate block" style={{ color: subTextColor }}>
                 @{(() => {
                   const username = player.twitter.username;
-                  // Longueur adaptative pour le username selon la taille d'écran
                   let maxUsernameLength;
-                  if (window.innerWidth < 640) { // mobile
+                  if (window.innerWidth < 640) {
                     maxUsernameLength = 10;
-                  } else if (window.innerWidth < 768) { // sm
+                  } else if (window.innerWidth < 768) {
                     maxUsernameLength = 12;
-                  } else if (window.innerWidth < 1024) { // md
+                  } else if (window.innerWidth < 1024) {
                     maxUsernameLength = 15;
-                  } else { // lg+
+                  } else {
                     maxUsernameLength = 18;
                   }
                   return username.length > maxUsernameLength ?
@@ -247,11 +251,11 @@ export default function Leaderboard({ }) {
                   pts
                 </span>
               </>
-            ) : viewMode === 'items' ? (
+            ) : viewMode === 'streak' ? (
               <>
-                {formatNumber(player.itemsBought?.count || 0)}
+                {formatNumber(player.streak || 0)}
                 <span className="text-xs sm:text-sm font-normal ml-1" style={{ color: subTextColor }}>
-                  items
+                  🔥
                 </span>
               </>
             ) : (
@@ -265,42 +269,28 @@ export default function Leaderboard({ }) {
           </div>
           <div className="text-xs sm:text-sm mt-0.5 sm:mt-1" style={{ color: subTextColor }}>
             <div className="flex flex-wrap gap-1 sm:gap-2 justify-end">
-              {/* Total clicks (sauf si c'est le mode clicks) */}
               {viewMode !== 'clicks' && (
                 <span className="flex items-center gap-1 whitespace-nowrap">
                   <Target className="w-3 h-3 text-blue-500" />
                   {formatNumber(player.totalClicks || 0)}
                 </span>
               )}
-              {/* Best clicks si disponible */}
-              {player.bestClicksInGame && (
+              {player.maxClicks && (
                 <span className="flex items-center gap-1 whitespace-nowrap">
                   <Zap className="w-3 h-3 text-yellow-500" />
-                  {formatNumber(player.bestClicksInGame)}
+                  {formatNumber(player.maxClicks)}
                 </span>
               )}
-              {/* Items bought (sauf si c'est le mode items) */}
-              {viewMode !== 'items' && player.itemsBought?.count > 0 && (
+              {viewMode !== 'streak' && (
                 <span className="flex items-center gap-1 whitespace-nowrap">
-                  <ShoppingBag className="w-3 h-3 text-green-500" />
-                  {formatNumber(player.itemsBought.count)}
+                  <Flame className="w-3 h-3 text-orange-500" />
+                  {player.streak || 0}
                 </span>
               )}
             </div>
-            {/* Informations supplémentaires sur une nouvelle ligne */}
-            {(player.averageClicks || player.longestStreak || player.totalPointsClaimed) && (
-              <div className="flex flex-wrap gap-1 sm:gap-2 justify-end mt-1 text-xs" style={{ color: subTextColor }}>
-                {/* Streak */}
-                <span className="flex items-center gap-1 whitespace-nowrap">
-                  <Flame className="w-3 h-3 text-orange-500" />
-                  {player.currentStreak || 0}
-                </span>
-                {player.totalPointsClaimed && (
-                  <span className="flex items-center gap-1 whitespace-nowrap">
-                    <Gift className="w-3 h-3 text-violet-500" />
-                    {formatNumber(player.totalPointsClaimed)}
-                  </span>
-                )}
+            {player.hasClaimedPoints && (
+              <div className="flex justify-end text-xs mt-1" style={{ color: '#a78bfa' }}>
+                ✓ Points claimed
               </div>
             )}
           </div>
@@ -309,7 +299,8 @@ export default function Leaderboard({ }) {
     </div>
   );
 
-  if (loading || (!stats.hasData && !error && !initialLoadTimeout)) {
+  // ===== FIX: Améliorer la condition de chargement =====
+  if (loading) {
     return (
       <Wrapper>
         <div
@@ -325,13 +316,11 @@ export default function Leaderboard({ }) {
           <div className="flex flex-col items-center gap-4">
             <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-2 border-transparent border-t-blue-500"></div>
             <p className="text-sm sm:text-base" style={{ color: textColor, margin: 0 }}>
-              {loading ? 'Loading leaderboard...' : 'Connecting to leaderboard...'}
+              Loading METH leaderboard...
             </p>
-            {!loading && !stats.hasData && !error && (
-              <p className="text-xs" style={{ color: subTextColor, margin: 0 }}>
-                This may take a few moments...
-              </p>
-            )}
+            <p className="text-xs" style={{ color: subTextColor, margin: 0 }}>
+              This may take a few moments...
+            </p>
           </div>
         </div>
       </Wrapper>
@@ -427,9 +416,10 @@ export default function Leaderboard({ }) {
     );
   }
 
-  if (!stats.hasData && (error || initialLoadTimeout)) {
+  // ===== FIX: Condition améliorée pour leaderboard vide =====
+  if (!stats.hasData) {
     const isTimeout = initialLoadTimeout && !error;
-    const displayError = error || (isTimeout ? 'Connection timeout - Unable to load leaderboard data after 2 minutes' : 'No data available');
+    const displayError = error || (isTimeout ? 'Connection timeout - Unable to load leaderboard data after 2 minutes' : 'No players have played yet');
 
     return (
       <Wrapper>
@@ -445,13 +435,13 @@ export default function Leaderboard({ }) {
         >
           <div className="flex flex-col items-center gap-4">
             <div className="text-4xl mb-2">
-              {isTimeout ? '⏰' : error ? '⚠️' : '📭'}
+              {isTimeout ? '⏰' : '📭'}
             </div>
             <p className="text-sm sm:text-base font-medium" style={{
               color: (error && !isTimeout) ? (isNight ? '#ef4444' : '#dc2626') : textColor,
               margin: 0
             }}>
-              {isTimeout ? 'Connection Timeout' : error ? 'Error Loading Data' : 'No Data Available'}
+              {isTimeout ? 'Connection Timeout' : 'Leaderboard Empty'}
             </p>
             <p className="text-xs sm:text-sm text-center max-w-md" style={{ color: subTextColor, margin: 0 }}>
               {displayError}
@@ -536,45 +526,41 @@ export default function Leaderboard({ }) {
     );
   }
 
-  // Find current user in the leaderboard using the hook helper
+  // Find current user in the leaderboard
   const currentUser = embeddedWallet?.address ? getUserData(embeddedWallet.address) : null;
 
   // Get data based on view mode
   let displayData = leaderboard;
   let currentUserForView = currentUser;
 
-  if (viewMode === 'items') {
-    displayData = getTopItemBuyersWithRank(leaderboard.length);
-    // Recalculer le rang du current user dans le classement items
+  if (viewMode === 'streak') {
+    displayData = getTopStreakPlayers(leaderboard.length);
     if (currentUser && embeddedWallet?.address) {
-      const itemsLeaderboard = getTopItemBuyersWithRank(leaderboard.length);
-      const userInItemsLeaderboard = itemsLeaderboard.find(p =>
+      const streakLeaderboard = getTopStreakPlayers(leaderboard.length);
+      const userInStreakLeaderboard = streakLeaderboard.find(p =>
         p.walletAddress.toLowerCase() === embeddedWallet.address.toLowerCase()
       );
-      currentUserForView = userInItemsLeaderboard || null;
+      currentUserForView = userInStreakLeaderboard || null;
 
-      // Si l'utilisateur n'est pas trouvé dans le classement items mais a des items
-      if (!currentUserForView && currentUser.itemsBought?.count > 0) {
-        // Calculer le rang parmi tous les acheteurs d'items
-        const allItemBuyers = [...leaderboard]
-          .filter(player => player.itemsBought && player.itemsBought.count > 0)
-          .sort((a, b) => (b.itemsBought?.count || 0) - (a.itemsBought?.count || 0));
+      if (!currentUserForView && currentUser.streak > 0) {
+        const allPlayers = [...leaderboard]
+          .filter(player => player.streak && player.streak > 0)
+          .sort((a, b) => (b.streak || 0) - (a.streak || 0));
 
-        const userRankInItems = allItemBuyers.findIndex(p =>
+        const userRankInStreak = allPlayers.findIndex(p =>
           p.walletAddress.toLowerCase() === embeddedWallet.address.toLowerCase()
         ) + 1;
 
-        if (userRankInItems > 0) {
+        if (userRankInStreak > 0) {
           currentUserForView = {
             ...currentUser,
-            rank: userRankInItems
+            rank: userRankInStreak
           };
         }
       }
     }
   } else if (viewMode === 'clicks') {
     displayData = getTopClickPlayers(leaderboard.length);
-    // Recalculer le rang du current user dans le classement clicks
     if (currentUser && embeddedWallet?.address) {
       const clicksLeaderboard = getTopClickPlayers(leaderboard.length);
       const userInClicksLeaderboard = clicksLeaderboard.find(p =>
@@ -582,9 +568,7 @@ export default function Leaderboard({ }) {
       );
       currentUserForView = userInClicksLeaderboard || null;
 
-      // Si l'utilisateur n'est pas trouvé dans le classement clicks mais a des clicks
       if (!currentUserForView && currentUser.totalClicks > 0) {
-        // Calculer le rang parmi tous les clickers
         const allClickers = [...leaderboard]
           .filter(player => player.totalClicks && player.totalClicks > 0)
           .sort((a, b) => (b.totalClicks || 0) - (a.totalClicks || 0));
@@ -602,7 +586,6 @@ export default function Leaderboard({ }) {
       }
     }
   } else if (viewMode === 'score') {
-    // S'assurer que currentUserForView a le bon rang même en mode score
     if (currentUser && embeddedWallet?.address) {
       const userInScoreLeaderboard = leaderboard.find(p =>
         p.walletAddress.toLowerCase() === embeddedWallet.address.toLowerCase()
@@ -611,7 +594,7 @@ export default function Leaderboard({ }) {
     }
   }
 
-  // Filter out current user from top players if they're in the top 10
+  // Filter out current user from top players
   const topPlayersWithoutCurrentUser = currentUserForView ?
     displayData.filter(player => player.walletAddress.toLowerCase() !== embeddedWallet?.address?.toLowerCase()) :
     displayData;
@@ -646,15 +629,19 @@ export default function Leaderboard({ }) {
     setCurrentPage(1);
   };
 
-  // Get items stats for display
-  const itemsStats = getItemsStats();
+  // Statistiques pour GAME METH
+  const streakStats = {
+    highestStreak: Math.max(...leaderboard.map(p => p.streak || 0), 0),
+    avgStreak: leaderboard.length > 0 ?
+      leaderboard.reduce((sum, p) => sum + (p.streak || 0), 0) / leaderboard.length : 0,
+    playersWithStreak: leaderboard.filter(player => (player.streak || 0) > 0).length
+  };
 
-  // Get clicks stats
   const clicksStats = {
-    totalClicks: leaderboard.reduce((sum, player) => sum + (parseInt(player.totalClicks) || 0), 0),
+    totalClicks: leaderboard.reduce((sum, p) => sum + (parseInt(p.totalClicks) || 0), 0),
     playersWithClicks: leaderboard.filter(player => parseInt(player.totalClicks) > 0).length,
     averageClicks: leaderboard.length > 0 ?
-      leaderboard.reduce((sum, player) => sum + (parseInt(player.totalClicks) || 0), 0) / leaderboard.length : 0,
+      leaderboard.reduce((sum, p) => sum + (parseInt(p.totalClicks) || 0), 0) / leaderboard.length : 0,
     topClicker: displayData[0] || null
   };
 
@@ -680,7 +667,7 @@ export default function Leaderboard({ }) {
               margin: 0,
               color: textColor
             }} className="sm:text-2xl">
-              Leaderboard
+              METH Leaderboard
             </h2>
           </div>
 
@@ -688,18 +675,12 @@ export default function Leaderboard({ }) {
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-xs sm:text-sm" style={{ color: subTextColor }}>
               <div className="flex items-center gap-1 sm:gap-2">
                 <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span>Season {metadata.seasonId || '0'}</span>
+                <span>Season METH</span>
               </div>
               <div className="flex items-center gap-1 sm:gap-2">
                 <Users className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span>{stats.totalPlayers} players</span>
               </div>
-              {stats.hasItemsData && itemsStats && (
-                <div className="flex items-center gap-1 sm:gap-2">
-                  <ShoppingBag className="w-3 h-3 sm:w-4 sm:h-4" />
-                  <span>{formatNumber(itemsStats.totalItems)} items bought</span>
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -745,6 +726,29 @@ export default function Leaderboard({ }) {
               <span>Score</span>
             </button>
             <button
+              onClick={() => switchViewMode('streak')}
+              title="Sort by current streak"
+              style={{
+                background: viewMode === 'streak' ? (isNight ? '#4f46e5' : '#4f46e5') : 'transparent',
+                color: viewMode === 'streak' ? 'white' : textColor,
+                border: `1px solid ${viewMode === 'streak' ? (isNight ? '#4f46e5' : '#4f46e5') : borderColor}`,
+                padding: '4px 8px',
+                borderRadius: '6px',
+                fontSize: '11px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '3px',
+                transition: 'all 0.2s ease',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <Flame className="w-3 h-3" />
+              <span>Streak</span>
+            </button>
+            <button
               onClick={() => switchViewMode('clicks')}
               title="Sort by total clicks made"
               style={{
@@ -767,35 +771,10 @@ export default function Leaderboard({ }) {
               <Target className="w-3 h-3" />
               <span>Clicks</span>
             </button>
-            {stats.hasItemsData && (
-              <button
-                onClick={() => switchViewMode('items')}
-                title="Sort by number of items purchased"
-                style={{
-                  background: viewMode === 'items' ? (isNight ? '#4f46e5' : '#4f46e5') : 'transparent',
-                  color: viewMode === 'items' ? 'white' : textColor,
-                  border: `1px solid ${viewMode === 'items' ? (isNight ? '#4f46e5' : '#4f46e5') : borderColor}`,
-                  padding: '4px 8px',
-                  borderRadius: '6px',
-                  fontSize: '11px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '3px',
-                  transition: 'all 0.2s ease',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                <ShoppingBag className="w-3 h-3" />
-                <span>Items</span>
-              </button>
-            )}
           </div>
         </div>
 
-        {/* Légende des icônes */}
+        {/* Légende des icônes - Adaptée pour METH */}
         <div className="mt-2 pt-2 border-t text-xs flex flex-wrap gap-4 justify-center" style={{
           borderColor: borderColor,
           color: subTextColor
@@ -806,21 +785,11 @@ export default function Leaderboard({ }) {
           </div>
           <div className="flex items-center gap-1">
             <Zap className="w-3 h-3 text-yellow-500" />
-            <span>Best in-game clicks</span>
+            <span>Best clicks/session</span>
           </div>
-          {stats.hasItemsData && (
-            <div className="flex items-center gap-1">
-              <ShoppingBag className="w-3 h-3 text-green-500" />
-              <span>Items bought</span>
-            </div>
-          )}
           <div className="flex items-center gap-1">
             <Flame className="w-3 h-3 text-orange-500" />
-            <span>Streak</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Gift className="w-3 h-3 text-violet-500" />
-            <span>Points claimed</span>
+            <span>Current streak</span>
           </div>
         </div>
       </div>
@@ -870,16 +839,22 @@ export default function Leaderboard({ }) {
           }}
         >
           <span>
-            {viewMode === 'score' && 'Top players'}
-            {viewMode === 'clicks' && 'Top clickers'}
-            {viewMode === 'items' && 'Top item buyers'}
+            {viewMode === 'score' && 'Top Scorers'}
+            {viewMode === 'streak' && 'Top Streakers'}
+            {viewMode === 'clicks' && 'Top Clickers'}
           </span>
           <span style={{ color: subTextColor }}>
-            Page {currentPage} of {totalPages}
+            Page {currentPage} of {totalPages || 1}
           </span>
         </div>
         <div className="divide-y" style={{ borderColor: borderColor }}>
-          {currentPagePlayers.map((player) => renderPlayerCard(player, false))}
+          {currentPagePlayers.length > 0 ? (
+            currentPagePlayers.map((player) => renderPlayerCard(player, false))
+          ) : (
+            <div className="p-6 text-center" style={{ color: subTextColor }}>
+              <p>No players found in this category</p>
+            </div>
+          )}
         </div>
 
         {/* Pagination */}
@@ -993,20 +968,20 @@ export default function Leaderboard({ }) {
               <div>
                 Last update: {stats.lastUpdate ? new Date(stats.lastUpdate).toLocaleString('en-EN') : 'N/A'}
               </div>
-              <div className="flex flex-wrap gap-3 text-xs">
-                {/* Stats spécifiques au mode */}
-                {viewMode === 'items' && stats.hasItemsData && itemsStats && (
+              <div className="flex flex-wrap gap-3 text-xs justify-center">
+                {viewMode === 'streak' && (
                   <>
-                    <span>📊 {itemsStats.playersWithItems} buyers</span>
-                    <span>🏪 {itemsStats.uniqueItems} items bought</span>
-                    <span>📈 {formatScore(itemsStats.averageItemsPerBuyer)} items bought in avg/user</span>
+                    <span>🔥 {formatNumber(streakStats.highestStreak)} highest</span>
+                    <span>📈 {formatScore(streakStats.avgStreak)} avg streak</span>
+                    <span>👥 {streakStats.playersWithStreak} streakers</span>
                   </>
                 )}
                 {viewMode === 'clicks' && clicksStats.totalClicks > 0 && (
                   <>
                     <span>🎯 {clicksStats.playersWithClicks} clickers</span>
+                    <span>📊 {formatNumber(clicksStats.averageClicks)} avg clicks</span>
                     {clicksStats.topClicker && (
-                      <span>👑 Top: {formatNumber(clicksStats.topClicker.totalClicks)} clicks</span>
+                      <span>👑 Top: {formatNumber(clicksStats.topClicker.totalClicks)}</span>
                     )}
                   </>
                 )}

@@ -19,6 +19,22 @@ import { useBlockchainHealth } from '../hooks/useBlockchainHealth'
 import * as Sentry from '@sentry/nextjs'
 import WalletButton from './WalletButton'
 
+// Configuration customisée du Megaeth Testnet avec une URL RPC spécifique
+const customMegaethTestnet = {
+  ...megaethTestnet,
+  id: 6343, // Viem utilise 'id' plutôt que 'chainId'
+  chainId: 6343, // Garder aussi chainId pour compatibilité
+  name: 'MegaETH Testnet v2', // Optionnel mais recommandé
+  rpcUrls: {
+    default: {
+      http: ['https://timothy.megaeth.com/rpc'],
+    },
+    public: {
+      http: ['https://timothy.megaeth.com/rpc'],
+    },
+  },
+};
+
 function PlayerData({ refreshCounter, themeMode, seasonId, playerData, embeddedWallet }) {
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
   const [columns, setColumns] = useState(2);
@@ -35,8 +51,8 @@ function PlayerData({ refreshCounter, themeMode, seasonId, playerData, embeddedW
     const handleResize = () => {
       const width = window.innerWidth;
       if (width < 768) setColumns(2);
-      else if (width < 1024) setColumns(4);
-      else setColumns(4);
+      else if (width < 1024) setColumns(3);
+      else setColumns(3);
     };
     handleResize();
     window.addEventListener('resize', handleResize);
@@ -106,7 +122,15 @@ function PlayerData({ refreshCounter, themeMode, seasonId, playerData, embeddedW
           <div style={valueStyle} className="text-base sm:text-sm md:text-xs">{gameClicks}</div>
         </div>
 
-        <div style={baseCardStyle}>
+        <div style={{
+          ...baseCardStyle,
+          gridColumn: columns === 2 ? 'span 2' : 'auto',
+          ...(columns === 2 && {
+            maxWidth: '50%',
+            marginLeft: 'auto',
+            marginRight: 'auto'
+          })
+        }}>
           <div style={labelStyle} className="text-base sm:text-sm md:text-xs">
             {cooldownRemaining > COOLDOWN_SECONDS ? 'Time remaining' : 'Cooldown'}
           </div>
@@ -119,11 +143,6 @@ function PlayerData({ refreshCounter, themeMode, seasonId, playerData, embeddedW
                 ? new Date(cooldownRemaining * 1000).toISOString().substr(11, 8)
                 : 'Ready ✓'}
           </div>
-        </div>
-
-        <div style={baseCardStyle}>
-          <div style={labelStyle} className="text-base sm:text-sm md:text-xs">Boost</div>
-          <div style={valueStyle} className="text-base sm:text-sm md:text-xs">{boost}%</div>
         </div>
       </div>
     </div>
@@ -204,7 +223,6 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
   const [finalScore, setFinalScore] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
   const [isCheckingPause, setIsCheckingPause] = useState(true)
-  const [seasonId, setSeasonId] = useState(null)
 
   // Hook pour la vérification de la blockchain
   const {
@@ -257,19 +275,7 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
 
     checkPausedState()
 
-    async function fetchSeason() {
-      if (!walletClient) return
-      console.log("📦 Fetching season ID...")
-      const season = await walletClient.readContract({
-        address: DIGIT_RABBITS_ADDRESS,
-        abi: DIGIT_RABBITS_ABI,
-        functionName: 'currentSeasonId',
-      })
-      console.log("✅ Season ID fetched:", season)
-      setSeasonId(Number(season))
-    }
-    fetchSeason()
-  }, [walletClient, refreshCounter, seasonId])
+  }, [walletClient, refreshCounter])
 
 
   // Gestion de l'effet 3D
@@ -377,7 +383,8 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
         abi: DIGIT_RABBITS_ABI,
         functionName: 'startGame',
         args: [],
-        chain: megaethTestnet
+        chain: customMegaethTestnet,
+        gas: 30000000n,
       })
 
       if (!result) {
@@ -692,11 +699,11 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
                 marginBottom: '16px'
               }}
             >
-              Season {seasonId - 1} is over
+              Season is paused for maintenance
             </h2>
 
             <p style={{ color: textColor, opacity: 0.8, marginBottom: '24px' }}>
-              See you soon on mainnet for another great adventure !
+              Let us take a short break to hop into some improvements! We appreciate your patience and can’t wait to welcome you back to the game soon.
             </p>
 
             <button

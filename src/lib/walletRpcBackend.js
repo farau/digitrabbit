@@ -7,6 +7,22 @@ import { privateKeyToAccount } from 'viem/accounts'
 let backendWalletClient = null;
 let backendPublicClient = null;
 
+// Configuration customisée du Megaeth Testnet avec une URL RPC spécifique
+const customMegaethTestnet = {
+    ...megaethTestnet,
+    id: 6343, // Viem utilise 'id' plutôt que 'chainId'
+    chainId: 6343, // Garder aussi chainId pour compatibilité
+    name: 'MegaETH Testnet v2', // Optionnel mais recommandé
+    rpcUrls: {
+        default: {
+            http: ['https://timothy.megaeth.com/rpc'],
+        },
+        public: {
+            http: ['https://timothy.megaeth.com/rpc'],
+        },
+    },
+};
+
 // Create account from private key
 function createMegaETHAccount(privateKey) {
     // Remove '0x' prefix if present
@@ -31,14 +47,14 @@ function initializeBackendRpcWallet() {
     // Create wallet client 
     backendWalletClient = createWalletClient({
         account,
-        chain: megaethTestnet,
-        transport: http(megaethTestnet.rpcUrls.default.http[0]),
+        chain: customMegaethTestnet,
+        transport: http(),
     });
 
     // Create separate public client for better performance
     backendPublicClient = createPublicClient({
-        chain: megaethTestnet,
-        transport: http(megaethTestnet.rpcUrls.default.http[0]),
+        chain: customMegaethTestnet,
+        transport: http(),
     });
 
     console.log('Backend wallet initialized for address:', account.address);
@@ -50,7 +66,6 @@ function initializeBackendRpcWallet() {
 function getBackendRpcWallet() {
     return initializeBackendRpcWallet();
 }
-
 
 export {
     initializeBackendRpcWallet,

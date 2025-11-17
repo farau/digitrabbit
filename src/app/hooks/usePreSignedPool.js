@@ -24,13 +24,13 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
             const networkGasPrice = await walletClient.getGasPrice()
             return {
                 gasPrice: networkGasPrice,
-                gasLimit: 300000n
+                gasLimit: 30000000n,
             }
         } catch (error) {
             console.warn('⚠️ Failed to get gas price, using fallback:', error)
             return {
                 gasPrice: 1000000000n, // 1 gwei
-                gasLimit: 50000n
+                gasLimit: 50000000n
             }
         }
     }

@@ -35,8 +35,8 @@ const nextConfig = {
                 ? "'self' https://challenges.cloudflare.com 'unsafe-eval' 'unsafe-inline' 'wasm-unsafe-eval' http://localhost:* https://localhost:*"
                 : "'self' https://challenges.cloudflare.com 'unsafe-eval' 'unsafe-inline' 'wasm-unsafe-eval'",
             connectSrc: isDev
-                ? "'self' https://auth.privy.io wss://relay.walletconnect.com wss://relay.walletconnect.org wss://www.walletlink.org https://*.rpc.privy.systems https://explorer-api.walletconnect.com https://carrot.megaeth.com https://pulse.walletconnect.org https://api.web3modal.org https://*.ingest.sentry.io blob: http://localhost:* https://localhost:* ws://localhost:* wss://localhost:*"
-                : "'self' https://auth.privy.io https://privy.digitrabbits.com wss://relay.walletconnect.com wss://relay.walletconnect.org wss://www.walletlink.org https://*.rpc.privy.systems https://explorer-api.walletconnect.com https://carrot.megaeth.com https://pulse.walletconnect.org https://api.web3modal.org https://*.ingest.sentry.io blob:",
+                ? "'self' https://auth.privy.io wss://relay.walletconnect.com wss://relay.walletconnect.org wss://www.walletlink.org https://*.rpc.privy.systems https://explorer-api.walletconnect.com https://*.megaeth.com https://pulse.walletconnect.org https://api.web3modal.org https://*.ingest.sentry.io blob: http://localhost:* https://localhost:* ws://localhost:* wss://localhost:*"
+                : "'self' https://auth.privy.io https://privy.digitrabbits.com wss://relay.walletconnect.com wss://relay.walletconnect.org wss://www.walletlink.org https://*.rpc.privy.systems https://explorer-api.walletconnect.com https://*.megaeth.com https://pulse.walletconnect.org https://api.web3modal.org https://*.ingest.sentry.io blob:",
             styleSrc: "'self' 'unsafe-inline' https://fonts.googleapis.com",
             fontSrc: "'self' https://fonts.gstatic.com",
             imgSrc: "'self' data: blob: https://pbs.twimg.com https://i.ibb.co https://explorer-api.walletconnect.com"

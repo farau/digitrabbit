@@ -337,7 +337,7 @@ export async function GET(request) {
                 totalTestDuration: totalTestTime,
                 poolSize: transactionPool.length,
                 timestamp: new Date().toISOString(),
-                network: 'megaeth-testnet',
+                network: 'megaeth-testnet-v2',
                 environment: isDevelopment ? 'development' : 'production',
                 cacheStrategy: isDevelopment ? 'memory' : 'cdn'
             }

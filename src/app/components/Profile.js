@@ -1,14 +1,5 @@
 'use client'
 
-import {
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
-  ResponsiveContainer,
-  Tooltip,
-} from 'recharts'
 import { Download, Gift, Loader2, Trophy } from 'lucide-react'
 import Image from 'next/image'
 import { XLogo } from '@/utils/constants'
@@ -21,6 +12,15 @@ import { useWalletClient } from '../hooks/useWalletClient'
 import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS } from '@/utils/constants'
 import WalletButton from './WalletButton'
 import { useBalance } from 'wagmi'
+import {
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+  ResponsiveContainer,
+  Tooltip,
+} from 'recharts'
 
 function XProfileDisplay() {
   const { user } = usePrivy();
@@ -90,58 +90,10 @@ function XProfileDisplay() {
 // Configuration des collections avec leurs images
 const COLLECTIONS_CONFIG = [
   {
-    name: 'badbunnz',
-    displayName: 'BadBunnz',
-    image: '/img/collections/badbunnz.png',
+    name: 'digitrabbits',
+    displayName: 'Digit Rabbits - testnet NFT',
+    image: '/img/collections/digitrabbits.jpg',
   },
-  {
-    name: 'fluffles',
-    displayName: 'The Fluffle',
-    image: '/img/collections/fluffles.jpg',
-  },
-  //
-  {
-    name: 'pudgypenguins',
-    displayName: 'Pudgy Penguins',
-    image: '/img/collections/pudgypenguins.png',
-  },
-  {
-    name: 'milady',
-    displayName: 'Milady',
-    image: '/img/collections/milady.png',
-  },
-  //
-  {
-    name: 'cyberkongz',
-    displayName: 'CyberKongz',
-    image: '/img/collections/cyberkongz.png',
-  },
-  {
-    name: 'chimpers',
-    displayName: 'Chimpers',
-    image: '/img/collections/chimpers.png',
-  },
-  {
-    name: 'sprotogremlins',
-    displayName: 'Sproto Gremlins',
-    image: '/img/collections/sprotogremlins.jpg',
-  },
-  {
-    name: 'steadyteddys',
-    displayName: 'Steady Teddys',
-    image: '/img/collections/steadyteddys.jpg',
-  },
-  //
-  {
-    name: 'megalio',
-    displayName: 'Megalio',
-    image: '/img/collections/megalio.jpg',
-  },
-  {
-    name: 'bullas',
-    displayName: 'The Bullas',
-    image: '/img/collections/bullas.png',
-  }
 ];
 
 function PointsModal({ isOpen, onClose, pointsData, onClaim, isClaiming, isNight }) {
@@ -177,7 +129,7 @@ function PointsModal({ isOpen, onClose, pointsData, onClaim, isClaiming, isNight
         bottom: 0,
         backgroundColor: overlayBg,
         backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)', // Support Safari
+        WebkitBackdropFilter: 'blur(8px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -384,7 +336,6 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
     setClaimSuccess(false);
 
     try {
-      // Utiliser l'endpoint GET mis à jour
       const response = await fetch('/api/users/claim', {
         method: 'GET',
         headers: {
@@ -399,7 +350,6 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
       const data = await response.json();
       setPointsData(data);
 
-      // Ouvrir la modale si des points sont disponibles
       if (data.claimablePoints > 0) {
         setShowModal(true);
       }
@@ -426,7 +376,6 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
         throw new Error('Embedded wallet not found');
       }
 
-      // Utiliser l'endpoint POST mis à jour
       const claimResponse = await fetch('/api/users/claim', {
         method: 'POST',
         headers: {
@@ -527,7 +476,6 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
           {isChecking ? 'Checking...' : 'Check Points'}
         </button>
 
-        {/* Affichage simple quand pas de points */}
         {pointsData && !isChecking && pointsData.claimablePoints === 0 && (
           <div className={`text-sm ${isNight ? 'text-gray-400' : 'text-gray-600'} text-center`}>
             No points to claim
@@ -547,7 +495,6 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
         )}
       </div>
 
-      {/* Modale pour le récapitulatif */}
       <PointsModal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
@@ -566,9 +513,6 @@ export default function Profile({ playerData, setRefreshCounter, isGameStarted }
   const isNight = themeMode === 'dark';
   const textColor = isNight ? '#eee' : '#333'
   const cardBg = isNight ? '#222' : '#f3f3f3'
-  const labelColor = isNight ? '#ccc' : '#333'
-  const tooltipBg = isNight ? '#333' : '#fff'
-  const tooltipColor = isNight ? '#eee' : '#333'
   const borderColor = isNight ? '#444' : '#ddd'
   const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)'
 
@@ -581,8 +525,6 @@ export default function Profile({ playerData, setRefreshCounter, isGameStarted }
   });
 
   const rawStats = {
-    clothes: playerItems.reduce((count, val) => count + (val > 0 ? val : 0), 0),
-    boost: Number(boost),
     totalClicks: Number(totalClicks),
     streak: Number(streak),
     maxClicks: Number(maxClicks)
@@ -590,31 +532,25 @@ export default function Profile({ playerData, setRefreshCounter, isGameStarted }
 
   const blockchainStats = [
     {
-      stat: 'Clothes',
-      value: (rawStats.clothes ?? 0) / 25,
-      real: `${rawStats.clothes ?? 0}/25`
-    },
-    {
-      stat: 'Boost',
-      value: (rawStats.boost ?? 0) / 360,
-      real: `${rawStats.boost ?? 0}%`
-    },
-    {
       stat: 'Total clicks',
       value: Math.min((rawStats.totalClicks ?? 0) / 100000, 1),
       real: `${rawStats.totalClicks ?? 0}`
     },
     {
       stat: 'Streak',
-      value: (rawStats.streak ?? 0) / 50,
+      value: Math.min((rawStats.streak ?? 0) / 40, 1),
       real: `${rawStats.streak ?? 0} days`
+    },
+    {
+      stat: 'Max clicks',
+      value: Math.min((rawStats.maxClicks ?? 0) / 359, 1),
+      real: `${rawStats.maxClicks ?? 0} (${Math.floor(1000 / (rawStats.maxClicks / 60))} ms/click)`
     }
   ];
 
   const renderVerticalLabels = ({ payload, x, y }) => {
     const angle = payload.coordinate?.angle ?? 0
     const label = payload.value
-    const shouldRotate = label === 'Streak' || label === 'Boost'
     const isLeft = angle > 90 && angle < 270
 
     return (
@@ -623,8 +559,7 @@ export default function Profile({ playerData, setRefreshCounter, isGameStarted }
         y={y}
         textAnchor={isLeft ? 'end' : 'start'}
         dominantBaseline="middle"
-        transform={shouldRotate ? `rotate(90 ${x} ${y})` : undefined}
-        style={{ fill: labelColor, fontSize: 12 }}
+        style={{ fill: isNight ? '#ccc' : '#333', fontSize: 12 }}
       >
         {label}
       </text>
@@ -637,11 +572,11 @@ export default function Profile({ playerData, setRefreshCounter, isGameStarted }
       return (
         <div
           style={{
-            backgroundColor: tooltipBg,
+            backgroundColor: isNight ? '#333' : '#fff',
             border: `1px solid ${borderColor}`,
             padding: '8px',
             borderRadius: 4,
-            color: tooltipColor,
+            color: isNight ? '#eee' : '#333',
           }}
         >
           <p style={{ margin: 0 }}>
@@ -660,7 +595,11 @@ export default function Profile({ playerData, setRefreshCounter, isGameStarted }
           <RadarChart data={blockchainStats}>
             <PolarGrid stroke={isNight ? '#555' : '#ccc'} />
             <PolarAngleAxis dataKey="stat" tick={renderVerticalLabels} />
-            <PolarRadiusAxis domain={[0, 1]} tickCount={6} stroke={labelColor} />
+            <PolarRadiusAxis
+              domain={[0, 1]}
+              tick={false}
+              axisLine={false}
+            />
             <Tooltip content={<CustomTooltip />} />
             <Radar
               name="Stats"
@@ -758,7 +697,7 @@ export default function Profile({ playerData, setRefreshCounter, isGameStarted }
   // Formater la balance à 5 décimales maximum
   const formatBalance = (value) => {
     const num = parseFloat(value);
-    return num.toFixed(5).replace(/\.?0+$/, ''); // Supprime les zéros inutiles à la fin
+    return num.toFixed(5).replace(/\.?0+$/, '');
   };
 
   return (embeddedWallet ?
@@ -892,6 +831,7 @@ export default function Profile({ playerData, setRefreshCounter, isGameStarted }
       </div>
 
       <XProfileDisplay />
+
       {/* Reward Section */}
       <div
         style={{
@@ -1012,7 +952,7 @@ export default function Profile({ playerData, setRefreshCounter, isGameStarted }
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Stats Section */}
       <div className="flex-1 flex flex-col md:flex-row gap-8 items-start mt-4">
         <div className="w-full md:w-1/2" style={{ color: textColor }}>
           <div
@@ -1038,64 +978,6 @@ export default function Profile({ playerData, setRefreshCounter, isGameStarted }
             </h3>
             <table className="w-full" style={{ background: 'transparent', fontFamily: 'inherit' }}>
               <tbody style={{ background: 'transparent' }}>
-                <tr style={{ borderBottom: `1px solid ${isNight ? '#475569' : '#e2e8f0'}`, background: 'transparent' }}>
-                  <td
-                    style={{
-                      color: textColor,
-                      paddingTop: '12px',
-                      paddingBottom: '12px',
-                      fontSize: '16px',
-                      fontWeight: '500',
-                      background: 'transparent',
-                      fontFamily: 'inherit',
-                    }}
-                  >
-                    Number of clothes
-                  </td>
-                  <td
-                    style={{
-                      color: textColor,
-                      paddingTop: '12px',
-                      paddingBottom: '12px',
-                      textAlign: 'right',
-                      fontSize: '16px',
-                      fontWeight: '500',
-                      background: 'transparent',
-                      fontFamily: 'inherit',
-                    }}
-                  >
-                    <strong style={{ fontFamily: 'inherit' }}>{rawStats.clothes}/25</strong>
-                  </td>
-                </tr>
-                <tr style={{ borderBottom: `1px solid ${isNight ? '#475569' : '#e2e8f0'}`, background: 'transparent' }}>
-                  <td
-                    style={{
-                      color: textColor,
-                      paddingTop: '12px',
-                      paddingBottom: '12px',
-                      fontSize: '16px',
-                      fontWeight: '500',
-                      background: 'transparent',
-                      fontFamily: 'inherit',
-                    }}
-                  >
-                    Boost
-                  </td>
-                  <td
-                    style={{
-                      color: textColor,
-                      paddingTop: '12px',
-                      paddingBottom: '12px',
-                      textAlign: 'right',
-                      fontSize: '16px',
-                      fontWeight: '500',
-                      background: 'transparent',
-                      fontFamily: 'inherit',
-                    }}
-                  >
-                    <strong style={{ fontFamily: 'inherit' }}>{rawStats.boost}%</strong>
-                  </td>
-                </tr>
                 <tr style={{ borderBottom: `1px solid ${isNight ? '#475569' : '#e2e8f0'}`, background: 'transparent' }}>
                   <td
                     style={{

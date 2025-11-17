@@ -224,7 +224,7 @@ function WalletBalance({ embeddedWallet, themeMode }) {
             ⚠️ You need testnet tokens to interact
 
             <a
-              href="https://testnet.megaeth.com/?faucet=true"
+              href="https://docs.megaeth.com/faucet"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center px-3 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-md shadow-sm hover:shadow transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ml-2"

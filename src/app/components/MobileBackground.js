@@ -58,7 +58,7 @@ export default function MobileBackground({ restoreApp, themeMode }) {
             app: "Profile",
             src: "/img/icons/profile.png",
             color: "#1da1f2",
-            position: { top: "20%", right: "10%" }
+            position: { top: "35%", right: "10%" }
         },
         {
             name: "Game",
@@ -66,13 +66,6 @@ export default function MobileBackground({ restoreApp, themeMode }) {
             src: "/img/icons/game.png",
             color: "#ff6b6b",
             position: { top: "35%", left: "5%" }
-        },
-        {
-            name: "Shop",
-            app: "Shop",
-            src: "/img/icons/shop.png",
-            color: "#4ecdc4",
-            position: { top: "35%", right: "5%" }
         },
         {
             name: "Leaderboard",
@@ -86,7 +79,7 @@ export default function MobileBackground({ restoreApp, themeMode }) {
             app: "Settings",
             src: "/img/icons/settings.png",
             color: "#a8e6cf",
-            position: { bottom: "35%", right: "5%" }
+            position: { bottom: "40%", right: "5%" }
         },
         {
             name: "Memes",

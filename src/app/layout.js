@@ -2,6 +2,7 @@ import "98.css";
 import "./globals.css";
 import { ContextProvider } from '@/context'
 import LeaderboardProvider from '@/context/LeaderboardProvider';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 export const metadata = {
   title: "Digit Rabbits",
@@ -21,6 +22,7 @@ export default function RootLayout({ children }) {
         <ContextProvider>
           <LeaderboardProvider>
             {children}
+            <SpeedInsights />
           </LeaderboardProvider>
         </ContextProvider>
       </body>

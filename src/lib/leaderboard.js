@@ -4,7 +4,7 @@ import { PrivyClient } from '@privy-io/server-auth';
 // Configuration
 const PRIVY_APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
 const PRIVY_APP_SECRET = process.env.PRIVY_APP_SECRET;
-const GRAPHQL_ENDPOINT = process.env.GRAPHQL_ENDPOINT || process.env.NEXT_PUBLIC_GRAPHQL_ENDPOINT;
+const GRAPHQL_ENDPOINT = process.env.GRAPHQL_METH_ENDPOINT || process.env.NEXT_PUBLIC_GRAPHQL_METH_ENDPOINT;
 
 // Client Privy
 const privy = new PrivyClient(PRIVY_APP_ID, PRIVY_APP_SECRET);
@@ -23,7 +23,7 @@ let cacheStore = {
     }
 };
 
-const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
+const CACHE_DURATION = 7 * 60 * 1000; // 7 minutes
 const REQUEST_TIMEOUT = 25000; // 25 secondes timeout pour GraphQL
 const PRIVY_TIMEOUT = 15000; // 15 secondes timeout pour Privy
 
@@ -113,28 +113,31 @@ async function getLeaderboardFromGraphQL(seasonId = "0") {
         while (hasMore) {
             console.log(`Récupération page: skip=${skip}, limit=${limit}`);
 
+            // ===== REQUÊTE ADAPTÉE POUR LE SUBGRAPH THE GRAPH =====
             const query = `
-                query GetLeaderboard($seasonId: String!, $skip: Int!, $limit: Int!) {
-                    playerSeasonStats_collection(
-                        orderBy: leaderboardScore
+                query GetLeaderboard($seasonId: BigInt!, $skip: Int!, $first: Int!) {
+                    playerSeasonDatas(
+                        where: { seasonId: $seasonId }
+                        orderBy: score
                         orderDirection: desc
-                        where: { seasonId: $seasonId, gamesPlayed_gt: 0 }
                         skip: $skip
-                        first: $limit
+                        first: $first
                     ) {
-                        leaderboardScore
-                        totalClicks
-                        bestClicksInGame
-                        averageClicks
-                        currentStreak
-                        longestStreak
+                        id
                         player {
-                            walletAddress
-                            totalPointsClaimed
-                            itemsBought {
-                                id
-                            }
+                            id
+                            address
+                            firstGameAt
+                            totalPointsAllTime
                         }
+                        seasonId
+                        score
+                        totalClicks
+                        gameClicks
+                        streak
+                        maxClicks
+                        hasClaimedPoints
+                        updatedAt
                     }
                 }
             `;
@@ -142,16 +145,16 @@ async function getLeaderboardFromGraphQL(seasonId = "0") {
             const variables = {
                 seasonId: seasonId,
                 skip: skip,
-                limit: limit
+                first: limit
             };
 
             const data = await executeGraphQLQuery(query, variables);
 
-            if (!data.playerSeasonStats_collection) {
+            if (!data.playerSeasonDatas) {
                 throw new Error('Format de réponse GraphQL invalide');
             }
 
-            const currentResults = data.playerSeasonStats_collection;
+            const currentResults = data.playerSeasonDatas;
             allResults = allResults.concat(currentResults);
 
             // Vérifier s'il y a encore des données
@@ -169,7 +172,7 @@ async function getLeaderboardFromGraphQL(seasonId = "0") {
         console.log(`Récupération terminée: ${allResults.length} éléments au total`);
 
         return {
-            playerSeasonStats_collection: allResults
+            playerSeasonDatas: allResults
         };
 
     } catch (error) {
@@ -331,38 +334,36 @@ async function calculateLeaderboard(forceRefresh = false) {
             getLeaderboardFromGraphQL()
         ]);
 
-        console.log(`GraphQL: ${graphqlData.playerSeasonStats_collection.length} joueurs`);
+        console.log(`GraphQL: ${graphqlData.playerSeasonDatas.length} joueurs`);
         console.log(`Privy: ${privyUsers.length} utilisateurs`);
 
         // Construction du leaderboard
         const leaderboard = [];
 
-        graphqlData.playerSeasonStats_collection.forEach((playerData, index) => {
-            const walletAddress = playerData.player.walletAddress;
+        graphqlData.playerSeasonDatas.forEach((playerData, index) => {
+            // ===== ADAPTATION AUX NOUVELLES DONNÉES DU SUBGRAPH =====
+            const playerAddress = playerData.player.address;
+
             // Recherche de l'utilisateur Privy correspondant
-            const privyUser = findPrivyUserByWallet(privyUsers, walletAddress);
+            const privyUser = findPrivyUserByWallet(privyUsers, playerAddress);
             const twitterInfo = getTwitterInfo(privyUser);
 
-            // Traitement des items achetés
-            const itemsBought = playerData.player.itemsBought || [];
-            const itemsCount = itemsBought.length;
-            const itemIds = itemsBought.map(item => item.id);
+            // Convertir le score de micro-points à points (divisé par 1000000)
+            const scoreInPoints = parseInt(playerData.score) / 1000000;
 
             // Inclure tous les joueurs, même sans Twitter
             leaderboard.push({
                 rank: index + 1,
-                walletAddress,
-                score: playerData.leaderboardScore / 10 ** 6,
-                totalClicks: playerData.totalClicks,
-                totalPointsClaimed: playerData.player.totalPointsClaimed,
-                bestClicksInGame: playerData.bestClicksInGame,
-                averageClicks: playerData.averageClicks,
-                currentStreak: playerData.currentStreak,
-                longestStreak: playerData.longestStreak,
-                itemsBought: {
-                    count: itemsCount,
-                    items: itemIds
-                },
+                walletAddress: playerAddress,
+                score: scoreInPoints, // Score en points (pas en micro-points)
+                totalClicks: parseInt(playerData.totalClicks),
+                gameClicks: parseInt(playerData.gameClicks),
+                streak: parseInt(playerData.streak),
+                maxClicks: parseInt(playerData.maxClicks),
+                hasClaimedPoints: playerData.hasClaimedPoints,
+                totalPointsAllTime: parseInt(playerData.player.totalPointsAllTime) / 1000000, // Points tous les temps
+                firstGameAt: parseInt(playerData.player.firstGameAt),
+                updatedAt: parseInt(playerData.updatedAt),
                 twitter: {
                     username: twitterInfo.username,
                     avatar: twitterInfo.avatar,
@@ -384,11 +385,12 @@ async function calculateLeaderboard(forceRefresh = false) {
                 seasonId: "0",
                 lastUpdate: new Date().toISOString(),
                 topScore: leaderboard[0]?.score || 0,
-                source: 'graphql',
+                topStreak: Math.max(...leaderboard.map(p => p.streak), 0),
+                topMaxClicks: Math.max(...leaderboard.map(p => p.maxClicks), 0),
+                source: 'the-graph-subgraph',
                 processingTimeMs: processingTime,
                 privyUsersCount: privyUsers.length,
-                graphqlPlayersCount: graphqlData.playerSeasonStats_collection.length,
-                totalItemsBought: leaderboard.reduce((sum, player) => sum + player.itemsBought.count, 0)
+                graphqlPlayersCount: graphqlData.playerSeasonDatas.length
             }
         };
 
@@ -413,20 +415,17 @@ async function calculateLeaderboard(forceRefresh = false) {
     }
 }
 
-
 /**
  * Obtient le leaderboard
  */
 export async function getLeaderboard(forceRefresh = false) {
     if (forceRefresh) {
         console.log('Force refresh demandé - invalidation des caches');
-        // Invalider seulement les caches concernés, pas Privy qui peut être réutilisé
         cacheStore.leaderboard.lastUpdate = 0;
     }
 
     return await calculateLeaderboard(forceRefresh);
 }
-
 
 /**
  * Obtient le classement d'un utilisateur spécifique
@@ -467,68 +466,83 @@ export async function getTopPlayers(limit = 10) {
 }
 
 /**
- * Obtient les joueurs ayant acheté le plus d'items
+ * Obtient les joueurs avec le meilleur streak
  */
-export async function getTopItemBuyers(limit = 10) {
+export async function getTopStreakers(limit = 10) {
     try {
         const { leaderboard } = await getLeaderboard();
 
-        // Trier par nombre d'items achetés
-        const sortedByItems = leaderboard
-            .filter(player => player.itemsBought.count > 0)
-            .sort((a, b) => b.itemsBought.count - a.itemsBought.count)
+        // Trier par streak
+        const sortedByStreak = leaderboard
+            .sort((a, b) => b.streak - a.streak)
             .slice(0, limit);
 
         return {
-            topItemBuyers: sortedByItems,
+            topStreakers: sortedByStreak,
             metadata: {
-                totalPlayersWithItems: leaderboard.filter(p => p.itemsBought.count > 0).length,
+                highestStreak: leaderboard[0]?.streak || 0,
                 lastUpdate: new Date().toISOString()
             }
         };
     } catch (error) {
-        console.error('Erreur lors de la récupération des top item buyers:', error);
-        return { topItemBuyers: [], metadata: null };
+        console.error('Erreur lors de la récupération des top streakers:', error);
+        return { topStreakers: [], metadata: null };
     }
 }
 
 /**
- * Obtient les statistiques sur les items achetés
+ * Obtient les joueurs avec le meilleur maxClicks
  */
-export async function getItemsStats() {
+export async function getTopClickers(limit = 10) {
     try {
         const { leaderboard } = await getLeaderboard();
 
-        const playersWithItems = leaderboard.filter(p => p.itemsBought.count > 0);
-        const totalItems = leaderboard.reduce((sum, p) => sum + p.itemsBought.count, 0);
-
-        // Comptage des items par ID
-        const itemsCountById = {};
-        leaderboard.forEach(player => {
-            player.itemsBought.items.forEach(itemId => {
-                itemsCountById[itemId] = (itemsCountById[itemId] || 0) + 1;
-            });
-        });
-
-        // Items les plus populaires
-        const popularItems = Object.entries(itemsCountById)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 10)
-            .map(([itemId, count]) => ({ itemId, count }));
+        // Trier par maxClicks
+        const sortedByClicks = leaderboard
+            .sort((a, b) => b.maxClicks - a.maxClicks)
+            .slice(0, limit);
 
         return {
-            totalItems,
-            playersWithItems: playersWithItems.length,
-            averageItemsPerPlayer: totalItems / leaderboard.length,
-            averageItemsPerBuyer: totalItems / playersWithItems.length,
-            popularItems,
-            uniqueItems: Object.keys(itemsCountById).length,
+            topClickers: sortedByClicks,
+            metadata: {
+                highestMaxClicks: leaderboard[0]?.maxClicks || 0,
+                lastUpdate: new Date().toISOString()
+            }
+        };
+    } catch (error) {
+        console.error('Erreur lors de la récupération des top clickers:', error);
+        return { topClickers: [], metadata: null };
+    }
+}
+
+/**
+ * Obtient les statistiques globales
+ */
+export async function getLeaderboardStats() {
+    try {
+        const { leaderboard } = await getLeaderboard();
+
+        const totalClicks = leaderboard.reduce((sum, p) => sum + p.totalClicks, 0);
+        const avgScore = leaderboard.reduce((sum, p) => sum + p.score, 0) / leaderboard.length;
+        const avgStreak = leaderboard.reduce((sum, p) => sum + p.streak, 0) / leaderboard.length;
+
+        return {
+            stats: {
+                totalPlayers: leaderboard.length,
+                totalClicks,
+                averageScore: avgScore,
+                averageStreak: avgStreak,
+                highestScore: Math.max(...leaderboard.map(p => p.score), 0),
+                highestStreak: Math.max(...leaderboard.map(p => p.streak), 0),
+                highestMaxClicks: Math.max(...leaderboard.map(p => p.maxClicks), 0),
+                playersWithClaimedPoints: leaderboard.filter(p => p.hasClaimedPoints).length
+            },
             metadata: {
                 lastUpdate: new Date().toISOString()
             }
         };
     } catch (error) {
-        console.error('Erreur lors de la récupération des stats items:', error);
+        console.error('Erreur lors de la récupération des stats:', error);
         return null;
     }
 }
@@ -555,7 +569,7 @@ export async function getCompleteLeaderboardData(forceRefresh = false) {
 }
 
 /**
- * Démarre la mise à jour automatique (comme dans l'ancien fichier)
+ * Démarre la mise à jour automatique
  */
 export function startLeaderboardUpdater() {
     console.log('Démarrage de la mise à jour automatique du leaderboard (15 min)');
@@ -567,7 +581,7 @@ export function startLeaderboardUpdater() {
 
     // Puis toutes les 15 minutes
     setInterval(() => {
-        console.log('Mise à jour automatique du leaderboard et top clicker...');
+        console.log('Mise à jour automatique du leaderboard...');
         Promise.all([
             getLeaderboard(true).catch(console.error)
         ]);

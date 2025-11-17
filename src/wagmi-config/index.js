@@ -7,6 +7,6 @@ import { createConfig } from '@privy-io/wagmi';
 export const wagmiConfig = createConfig({
   chains: [megaethTestnet],
   transports: {
-    [megaethTestnet.id]: http()
+    [megaethTestnet.id]: http("https://timothy.megaeth.com/rpc")
   },
 });

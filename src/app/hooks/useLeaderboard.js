@@ -10,6 +10,7 @@ export function useLeaderboard(limit = null, user = null, complete = true) {
     const fetchingRef = useRef(false);
     const abortControllerRef = useRef(null);
     const retryTimeoutRef = useRef(null);
+    const isInitializedRef = useRef(false);
 
     const fetchLeaderboard = useCallback(async (forceRefresh = false) => {
         // Éviter les appels multiples simultanés
@@ -71,7 +72,7 @@ export function useLeaderboard(limit = null, user = null, complete = true) {
             }
 
             setData(result);
-            setRetryCount(0); // Reset retry count en cas de succès
+            setRetryCount(0);
 
             console.log('Leaderboard loaded successfully:', {
                 topPlayers: result.topPlayers?.length || result.leaderboard?.length || 0,
@@ -88,14 +89,11 @@ export function useLeaderboard(limit = null, user = null, complete = true) {
             console.error('Leaderboard error:', err);
             setError(err.message);
 
-            // En cas d'erreur, ne pas faire de retry automatique dans ce callback
-            // Le retry sera géré manuellement
-
         } finally {
             fetchingRef.current = false;
             setLoading(false);
         }
-    }, [limit, user, complete]); // RETIRÉ data et retryCount des dépendances
+    }, [limit, user, complete]);
 
     // Effect séparé pour le retry automatique
     useEffect(() => {
@@ -119,6 +117,12 @@ export function useLeaderboard(limit = null, user = null, complete = true) {
 
     // Effect principal pour charger les données - UNE SEULE FOIS au montage
     useEffect(() => {
+        // Vérifier si c'est déjà initialisé
+        if (isInitializedRef.current) {
+            return;
+        }
+
+        isInitializedRef.current = true;
         console.log('useLeaderboard: Initial mount');
         fetchLeaderboard();
 
@@ -137,11 +141,14 @@ export function useLeaderboard(limit = null, user = null, complete = true) {
 
     // Effect séparé pour les changements de paramètres
     useEffect(() => {
-        console.log('useLeaderboard: Parameters changed', { limit, user, complete });
-        if (data !== null) { // Ne refetch que si on a déjà des données
-            fetchLeaderboard();
+        // Ne pas refetch au premier montage (déjà fait par le premier effet)
+        if (!isInitializedRef.current) {
+            return;
         }
-    }, [limit, user, complete, fetchLeaderboard]);
+
+        console.log('useLeaderboard: Parameters changed', { limit, user, complete });
+        fetchLeaderboard(false);
+    }, [limit, user, complete]); // RETIRÉ fetchLeaderboard pour éviter la refetch
 
     // Fonction de refresh manuel
     const refresh = useCallback(async () => {
@@ -260,7 +267,6 @@ export function useLeaderboard(limit = null, user = null, complete = true) {
         canRetry: !!error && retryCount < 2
     };
 }
-
 
 // Hook pour un utilisateur spécifique
 export function useUserRank(walletAddress) {
@@ -402,6 +408,3 @@ export function useItemsStats() {
         hasData: !!data
     };
 }
-
-// Note: useTopItemBuyers hook removed - use getTopItemBuyers helper from useLeaderboard instead
-// Example: const { getTopItemBuyers } = useLeaderboard(); const topBuyers = getTopItemBuyers(10);
