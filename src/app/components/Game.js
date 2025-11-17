@@ -342,42 +342,59 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
 
       // 1. Vérification du wallet
       if (!walletClient || !embeddedWallet || !embeddedWallet.address) {
-        throw new Error('No wallet client set')
+        throw new Error('No wallet client set');
       }
 
       // 2. Vérification et initialisation du pool si nécessaire
-      setIsWritingContract(true)
-      setErrorStartGame('')
+      setIsWritingContract(true);
+      setErrorStartGame('');
 
-      let currentPool = preSignedPool
-
+      let currentPool = preSignedPool;
       const hasValidePool = currentPool?.transactions?.length > 0 && getAvailableTransactions() > 0;
 
       if (!hasValidePool) {
-        console.log("Initializing pool before starting game...")
-
+        console.log("Initializing pool before starting game...");
         try {
-          const pool = await initializePool(false)
-          const newAvailableCount = pool.transactions.length - pool.currentIndex
-
+          const pool = await initializePool(false);
+          const newAvailableCount = pool.transactions.length - pool.currentIndex;
           if (newAvailableCount === 0) {
-            throw new Error('Pool initialization completed but no transaction available. Please try again.')
+            throw new Error('Pool initialization completed but no transaction available. Please try again.');
           }
-
           console.log("Pool successfully initialized:", {
             availableCount: newAvailableCount,
             timestamp: new Date().toISOString()
           });
         } catch (poolError) {
-          console.error('Pool initialization failed:', poolError)
-          throw new Error('Failed to initialize transaction pool. Please try again.')
+          console.error('Pool initialization failed:', poolError);
+          throw new Error('Failed to initialize transaction pool. Please try again.');
         }
       }
 
-      console.log(`Starting game on MegaETH Testnet...`)
+      console.log(`Starting game on MegaETH Testnet...`);
 
-      // 3. Démarrer le jeu 
-      const result = await walletClient.writeContract({
+      // 3. Simulation du contrat pour obtenir le message d'erreur précis
+      try {
+        await walletClient.simulateContract({
+          account: embeddedWallet.address,
+          address: DIGIT_RABBITS_ADDRESS,
+          abi: DIGIT_RABBITS_ABI,
+          functionName: 'startGame',
+          args: [],
+          chain: customMegaethTestnet,
+          gas: 3000000n,
+        });
+      } catch (simulationError) {
+        const message = simulationError.shortMessage || simulationError.message || 'Unknown simulation error';
+        setErrorStartGame(message);
+        Sentry.captureException(simulationError, {
+          tags: { action: 'simulate_start_game', component: 'Game' },
+          extra: { walletAddress: embeddedWallet?.address }
+        });
+        throw simulationError;
+      }
+
+      // 4. Démarrer le jeu (envoi réel)
+      const txHash = await walletClient.writeContract({
         account: embeddedWallet.address,
         address: DIGIT_RABBITS_ADDRESS,
         abi: DIGIT_RABBITS_ABI,
@@ -385,20 +402,26 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
         args: [],
         chain: customMegaethTestnet,
         gas: 30000000n,
-      })
+      });
 
-      if (!result) {
-        throw new Error('Failed to start game')
+      if (!txHash) {
+        throw new Error('Failed to start game');
       }
 
-      console.log(`Game started with hash: ${result}`)
+      // 5. Attendre le minage et vérifier le statut
+      const receipt = await walletClient.waitForTransactionReceipt({ hash: txHash });
+      if (receipt.status === 0) {
+        throw new Error('Failed to start game: transaction reverted or failed');
+      }
+
+      console.log(`Game started with hash: ${txHash}`);
 
       Sentry.addBreadcrumb({
         category: 'game',
         message: 'Game started successfully',
         level: 'info',
         data: {
-          transactionHash: result.transactionHash || result,
+          transactionHash: txHash,
           walletAddress: embeddedWallet.address,
           availableTransactions: getAvailableTransactions(),
           blockchainHealth: healthStatus?.status,
@@ -413,9 +436,9 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
         }
       });
 
-      setIsGameStarted(true)
-      setTimer(60)
-      setResult(`Hash: ${result.transactionHash || result}`)
+      setIsGameStarted(true);
+      setTimer(60);
+      setResult(`Hash: ${txHash}`);
 
     } catch (err) {
       // Log l'erreur dans Sentry avec contexte
@@ -436,23 +459,24 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
           } : null
         }
       });
-      console.error('Contract write failed:', err)
-      if (err.shortMessage?.toLowerCase().includes("maximum limit")) {
+      console.error('Contract write failed:', err);
+      if (
+        err.shortMessage?.toLowerCase().includes("maximum limit") ||
+        err.shortMessage?.toLowerCase().includes("exceeds the balance of the account")
+      ) {
         setErrorStartGame("Please fund your wallet with testnet tokens. Go to the Settings section, copy your wallet address and paste it into the faucet.");
-      }
-      else if (err.shortMessage?.toLowerCase().includes("not finished")) {
+      } else if (err.shortMessage?.toLowerCase().includes("not finished")) {
         setErrorStartGame("Cooldown not finished yet. Please try again later.");
-      }
-      else {
+      } else {
         setErrorStartGame(err.message || err.shortMessage || 'Unknown error occurred');
       }
-
-      throw err
+      throw err;
     } finally {
-      setIsWritingContract(false)
-      setRefreshCounter(c => c + 1)
+      setIsWritingContract(false);
+      setRefreshCounter(c => c + 1);
     }
-  }
+  };
+
 
   // Relancer la pool en cas de problème 
   const handleRelaunchPool = async () => {
