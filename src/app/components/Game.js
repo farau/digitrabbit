@@ -372,7 +372,36 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
 
       console.log(`Starting game on MegaETH Testnet...`);
 
-      // 3. Simulation du contrat pour obtenir le message d'erreur précis
+      // 3. Estimation du gas
+      let estimatedGas;
+      try {
+        estimatedGas = await walletClient.estimateContractGas({
+          account: embeddedWallet.address,
+          address: DIGIT_RABBITS_ADDRESS,
+          abi: DIGIT_RABBITS_ABI,
+          functionName: 'startGame',
+          args: [],
+          chain: customMegaethTestnet,
+        });
+
+        // Ajouter une marge de sécurité de 20%
+        estimatedGas = (estimatedGas * 120n) / 100n;
+
+        console.log(`Estimated gas: ${estimatedGas.toString()}`);
+      } catch (estimationError) {
+        console.error('Gas estimation failed:', estimationError);
+        setErrorStartGame(estimationError.shortMessage || estimationError.message || 'Unknown error')
+        // Fallback sur une valeur par défaut si l'estimation échoue
+        estimatedGas = 30000000n;
+
+        Sentry.captureException(estimationError, {
+          tags: { action: 'estimate_gas_start_game', component: 'Game' },
+          extra: { walletAddress: embeddedWallet?.address }
+        });
+        throw estimationError;
+      }
+
+      // 4. Simulation du contrat pour obtenir le message d'erreur précis
       try {
         await walletClient.simulateContract({
           account: embeddedWallet.address,
@@ -381,19 +410,22 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
           functionName: 'startGame',
           args: [],
           chain: customMegaethTestnet,
-          gas: 3000000n,
+          gas: estimatedGas,
         });
       } catch (simulationError) {
         const message = simulationError.shortMessage || simulationError.message || 'Unknown simulation error';
         setErrorStartGame(message);
         Sentry.captureException(simulationError, {
           tags: { action: 'simulate_start_game', component: 'Game' },
-          extra: { walletAddress: embeddedWallet?.address }
+          extra: {
+            walletAddress: embeddedWallet?.address,
+            estimatedGas: estimatedGas.toString()
+          }
         });
         throw simulationError;
       }
 
-      // 4. Démarrer le jeu (envoi réel)
+      // 5. Démarrer le jeu (envoi réel)
       const txHash = await walletClient.writeContract({
         account: embeddedWallet.address,
         address: DIGIT_RABBITS_ADDRESS,
@@ -401,14 +433,14 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
         functionName: 'startGame',
         args: [],
         chain: customMegaethTestnet,
-        gas: 30000000n,
+        gas: estimatedGas,
       });
 
       if (!txHash) {
         throw new Error('Failed to start game');
       }
 
-      // 5. Attendre le minage et vérifier le statut
+      // 6. Attendre le minage et vérifier le statut
       const receipt = await walletClient.waitForTransactionReceipt({ hash: txHash });
       if (receipt.status === 0) {
         throw new Error('Failed to start game: transaction reverted or failed');
@@ -423,6 +455,8 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
         data: {
           transactionHash: txHash,
           walletAddress: embeddedWallet.address,
+          gasUsed: receipt.gasUsed?.toString(),
+          estimatedGas: estimatedGas.toString(),
           availableTransactions: getAvailableTransactions(),
           blockchainHealth: healthStatus?.status,
           poolStats: preSignedPool ? {

@@ -4,6 +4,7 @@ import { encodeFunctionData } from 'viem'
 import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS } from '@/utils/constants'
 import { useWalletClient } from './useWalletClient'
 import { InternalRpcError } from 'viem';
+import { megaethTestnet } from 'viem/chains';
 
 const play = encodeFunctionData({
     abi: DIGIT_RABBITS_ABI,
@@ -19,18 +20,45 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
     const hasInitialized = useRef(false) // Pour éviter les re-initialisations
     const { walletClient } = useWalletClient(embeddedWallet)
 
+    // Configuration customisée du Megaeth Testnet avec une URL RPC spécifique
+    const customMegaethTestnet = {
+        ...megaethTestnet,
+        id: 6343, // Viem utilise 'id' plutôt que 'chainId'
+        chainId: 6343, // Garder aussi chainId pour compatibilité
+        name: 'MegaETH Testnet v2', // Optionnel mais recommandé
+        rpcUrls: {
+            default: {
+                http: ['https://timothy.megaeth.com/rpc'],
+            },
+            public: {
+                http: ['https://timothy.megaeth.com/rpc'],
+            },
+        },
+    };
+
     const defineGasPrice = async (walletClient) => {
         try {
-            const networkGasPrice = await walletClient.getGasPrice()
+            let estimatedGas = await walletClient.estimateContractGas({
+                account: embeddedWallet.address,
+                address: DIGIT_RABBITS_ADDRESS,
+                abi: DIGIT_RABBITS_ABI,
+                functionName: 'play',
+                args: [],
+                chain: customMegaethTestnet
+            });
+
+            // Ajouter une marge de sécurité de 20%
+
             return {
-                gasPrice: networkGasPrice,
-                gasLimit: 30000000n,
+                gasPrice: (estimatedGas * 120n) / 100n,
+                gasLimit: 30000000n
             }
+
         } catch (error) {
             console.warn('⚠️ Failed to get gas price, using fallback:', error)
             return {
-                gasPrice: 1000000000n, // 1 gwei
-                gasLimit: 50000000n
+                gasPrice: 30000000n,
+                gasLimit: 30000000n
             }
         }
     }
@@ -63,7 +91,7 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
                     maxFeePerGas: gasPrice,
                     maxPriorityFeePerGas: gasPrice / 10n,
                     type: 'eip1559',
-                    gas: gasLimit,
+                    gas: gasPrice,
                 })
             })
 
@@ -116,6 +144,7 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
             const { gasPrice, gasLimit } = await defineGasPrice(walletClient)
 
             console.log(`Pre-signing 10 transactions...`)
+            console.log('Gas price:', gasPrice.toString())
             const signingPromises = Array.from({ length: sizePool }, async (_, i) => {
                 return await walletClient.signTransaction({
                     account: embeddedWallet?.address,
@@ -125,7 +154,7 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
                     maxFeePerGas: gasPrice,
                     maxPriorityFeePerGas: gasPrice / 10n,
                     type: 'eip1559',
-                    gas: gasLimit,
+                    gas: gasPrice,
                 })
             })
 
