@@ -35,7 +35,7 @@ const customMegaethTestnet = {
   },
 };
 
-function PlayerData({ refreshCounter, themeMode, seasonId, playerData, embeddedWallet }) {
+function PlayerData({ refreshCounter, themeMode, seasonId, playerData, embeddedWallet, onCooldownChange }) {
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
   const [columns, setColumns] = useState(2);
 
@@ -63,6 +63,7 @@ function PlayerData({ refreshCounter, themeMode, seasonId, playerData, embeddedW
     if (sessionEndsAt === null || sessionEndsAt === undefined) return;
     if (sessionEndsAt === 0n || sessionEndsAt === 0) {
       setCooldownRemaining(0);
+      onCooldownChange?.(0); // Informer le parent
       return;
     }
 
@@ -72,12 +73,13 @@ function PlayerData({ refreshCounter, themeMode, seasonId, playerData, embeddedW
       const now = Math.floor(Date.now() / 1000);
       const remaining = Math.max(cooldownEnd - now, 0);
       setCooldownRemaining(remaining);
+      onCooldownChange?.(remaining); // Informer le parent
     };
 
     updateTimer();
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
-  }, [sessionEndsAt]);
+  }, [sessionEndsAt, onCooldownChange]);
 
   if (!playerData) return <div style={{ color: textColor }}>Loading player data...</div>;
 
@@ -244,6 +246,9 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
   const { embeddedWallet, isValidating, validationError } = useGame();
   const { walletClient } = useWalletClient(embeddedWallet)
 
+  // État du cooldown
+  const [cooldownRemaining, setCooldownRemaining] = useState(0);
+
   // Vérifier l'état paused du contrat et la saison
   useEffect(() => {
     const checkPausedState = async () => {
@@ -331,6 +336,13 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
   // Démarrage du jeu avec vérification de la blockchain
   const handleStartGame = async () => {
     try {
+
+      // Vérification du cooldown avant de commencer car Testnet v2 ne récupère pas le cooldown du contrat
+      if (cooldownRemaining > 0) {
+        setErrorStartGame(`Please wait for the cooldown to finish before starting a new game.\nTime remaining: ${new Date(cooldownRemaining * 1000).toISOString().substr(11, 8)}`);
+        return;
+      }
+
       // 0. Vérification de l'état de la blockchain avant de commencer
       if (!canPlay) {
         if (healthStatus?.status === 'down') {
@@ -372,58 +384,6 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
 
       console.log(`Starting game on MegaETH Testnet...`);
 
-      // 3. Estimation du gas
-      let estimatedGas;
-      try {
-        estimatedGas = await walletClient.estimateContractGas({
-          account: embeddedWallet.address,
-          address: DIGIT_RABBITS_ADDRESS,
-          abi: DIGIT_RABBITS_ABI,
-          functionName: 'startGame',
-          args: [],
-          chain: customMegaethTestnet,
-        });
-
-        // Ajouter une marge de sécurité de 20%
-        estimatedGas = (estimatedGas * 120n) / 100n;
-
-        console.log(`Estimated gas: ${estimatedGas.toString()}`);
-      } catch (estimationError) {
-        console.error('Gas estimation failed:', estimationError);
-        setErrorStartGame(estimationError.shortMessage || estimationError.message || 'Unknown error')
-        // Fallback sur une valeur par défaut si l'estimation échoue
-        estimatedGas = 30000000n;
-
-        Sentry.captureException(estimationError, {
-          tags: { action: 'estimate_gas_start_game', component: 'Game' },
-          extra: { walletAddress: embeddedWallet?.address }
-        });
-        throw estimationError;
-      }
-
-      // 4. Simulation du contrat pour obtenir le message d'erreur précis
-      try {
-        await walletClient.simulateContract({
-          account: embeddedWallet.address,
-          address: DIGIT_RABBITS_ADDRESS,
-          abi: DIGIT_RABBITS_ABI,
-          functionName: 'startGame',
-          args: [],
-          chain: customMegaethTestnet,
-          gas: estimatedGas,
-        });
-      } catch (simulationError) {
-        const message = simulationError.shortMessage || simulationError.message || 'Unknown simulation error';
-        setErrorStartGame(message);
-        Sentry.captureException(simulationError, {
-          tags: { action: 'simulate_start_game', component: 'Game' },
-          extra: {
-            walletAddress: embeddedWallet?.address,
-            estimatedGas: estimatedGas.toString()
-          }
-        });
-        throw simulationError;
-      }
 
       // 5. Démarrer le jeu (envoi réel)
       const txHash = await walletClient.writeContract({
@@ -433,7 +393,7 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
         functionName: 'startGame',
         args: [],
         chain: customMegaethTestnet,
-        gas: estimatedGas,
+        gas: 30000000n
       });
 
       if (!txHash) {
@@ -456,7 +416,6 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
           transactionHash: txHash,
           walletAddress: embeddedWallet.address,
           gasUsed: receipt.gasUsed?.toString(),
-          estimatedGas: estimatedGas.toString(),
           availableTransactions: getAvailableTransactions(),
           blockchainHealth: healthStatus?.status,
           poolStats: preSignedPool ? {
@@ -791,6 +750,7 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
             themeMode={themeMode}
             playerData={playerData}
             embeddedWallet={embeddedWallet}
+            onCooldownChange={setCooldownRemaining}
           />
         </div>
 
@@ -903,7 +863,7 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
         {errorStartGame && (
           <div className="mb-6 p-4 bg-red-100/70 dark:bg-red-900/70 rounded-lg max-w-2xl text-left backdrop-blur-sm">
             <h4 className="text-red-700 dark:text-red-300 break-all">❌ Error :</h4>
-            <p className="text-red-700 dark:text-red-300 break-all">{errorStartGame}</p>
+            <p className="text-red-700 dark:text-red-300 break-all whitespace-pre-line">{errorStartGame}</p>
           </div>
         )}
       </div>

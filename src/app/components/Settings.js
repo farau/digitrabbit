@@ -195,7 +195,12 @@ function WalletBalance({ embeddedWallet, themeMode }) {
     );
   }
 
-  const hasBalance = balance?.value > 0n;
+  // balance.value is a bigint (wei). Treat balances > 0.00001 ETH as > 10_000_000_000_000 wei.
+  const WEI_THRESHOLD = 10000000000000n; // 0.00001 ETH in wei
+  const hasBalance = typeof balance?.value === 'bigint'
+    ? balance.value > WEI_THRESHOLD
+    : Number(balance?.formatted || 0) > 0.00001;
+
   const textColor = themeMode === 'dark' ? 'text-white' : 'text-black';
 
   // Formater la balance à 5 décimales maximum

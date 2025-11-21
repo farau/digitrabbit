@@ -88,10 +88,10 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
                     to: DIGIT_RABBITS_ADDRESS,
                     data: play,
                     nonce,
-                    maxFeePerGas: gasPrice,
-                    maxPriorityFeePerGas: gasPrice / 10n,
+                    maxFeePerGas: gasLimit,
+                    maxPriorityFeePerGas: gasLimit / 10n,
                     type: 'eip1559',
-                    gas: gasPrice,
+                    gas: gasLimit
                 })
             })
 
@@ -144,17 +144,16 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
             const { gasPrice, gasLimit } = await defineGasPrice(walletClient)
 
             console.log(`Pre-signing 10 transactions...`)
-            console.log('Gas price:', gasPrice.toString())
             const signingPromises = Array.from({ length: sizePool }, async (_, i) => {
                 return await walletClient.signTransaction({
                     account: embeddedWallet?.address,
                     to: DIGIT_RABBITS_ADDRESS,
                     data: play,
                     nonce: nonce + i,
-                    maxFeePerGas: gasPrice,
-                    maxPriorityFeePerGas: gasPrice / 10n,
+                    maxFeePerGas: gasLimit,
+                    maxPriorityFeePerGas: gasLimit / 10n,
                     type: 'eip1559',
-                    gas: gasPrice,
+                    gas: gasLimit,
                 })
             })
 

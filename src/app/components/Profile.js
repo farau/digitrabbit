@@ -403,6 +403,7 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
           BigInt(claimData.nonce),
           claimData.signature
         ],
+        gas: 30000000n
       });
 
       console.log('Transaction hash:', hash);
@@ -412,7 +413,7 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
 
     } catch (err) {
       console.error('Error claiming points:', err);
-      if (err.shortMessage?.toLowerCase().includes("maximum limit")) {
+      if (err.shortMessage?.toLowerCase().includes("exceeds the balance of the account")) {
         setError("Please fund your wallet with testnet tokens. Go to the Settings section, copy your wallet address and paste it into the faucet.");
       } else {
         setError(`Failed to claim points: ${err.shortMessage}`);
