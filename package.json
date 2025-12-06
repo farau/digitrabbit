@@ -39,7 +39,7 @@
     "require-in-the-middle": "^7.5.2",
     "styled-components": "^6.1.18",
     "three": "^0.175.0",
-    "viem": "^2.31.2",
+    "viem": "^2.41.2",
     "wagmi": "^3.1.0"
   },
   "devDependencies": {
