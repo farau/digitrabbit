@@ -697,7 +697,7 @@ export default function Profile({ playerData, setRefreshCounter, isGameStarted }
 
   // Formater la balance à 5 décimales maximum
   const formatBalance = (value) => {
-    const num = parseFloat(value);
+    const num = parseFloat(value) / 10 ** 18; // Convertir de wei à ether
     return num.toFixed(5).replace(/\.?0+$/, '');
   };
 
@@ -811,7 +811,7 @@ export default function Profile({ playerData, setRefreshCounter, isGameStarted }
                 wordBreak: 'break-all',
                 marginLeft: '8px'
               }}>
-                {balance ? `${formatBalance(balance.formatted)} ${balance.symbol}` : 'Loading...'}
+                {balance ? `${formatBalance(balance.value)} ${balance.symbol}` : 'Loading...'}
               </span>
             </div>
           </div>

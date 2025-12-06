@@ -7,36 +7,50 @@ import { useGLTF, OrbitControls } from "@react-three/drei";
 import { useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useEffect } from "react";
-import { useTheme } from "@/context"
-function RotatingModel({ mouse, clicked }) {
-  const { scene } = useGLTF("/3d/head");
+import { useTheme } from "@/context";
+
+function RotatingHeadModel({ themeMode, isClicked, onPointerDown, onPointerUp }) {
+  const headGltfLight = useGLTF("/3d/head");
+  const cryGltf = useGLTF("/3d/cry");
+  const headGltfDark = useGLTF("/3d/sleep");
+
+  const headGltf = themeMode === "dark" ? headGltfDark : headGltfLight;
+
   const modelRef = useRef();
-  const headRef = useRef();
+  const targetScale = useRef(1.5);
+  const scaleRef = useRef(1.5);
 
-  useEffect(() => {
-    const head = scene.getObjectByName("Head"); // ← adapte le nom ici selon ton modèle
-    if (head) {
-      headRef.current = head;
-    }
-  }, [scene]);
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime();
 
-  useFrame(() => {
     if (modelRef.current) {
-      // Zoom effect (clic)
-      const targetScale = clicked ? 1.8 : 1.5;
-      const currentScale = modelRef.current.scale.x;
-      const newScale = currentScale + (targetScale - currentScale) * 0.2;
-      modelRef.current.scale.set(newScale, newScale, newScale);
-    }
+      // Flottement vertical
+      modelRef.current.position.y = Math.sin(t * 1.5) * 0.15;
 
-    if (headRef.current && mouse) {
-      // Rotation du regard (x: haut/bas, y: gauche/droite)
-      headRef.current.rotation.y = mouse.x * 0.5; // gauche/droite
-      headRef.current.rotation.x = mouse.y * 0.3; // haut/bas
+      // Rotation automatique autour de l'axe Y (vitesse moyenne)
+      modelRef.current.rotation.y = t * 0.5;
+
+      // Interpolation de la taille
+      targetScale.current = isClicked ? 1.8 : 1.5;
+      scaleRef.current = THREE.MathUtils.lerp(scaleRef.current, targetScale.current, 0.05);
+      modelRef.current.scale.setScalar(scaleRef.current);
     }
   });
 
-  return <primitive object={scene} ref={modelRef} />;
+  return (
+    <group ref={modelRef} onPointerDown={onPointerDown} onPointerUp={onPointerUp}>
+      <primitive
+        object={cryGltf.scene}
+        visible={isClicked}
+        dispose={null}
+      />
+      <primitive
+        object={headGltf.scene}
+        visible={!isClicked}
+        dispose={null}
+      />
+    </group>
+  );
 }
 
 export function FloatingHeadModel({ mouse, isClicked, themeMode, onPointerDown, onPointerUp }) {
@@ -107,7 +121,7 @@ export default function Icon({ name, src, label, onClick, position, sound, show3
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
   const [click, setClicked] = useState(false);
   const soundRef = useRef(null);
-  const { themeMode } = useTheme()
+  const { themeMode } = useTheme();
 
   // Fonction helper pour définir le volume de manière sécurisée
   const setVolumeSafely = (audioElement, vol) => {
@@ -137,7 +151,7 @@ export default function Icon({ name, src, label, onClick, position, sound, show3
       soundRef.current = new Audio("/sounds/crying.mp3");
       setVolumeSafely(soundRef.current, volume);
     }
-  }, [volume]); // 👈 Ajouter volume en dépendance
+  }, [volume]);
 
   const handlePointerMove = (e) => {
     const bounds = e.currentTarget.getBoundingClientRect();
@@ -160,7 +174,7 @@ export default function Icon({ name, src, label, onClick, position, sound, show3
 
   const handleClick = () => {
     if (onClick) onClick();
-  }
+  };
 
   // Garantit que si on sort du canva le clic se désactive (même si le clic reste actif)
   useEffect(() => {
@@ -203,8 +217,12 @@ export default function Icon({ name, src, label, onClick, position, sound, show3
             camera={{ position: [1, 0, 3] }}>
             <ambientLight />
             <directionalLight position={[2, 2, 2]} />
-            <FloatingHeadModel mouse={mouse} isClicked={click} themeMode={themeMode} onPointerDown={handlePointerDown}
-              onPointerUp={handlePointerUp} />
+            <FloatingHeadModel
+              themeMode={themeMode}
+              isClicked={click}
+              onPointerDown={handlePointerDown}
+              onPointerUp={handlePointerUp}
+            />
           </Canvas>
 
         </div>

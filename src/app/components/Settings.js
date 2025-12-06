@@ -205,14 +205,14 @@ function WalletBalance({ embeddedWallet, themeMode }) {
 
   // Formater la balance à 5 décimales maximum
   const formatBalance = (value) => {
-    const num = parseFloat(value);
+    const num = parseFloat(value) / 10 ** 18; // Convertir de wei à ether
     return num.toFixed(5).replace(/\.?0+$/, ''); // Supprime les zéros inutiles à la fin
   };
 
   return (
     <div className="mt-4 space-y-2">
       <p>
-        Balance: {formatBalance(balance.formatted)} {balance.symbol}
+        Balance: {formatBalance(balance.value)} {balance.symbol}
         {!hasBalance && (
           <button
             onClick={refetchBalance}

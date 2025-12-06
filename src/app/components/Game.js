@@ -35,7 +35,7 @@ const customMegaethTestnet = {
   },
 };
 
-function PlayerData({ refreshCounter, themeMode, seasonId, playerData, embeddedWallet, onCooldownChange }) {
+function PlayerData({ refreshCounter, themeMode, seasonId, playerData, embeddedWallet }) {
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
   const [columns, setColumns] = useState(2);
 
@@ -63,7 +63,6 @@ function PlayerData({ refreshCounter, themeMode, seasonId, playerData, embeddedW
     if (sessionEndsAt === null || sessionEndsAt === undefined) return;
     if (sessionEndsAt === 0n || sessionEndsAt === 0) {
       setCooldownRemaining(0);
-      onCooldownChange?.(0); // Informer le parent
       return;
     }
 
@@ -73,13 +72,12 @@ function PlayerData({ refreshCounter, themeMode, seasonId, playerData, embeddedW
       const now = Math.floor(Date.now() / 1000);
       const remaining = Math.max(cooldownEnd - now, 0);
       setCooldownRemaining(remaining);
-      onCooldownChange?.(remaining); // Informer le parent
     };
 
     updateTimer();
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
-  }, [sessionEndsAt, onCooldownChange]);
+  }, [sessionEndsAt]);
 
   if (!playerData) return <div style={{ color: textColor }}>Loading player data...</div>;
 
@@ -246,9 +244,6 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
   const { embeddedWallet, isValidating, validationError } = useGame();
   const { walletClient } = useWalletClient(embeddedWallet)
 
-  // État du cooldown
-  const [cooldownRemaining, setCooldownRemaining] = useState(0);
-
   // Vérifier l'état paused du contrat et la saison
   useEffect(() => {
     const checkPausedState = async () => {
@@ -337,12 +332,6 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
   const handleStartGame = async () => {
     try {
 
-      // Vérification du cooldown avant de commencer car Testnet v2 ne récupère pas le cooldown du contrat
-      if (cooldownRemaining > 0) {
-        setErrorStartGame(`Please wait for the cooldown to finish before starting a new game.\nTime remaining: ${new Date(cooldownRemaining * 1000).toISOString().substr(11, 8)}`);
-        return;
-      }
-
       // 0. Vérification de l'état de la blockchain avant de commencer
       if (!canPlay) {
         if (healthStatus?.status === 'down') {
@@ -402,9 +391,17 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
 
       // 6. Attendre le minage et vérifier le statut
       const receipt = await walletClient.waitForTransactionReceipt({ hash: txHash });
-      if (receipt.status === 0) {
-        throw new Error('Failed to start game: transaction reverted or failed');
+      if (receipt.status === 'reverted') {
+        const tx = await walletClient.getTransaction({ hash: txHash });
+        console.log({ tx })
+        try {
+          await walletClient.call({ to: tx.to, data: tx.input, from: tx.from, gas: tx.gasPrice });
+        } catch (error) {
+          const revertReason = error.details || error.message || 'Transaction reverted';
+          throw new Error(`Transaction reverted: ${revertReason}`);
+        }
       }
+
 
       console.log(`Game started with hash: ${txHash}`);
 
@@ -750,7 +747,6 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
             themeMode={themeMode}
             playerData={playerData}
             embeddedWallet={embeddedWallet}
-            onCooldownChange={setCooldownRemaining}
           />
         </div>
 
