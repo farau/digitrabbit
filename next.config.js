@@ -3,6 +3,8 @@ const { withSentryConfig } = require("@sentry/nextjs");
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     images: {
+        unoptimized: true,            // 🔥 Désactive l'optimisation cassée
+        disableStaticImages: true,    // 🔥 Bypass le bug dans <Image>
         remotePatterns: [
             {
                 protocol: 'https',

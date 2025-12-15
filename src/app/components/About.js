@@ -22,7 +22,7 @@ export default function About() {
             </p>
 
             <p style={{ margin: "0 0 20px 0", padding: 10, color: textColor }} className="text-center">
-                Digit Rabbits is a generative meme-based PFP collection with retro futuristic and fun vibes. Built on <span style={{ fontWeight: "bold" }}>MegaETH</span>, it was designed to be fun, accessible and welcoming to all, whether you&apos;re a degen, a meme lover, or just here for the tech.
+                Digit Rabbits is a generative meme-based PFP collection of 3264 NFTs with retro futuristic and fun vibes. Built on <span style={{ fontWeight: "bold" }}>MegaETH</span>, it was designed to be fun, accessible and welcoming to all, whether you&apos;re a degen, a meme lover, or just here for the tech.
             </p>
 
             <Image

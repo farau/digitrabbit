@@ -29,16 +29,16 @@ export default function BackgroundEffect({ mode = 'sun' }) {
 
     if (mode === 'sun') {
       const material = new THREE.MeshBasicMaterial({ color: 0xfff6b0 })
-      object = new THREE.Mesh(new THREE.SphereGeometry(0.3, 32, 32), material)
+      object = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), material)
       object.position.set(5, 5, -5)
-        scene.add(object)
-        
+      scene.add(object)
+
       light = new THREE.PointLight(0xffa500, 0.1, 10)
       light.position.copy(object.position)
       scene.add(light)
-        
+
     } else {
-      const geometry = new THREE.SphereGeometry(0.25, 36, 36)
+      const geometry = new THREE.SphereGeometry(0.4, 36, 36)
       const material = new THREE.ShaderMaterial({
         uniforms: {
           crescentCut: { value: 0.15 },
@@ -64,12 +64,12 @@ export default function BackgroundEffect({ mode = 'sun' }) {
       })
 
       object = new THREE.Mesh(geometry, material)
-      
+
       // Position initiale, sera mise à jour dans animate()
       initialMoonOffset = new THREE.Vector3(2.5, 2.5, -5)
-        
+
       scene.add(object)
-        
+
       light = new THREE.PointLight(0xf0f0f5, 0.12, 10)
       scene.add(light)
     }
@@ -118,10 +118,10 @@ export default function BackgroundEffect({ mode = 'sun' }) {
         // Scintillement subtil
         const flicker = 1 + 0.01 * Math.sin(time * 5 + Math.random() * 0.5)
         object.scale.set(flicker, flicker, flicker)
-        
+
         // Lumière plus douce, variation faible
         light.intensity = 0.12 + 0.005 * Math.sin(time * 3 + Math.random() * 0.5)
-          
+
         // Met à jour la position de la lune en fonction de la position et rotation de la caméra
         object.position.copy(camera.position).add(initialMoonOffset.clone().applyQuaternion(camera.quaternion))
         light.position.copy(object.position)
@@ -172,7 +172,7 @@ export default function BackgroundEffect({ mode = 'sun' }) {
       style={{
         position: 'fixed',
         top: 0,
-        left: 0,
+        left: -500,
         width: '100vw',
         height: '100vh',
         pointerEvents: 'none',
