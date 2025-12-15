@@ -83,7 +83,7 @@ function LoadingModal({ isNight }) {
           margin: 0,
           textAlign: 'center'
         }}>
-          Checking your eligiblity...
+          Checking your eligibility...
         </p>
       </div>
     </div>
@@ -189,7 +189,7 @@ function ResultModal({ whitelistData, isNight, onClose }) {
           top: 15,
           left: 0,
           width: '100%',
-          height: isMobile ? '150%' : '120%',
+          height: isMobile ? '120%' : '120%',
           backgroundColor: overlayBg,
           backdropFilter: 'blur(8px)',
           WebkitBackdropFilter: 'blur(8px)',
