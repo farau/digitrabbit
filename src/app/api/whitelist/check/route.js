@@ -33,9 +33,10 @@ export async function POST(request) {
         const flufflesPath = path.join(process.cwd(), 'data', 'fluffles.csv');
         const gtdPath = path.join(process.cwd(), 'data', 'gtd.csv');
         const fcfsPath = path.join(process.cwd(), 'data', 'fcfs.csv');
+        const badbunnzPath = path.join(process.cwd(), 'data', 'badbunnz.csv');
 
         // Vérifier que les fichiers existent
-        if (!fs.existsSync(gtdPath) || !fs.existsSync(fcfsPath) || !fs.existsSync(flufflesPath)) {
+        if (!fs.existsSync(gtdPath) || !fs.existsSync(fcfsPath) || !fs.existsSync(flufflesPath) || !fs.existsSync(badbunnzPath)) {
             return NextResponse.json(
                 { error: 'Whitelist data not found' },
                 { status: 500 }
@@ -46,12 +47,13 @@ export async function POST(request) {
         const flufflesText = fs.readFileSync(flufflesPath, 'utf-8');
         const gtdText = fs.readFileSync(gtdPath, 'utf-8');
         const fcfsText = fs.readFileSync(fcfsPath, 'utf-8');
+        const badbunnzText = fs.readFileSync(badbunnzPath, 'utf-8');
 
         // Parser les CSV
         const flufflesData = parseCSV(flufflesText);
         const gtdData = parseCSV(gtdText);
         const fcfsData = parseCSV(fcfsText);
-
+        const badbunnzData = parseCSV(badbunnzText);
 
         // Normaliser l'adresse
         const normalizedAddress = address.toLowerCase();
@@ -69,6 +71,10 @@ export async function POST(request) {
             fcfs: {
                 isWhitelisted: normalizedAddress in fcfsData,
                 count: fcfsData[normalizedAddress] || 0
+            },
+            badbunnz: {
+                isWhitelisted: normalizedAddress in badbunnzData,
+                count: badbunnzData[normalizedAddress] || 0
             }
         };
 

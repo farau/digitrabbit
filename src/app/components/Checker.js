@@ -15,13 +15,17 @@ const WHITELIST_CONFIG = [
     displayName: 'Fluffles FCFS Phase'
   },
   {
+    type: 'badbunnz',
+    displayName: 'BadBunnz FCFS Phase'
+  },
+  {
     type: 'gtd',
     displayName: 'Guaranteed Whitelist'
   },
   {
     type: 'fcfs',
     displayName: 'First Come First Serve'
-  },
+  }
 ];
 
 function LoadingModal({ isNight }) {
@@ -392,11 +396,12 @@ function CheckWhitelistButton({ isNight }) {
   const VIDEO_COUNTS = {
     ok: 3,
     ko: 7,
-    fluffles: 1
+    fluffles: 1,
+    badbunnz: 1
   };
 
-  const getRandomImage = (isEligible, isEligibleFluffles) => {
-    const folder = isEligible ? (isEligibleFluffles ? 'fluffles' : 'ok') : 'ko';
+  const getRandomImage = (isEligible, isEligibleFluffles, isELigibleBadbunnz) => {
+    const folder = isEligible ? (isEligibleFluffles ? 'fluffles' : (isELigibleBadbunnz ? 'badbunnz' : 'ok')) : 'ko';
     const count = VIDEO_COUNTS[folder];
     const randomIndex = Math.floor(Math.random() * count) + 1;
     return `/img/whitelist/${folder}/${randomIndex}.mp4`;
@@ -450,9 +455,10 @@ function CheckWhitelistButton({ isNight }) {
       }
 
       const data = await response.json();
-      const isEligible = data.gtd?.isWhitelisted || data.fcfs?.isWhitelisted || data.fluffles?.isWhitelisted;
+      const isEligible = data.gtd?.isWhitelisted || data.fcfs?.isWhitelisted || data.fluffles?.isWhitelisted || data.badbunnz?.isWhitelisted;
       const isEligibleFluffles = data.fluffles?.isWhitelisted;
-      const randomImage = getRandomImage(isEligible, isEligibleFluffles);
+      const isELigibleBadbunnz = data.badbunnz?.isWhitelisted;
+      const randomImage = getRandomImage(isEligible, isEligibleFluffles, isELigibleBadbunnz);
 
       setWhitelistData({ ...data, image: randomImage });
 
