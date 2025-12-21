@@ -21,7 +21,6 @@ import Assets from "./Assets";
 import FAQ from "./FAQ";
 import Roadmap from "./Roadmap";
 import MobileBackground from "./MobileBackground";
-import Checker from "./Checker";
 
 import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, publicClient, NUM_SLOTS } from '@/utils/constants'
 import { usePreSignedPool } from "../hooks/usePreSignedPool";
@@ -29,7 +28,7 @@ import { usePreSignedPool } from "../hooks/usePreSignedPool";
 
 export default function MainPage() {
 
-  const [visibleApps, setVisibleApps] = useState(["Checker"]);
+  const [visibleApps, setVisibleApps] = useState([]);
   const [minimizedApps, setMinimizedApps] = useState([]);
   const [appZIndices, setAppZIndices] = useState({});
 
@@ -344,8 +343,6 @@ export default function MainPage() {
         playerData={playerData}
         isGameStarted={isGameStarted}
       />;*/
-      case "Checker":
-        return <Checker />;
       case "Leaderboard":
         return <Leaderboard />;
       case "Settings":
@@ -423,13 +420,6 @@ export default function MainPage() {
         label="Game.exe"
         onClick={() => restoreApp("Game")}
         position={{ x: -100, y: "35%" }}
-      />
-      <Icon
-        name="Checker"
-        src="/img/icons/checker.png"
-        label="Checker"
-        onClick={() => restoreApp("Checker")}
-        position={{ x: -100, y: "50%" }}
       />
       <Icon
         name="Chill"
