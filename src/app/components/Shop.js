@@ -13,7 +13,7 @@ import { XLogo } from '@/utils/constants'
 import { useWalletClient } from '../hooks/useWalletClient'
 import WalletButton from './WalletButton'
 
-export default function Shop({ refreshCounter, setRefreshCounter, playerData, isGameStarted }) {
+export default function Shop({ playerData, isGameStarted }) {
   const [selectedLevels, setSelectedLevels] = useState(Array(NUM_SLOTS).fill(1))
   const [isWriting, setIsWriting] = useState(false)
   const [error, setError] = useState('')
@@ -153,7 +153,7 @@ export default function Shop({ refreshCounter, setRefreshCounter, playerData, is
       setTxResult(hash)
 
       // Après succès, on refresh les données joueur pour avoir les dernières infos
-      setRefreshCounter(c => c + 1)
+      //setRefreshCounter(c => c + 1)
 
     } catch (err) {
       if (err.shortMessage?.toLowerCase().includes("maximum limit")) {

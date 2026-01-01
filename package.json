@@ -13,7 +13,7 @@
     "@privy-io/react-auth": "^2.14.2",
     "@privy-io/wagmi": "^1.0.4",
     "@react-three/drei": "^10.0.7",
-    "@react-three/fiber": "^9.1.2",
+    "@react-three/fiber": "^9.4.2",
     "@react-three/postprocessing": "^3.0.4",
     "@reown/appkit-adapter-ethers": "^1.7.4",
     "@sentry/nextjs": "^9.40.0",
@@ -23,9 +23,11 @@
     "@vercel/analytics": "^1.6.1",
     "@vercel/speed-insights": "^1.2.0",
     "@zerodev/sdk": "^5.4.36",
+    "alchemy-sdk": "^3.6.5",
     "clsx": "^2.1.1",
     "ethers": "^6.14.0",
     "framer-motion": "^12.22.0",
+    "import-in-the-middle": "1.14.2",
     "jose": "^6.0.11",
     "lucide-react": "^0.525.0",
     "next": "15.4.8",
@@ -39,9 +41,10 @@
     "recharts": "^2.15.3",
     "require-in-the-middle": "^7.5.2",
     "styled-components": "^6.1.18",
-    "three": "^0.175.0",
+    "three": "^0.182.0",
     "viem": "^2.31.2",
-    "wagmi": "^2.19.5"
+    "wagmi": "^2.19.5",
+    "websocket": "^1.0.35"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.3",

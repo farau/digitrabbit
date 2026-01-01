@@ -1,4 +1,6 @@
 // hooks/useWalletClient.js - Version améliorée
+'use client';
+
 import { useEffect, useState } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
 import { initWalletClient, clearWalletClient } from '@/lib/walletClient'

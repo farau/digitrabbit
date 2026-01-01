@@ -1,82 +1,162 @@
-// app/api/rpc/route.js - Code complet avec cache hybride
+// app/api/rpc/route.js - Code complet avec cache optimisé
+
 import { NextResponse } from 'next/server';
 import { getBackendRpcWallet } from '@/lib/walletRpcBackend';
 
-// Configuration pour les tests
+// ===== CONFIGURATION =====
 const TEST_CONFIG = {
     POOL_SIZE: 5,
     TIMEOUT_MS: 5000,
-    CACHE_DURATION_MS: 60000 * 5, // 5mn de cache
+    CACHE_DURATION_MS: 60000 * 5, // 5 minutes = 300 secondes
     THRESHOLDS: {
-        OK: 300,           // < 300ms
-        GOOD: 1000,        // 300ms - 1s
+        OK: 300,                // < 300ms
+        GOOD: 1000,             // 300ms - 1s
         SLIGHTLY_DEGRADED: 3000,  // 1s - 3s
-        DEGRADED: 3000     // > 3s
+        DEGRADED: 3000          // > 3s
     }
-};
-
-// Cache en mémoire SEULEMENT pour le développement
-let devCache = {
-    data: null,
-    timestamp: null,
-    isRunning: false
 };
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 
-// Fonctions de cache pour le développement
-function isDevCacheValid() {
-    if (!isDevelopment || !devCache.data || !devCache.timestamp) {
-        return false;
+// ===== CACHE CLASS =====
+/**
+ * Cache en mémoire pour le développement UNIQUEMENT
+ * En production, utilise les headers HTTP (CDN gère tout)
+ */
+class DevCache {
+    constructor(duration = TEST_CONFIG.CACHE_DURATION_MS) {
+        this.data = null;
+        this.timestamp = null;
+        this.isRunning = false;
+        this.duration = duration;
     }
-    const cacheAge = Date.now() - devCache.timestamp;
-    return cacheAge < TEST_CONFIG.CACHE_DURATION_MS;
+
+    /**
+     * Vérifie si le cache est valide
+     */
+    isValid() {
+        if (!this.data || !this.timestamp) return false;
+        const age = Date.now() - this.timestamp;
+        return age < this.duration;
+    }
+
+    /**
+     * Récupère les données du cache avec age et TTL
+     */
+    get() {
+        if (!this.isValid()) return null;
+
+        const age = Date.now() - this.timestamp;
+        const remaining = this.duration - age;
+
+        return {
+            data: this.data,
+            age: Math.round(age / 1000),
+            ttl: Math.round(remaining / 1000)
+        };
+    }
+
+    /**
+     * Stocke les données en cache
+     */
+    set(data) {
+        this.data = { ...data };
+        this.timestamp = Date.now();
+    }
+
+    /**
+     * Vide le cache
+     */
+    clear() {
+        this.data = null;
+        this.timestamp = null;
+        this.isRunning = false;
+    }
 }
 
-function getDevCachedResponse() {
-    const cacheAge = Date.now() - devCache.timestamp;
-    const remainingTtl = Math.max(0, TEST_CONFIG.CACHE_DURATION_MS - cacheAge);
+const cache = new DevCache();
+
+// ===== CACHE HEADERS MANAGEMENT =====
+/**
+ * Retourne les headers de cache appropriés
+ * - Développement : cache mémoire local (simple debugging)
+ * - Production : cache CDN (Vercel Edge) avec stale-while-revalidate
+ */
+function getCacheHeaders(forceRefresh = false) {
+    if (isDevelopment) {
+        return {
+            'Cache-Control': 'private, no-cache',
+            'X-Environment': 'development',
+            'X-Cache-Strategy': 'memory'
+        };
+    }
+
+    // Production : cache public au CDN
+    const maxAge = Math.round(TEST_CONFIG.CACHE_DURATION_MS / 1000); // 300 secondes
+
+    if (forceRefresh) {
+        return {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
+            'X-Environment': 'production',
+            'X-Cache-Strategy': 'no-cache'
+        };
+    }
+
+    return {
+        // ✅ Cache au CDN (Vercel Edge) pendant 5 min
+        // ✅ s-maxage = cache au CDN même si max-age au client expire
+        // ✅ stale-while-revalidate = sert stale 60s pendant que serveur revalidate
+        'Cache-Control': `public, max-age=${maxAge}, s-maxage=${maxAge}, stale-while-revalidate=60`,
+        'Vary': 'Accept-Encoding',
+        'X-Environment': 'production',
+        'X-Cache-Strategy': 'cdn',
+        'X-Cache-Max-Age': maxAge.toString()
+    };
+}
+
+/**
+ * Retourne la réponse depuis le cache (dev uniquement)
+ */
+function getCachedResponse() {
+    const cached = cache.get();
+    if (!cached) return null;
 
     return NextResponse.json({
-        ...devCache.data,
+        ...cached.data,
         cached: true,
-        cacheAge: Math.round(cacheAge / 1000),
-        cacheTtl: Math.round(remainingTtl / 1000),
+        cacheAge: cached.age,
+        cacheTtl: cached.ttl,
         environment: 'development'
     }, {
         headers: {
-            'Cache-Control': `private, max-age=${Math.round(remainingTtl / 1000)}`,
-            'X-Cache': 'DEV-HIT',
-            'X-Cache-Age': Math.round(cacheAge / 1000).toString(),
-            'X-Cache-TTL': Math.round(remainingTtl / 1000).toString(),
+            'Cache-Control': `private, max-age=${cached.ttl}`,
+            'X-Cache': 'HIT',
+            'X-Cache-Age': cached.age.toString(),
+            'X-Cache-TTL': cached.ttl.toString(),
             'X-Environment': 'development'
         }
     });
 }
 
-function updateDevCache(data) {
-    if (isDevelopment) {
-        devCache = {
-            data: { ...data },
-            timestamp: Date.now(),
-            isRunning: false
-        };
-    }
-}
-
+// ===== GAS & TRANSACTION MANAGEMENT =====
+/**
+ * Définit le prix du gas pour les tests
+ */
 const defineGasPrice = async (walletClient) => {
     return {
         gasPrice: 1000000000n, // 1 gwei
         gasLimit: 100000n
-    }
-}
+    };
+};
 
 /**
  * Crée une pool de transactions présignées pour les tests
  */
 async function createTransactionPool(walletClient, poolSize = TEST_CONFIG.POOL_SIZE) {
     const transactions = [];
-    const { gasPrice, gasLimit } = await defineGasPrice(walletClient)
+    const { gasPrice, gasLimit } = await defineGasPrice(walletClient);
     const baseNonce = await walletClient.request({
         method: 'eth_getTransactionCount',
         params: [walletClient.account.address, 'latest']
@@ -141,7 +221,7 @@ async function testTransaction(walletClient, transaction) {
     } catch (error) {
         const responseTime = Date.now() - startTime;
 
-        if (process.env.NODE_ENV === 'development') {
+        if (isDevelopment) {
             console.warn(`⚠️ Transaction test failed:`, error.message);
         }
 
@@ -154,6 +234,7 @@ async function testTransaction(walletClient, transaction) {
     }
 }
 
+// ===== ANALYSIS & RESULTS =====
 /**
  * Analyse les résultats des tests pour déterminer l'état de la blockchain
  */
@@ -161,6 +242,7 @@ function analyzeResults(results) {
     const successfulTests = results.filter(r => r.success);
     const failedTests = results.filter(r => !r.success);
 
+    // Si tout échoue
     if (successfulTests.length === 0) {
         return {
             status: 'down',
@@ -175,8 +257,10 @@ function analyzeResults(results) {
         };
     }
 
+    // Calcul du temps moyen
     const avgResponseTime = successfulTests.reduce((sum, test) => sum + test.responseTime, 0) / successfulTests.length;
 
+    // Détermination du statut
     let status, value;
 
     if (avgResponseTime < TEST_CONFIG.THRESHOLDS.OK) {
@@ -209,21 +293,38 @@ function analyzeResults(results) {
     };
 }
 
+// ===== MAIN HANDLER =====
 /**
- * Gestionnaire GET avec cache hybride dev/prod
+ * GET /api/rpc
+ * 
+ * Teste l'état de santé de la blockchain
+ * 
+ * Développement:
+ *   - Cache en mémoire (5 min)
+ *   - Évite les appels répétés
+ * 
+ * Production:
+ *   - Cache CDN via headers HTTP (Vercel Edge)
+ *   - Tous les clients partagent le cache
+ *   - stale-while-revalidate pour éviter la thundering herd
+ * 
+ * Query params:
+ *   - ?refresh=true : Force la réexécution des tests (ignore le cache)
  */
 export async function GET(request) {
     const url = new URL(request.url);
     const forceRefresh = url.searchParams.get('refresh') === 'true';
 
-    // En développement : utiliser le cache mémoire
+    // ===== DÉVELOPPEMENT : Cache mémoire =====
     if (isDevelopment && !forceRefresh) {
-        if (isDevCacheValid()) {
+        // Cache valide ? Retourner le cache
+        if (cache.isValid()) {
             console.log('📦 [DEV] Returning cached blockchain health status');
-            return getDevCachedResponse();
+            return getCachedResponse();
         }
 
-        if (devCache.isRunning) {
+        // Test déjà en cours ? Retourner 429 (Too Many Requests)
+        if (cache.isRunning) {
             console.log('⏳ [DEV] Test already running, please wait...');
             return NextResponse.json({
                 status: 'testing',
@@ -241,40 +342,33 @@ export async function GET(request) {
             });
         }
 
-        devCache.isRunning = true;
+        cache.isRunning = true;
     }
-
-    // Headers pour la production (CDN) et développement
-    const cacheHeaders = isDevelopment ? {
-        'Cache-Control': 'private, no-cache',
-        'X-Environment': 'development'
-    } : {
-        'Cache-Control': forceRefresh
-            ? 'no-cache, no-store, must-revalidate'
-            : `public, max-age=${Math.round(TEST_CONFIG.CACHE_DURATION_MS / 1000)}, s-maxage=${Math.round(TEST_CONFIG.CACHE_DURATION_MS / 1000)}`,
-        'Vary': 'Accept-Encoding',
-        'X-Environment': 'production'
-    };
 
     console.log(`🚀 [${isDevelopment ? 'DEV' : 'PROD'}] ${forceRefresh ? 'Forced refresh -' : ''} Starting blockchain health test...`);
 
     const testStartTime = Date.now();
     let walletClient;
 
+    // Step 0: Get wallet client
     try {
         const walletResult = getBackendRpcWallet();
         walletClient = walletResult.walletClient;
 
     } catch (error) {
-        if (isDevelopment) devCache.isRunning = false;
+        if (isDevelopment) cache.isRunning = false;
         console.error('❌ Failed to get test wallet client:', error);
+
         return NextResponse.json({
             status: 'down',
             value: 0,
             error: 'Unable to create test wallet client',
             details: error.message,
             timestamp: new Date().toISOString()
-        }, { status: 500 });
+        }, {
+            status: 500,
+            headers: getCacheHeaders(true)
+        });
     }
 
     // Step 1: Create transaction pool
@@ -282,15 +376,19 @@ export async function GET(request) {
     try {
         transactionPool = await createTransactionPool(walletClient);
     } catch (error) {
-        if (isDevelopment) devCache.isRunning = false;
+        if (isDevelopment) cache.isRunning = false;
         console.error('❌ Failed to create transaction pool:', error);
+
         return NextResponse.json({
             status: 'down',
             value: 0,
             error: 'Unable to create transaction pool',
             details: error.message,
             timestamp: new Date().toISOString()
-        }, { status: 500 });
+        }, {
+            status: 500,
+            headers: getCacheHeaders(true)
+        });
     }
 
     // Step 2: Execute transaction tests
@@ -345,18 +443,18 @@ export async function GET(request) {
 
         // Mettre à jour le cache en développement
         if (isDevelopment) {
-            updateDevCache(responseData);
+            cache.set(responseData);
         }
 
         return NextResponse.json({
             ...responseData,
             cached: false
         }, {
-            headers: cacheHeaders
+            headers: getCacheHeaders(forceRefresh)
         });
 
     } catch (error) {
-        if (isDevelopment) devCache.isRunning = false;
+        if (isDevelopment) cache.isRunning = false;
         console.error('❌ Error during RPC test:', error);
 
         return NextResponse.json({
@@ -367,9 +465,7 @@ export async function GET(request) {
             timestamp: new Date().toISOString()
         }, {
             status: 500,
-            headers: {
-                'Cache-Control': 'no-cache, no-store, must-revalidate'
-            }
+            headers: getCacheHeaders(true)
         });
     }
 }

@@ -1,22 +1,7 @@
 // lib/walletClient.js
-import { createWalletClient, custom, publicActions } from 'viem';
+import { createWalletClient, custom, publicActions, http } from 'viem';
 import { megaethTestnet } from 'viem/chains';
-
-// Configuration customisée du Megaeth Testnet avec une URL RPC spécifique
-const customMegaethTestnet = {
-  ...megaethTestnet,
-  id: 6343, // Viem utilise 'id' plutôt que 'chainId'
-  chainId: 6343, // Garder aussi chainId pour compatibilité
-  name: 'MegaETH Testnet v2', // Optionnel mais recommandé
-  rpcUrls: {
-    default: {
-      http: ['https://timothy.megaeth.com/rpc'],
-    },
-    public: {
-      http: ['https://timothy.megaeth.com/rpc'],
-    },
-  },
-};
+import { customMegaethTestnet } from '@/utils/constants';
 
 let client = null;
 

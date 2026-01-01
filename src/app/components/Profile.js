@@ -318,7 +318,7 @@ function PointsModal({ isOpen, onClose, pointsData, onClaim, isClaiming, isNight
   );
 }
 
-function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCounter, isGameStarted }) {
+function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, isGameStarted }) {
   const { wallets } = useWallets();
   const { walletClient } = useWalletClient(embeddedWallet);
   const [isChecking, setIsChecking] = useState(false);
@@ -408,7 +408,6 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
 
       console.log('Transaction hash:', hash);
       setClaimSuccess(true);
-      setRefreshCounter(c => c + 1);
       setPointsData(null);
 
     } catch (err) {
@@ -508,7 +507,7 @@ function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, setRefreshCo
   );
 }
 
-export default function Profile({ playerData, setRefreshCounter, isGameStarted }) {
+export default function Profile({ playerData, isGameStarted }) {
   const { user } = usePrivy();
   const { themeMode } = useTheme();
   const isNight = themeMode === 'dark';
@@ -900,7 +899,6 @@ export default function Profile({ playerData, setRefreshCounter, isGameStarted }
                 isNight={isNight}
                 user={user}
                 embeddedWallet={embeddedWallet}
-                setRefreshCounter={setRefreshCounter}
                 isGameStarted={isGameStarted}
               />
             </div>

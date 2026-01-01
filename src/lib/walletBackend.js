@@ -1,9 +1,10 @@
 // lib/walletBackend.js
 import { createWalletClient, createPublicClient, http } from 'viem';
-import { megaethTestnet } from 'viem/chains'; // Signer will be used especially on MegaETH Testnet
+import customMegaethTestnet from '@/utils/constants';
 import { privateKeyToAccount } from 'viem/accounts'
 import { encodePacked, keccak256, hashMessage } from 'viem';
 import { recoverAddress } from 'viem'
+import { customMegaethTestnet } from '@/utils/constants';
 
 // Singleton pattern for wallet clients
 let backendWalletClient = null;
@@ -33,14 +34,14 @@ function initializeBackendWallet() {
   // Create wallet client 
   backendWalletClient = createWalletClient({
     account,
-    chain: megaethTestnet,
-    transport: http(megaethTestnet.rpcUrls.default.http[0]),
+    chain: customMegaethTestnet,
+    transport: http('https://timothy.megaeth.com/rpc?vip=1&u=digitrabbits%20v2&v=5184000&s=mafia&verify=' + process.env.NEXT_PUBLIC_RPC_KEY),
   });
 
   // Create separate public client for better performance
   backendPublicClient = createPublicClient({
-    chain: megaethTestnet,
-    transport: http(megaethTestnet.rpcUrls.default.http[0]),
+    chain: customMegaethTestnet,
+    transport: http('https://timothy.megaeth.com/rpc?vip=1&u=digitrabbits%20v2&v=5184000&s=mafia&verify=' + process.env.NEXT_PUBLIC_RPC_KEY),
   });
 
   console.log('Backend wallet initialized for address:', account.address);

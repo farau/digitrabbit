@@ -1,4 +1,5 @@
 // lib/leaderboard.js
+import { unstable_cache } from 'next/cache'
 import { PrivyClient } from '@privy-io/server-auth';
 
 // Configuration
@@ -9,45 +10,9 @@ const GRAPHQL_ENDPOINT = process.env.GRAPHQL_METH_ENDPOINT || process.env.NEXT_P
 // Client Privy
 const privy = new PrivyClient(PRIVY_APP_ID, PRIVY_APP_SECRET);
 
-// Cache unifié avec gestion des états
-let cacheStore = {
-    privyUsers: {
-        data: null,
-        lastUpdate: 0,
-        isUpdating: false
-    },
-    leaderboard: {
-        data: null,
-        lastUpdate: 0,
-        isUpdating: false
-    }
-};
-
-const CACHE_DURATION = 7 * 60 * 1000; // 7 minutes
 const REQUEST_TIMEOUT = 25000; // 25 secondes timeout pour GraphQL
 const PRIVY_TIMEOUT = 15000; // 15 secondes timeout pour Privy
 
-/**
- * Vérifie si le cache est encore valide
- */
-function isCacheValid(cacheKey) {
-    const cache = cacheStore[cacheKey];
-    return cache.data && (Date.now() - cache.lastUpdate) < CACHE_DURATION;
-}
-
-/**
- * Attend qu'une mise à jour en cours se termine
- */
-async function waitForUpdate(cacheKey, maxWait = 30000) {
-    const cache = cacheStore[cacheKey];
-    const startTime = Date.now();
-
-    while (cache.isUpdating && (Date.now() - startTime) < maxWait) {
-        await new Promise(resolve => setTimeout(resolve, 200));
-    }
-
-    return cache.data;
-}
 
 /**
  * Exécute une requête GraphQL avec timeout
@@ -72,7 +37,6 @@ async function executeGraphQLQuery(query, variables = {}) {
                 query,
                 variables
             }),
-            signal: controller.signal
         });
 
         clearTimeout(timeoutId);
@@ -103,7 +67,7 @@ async function executeGraphQLQuery(query, variables = {}) {
  */
 async function getLeaderboardFromGraphQL(seasonId = "0") {
     try {
-        console.log(`Récupération GraphQL complète: seasonId=${seasonId}`);
+        console.log(`Fetching complete GraphQL leaderboard: seasonId=${seasonId}`);
 
         let allResults = [];
         let hasMore = true;
@@ -111,7 +75,7 @@ async function getLeaderboardFromGraphQL(seasonId = "0") {
         const limit = 1000; // Taille de page (ajustez selon les limites de votre API)
 
         while (hasMore) {
-            console.log(`Récupération page: skip=${skip}, limit=${limit}`);
+            console.log(`Fetching page: skip=${skip}, limit=${limit}`);
 
             // ===== REQUÊTE ADAPTÉE POUR LE SUBGRAPH THE GRAPH =====
             const query = `
@@ -161,7 +125,7 @@ async function getLeaderboardFromGraphQL(seasonId = "0") {
             hasMore = currentResults.length === limit;
             skip += limit;
 
-            console.log(`Page récupérée: ${currentResults.length} éléments, Total: ${allResults.length}`);
+            console.log(`Page fetched: ${currentResults.length} items, Total: ${allResults.length}`);
 
             // Petite pause pour éviter de surcharger l'API (optionnel)
             if (hasMore) {
@@ -169,41 +133,24 @@ async function getLeaderboardFromGraphQL(seasonId = "0") {
             }
         }
 
-        console.log(`Récupération terminée: ${allResults.length} éléments au total`);
+        console.log(`Fetch complete: ${allResults.length} items total`);
 
         return {
             playerSeasonDatas: allResults
         };
 
     } catch (error) {
-        console.error('Erreur getLeaderboardFromGraphQL:', error);
+        console.error('Error in getLeaderboardFromGraphQL:', error);
         throw error;
     }
 }
 
 /**
- * Récupère tous les utilisateurs de Privy avec cache et protection contre les appels multiples
+ * Récupère tous les utilisateurs de Privy
  */
-async function getPrivyUsers(forceRefresh = false) {
-    const cache = cacheStore.privyUsers;
-
-    // Vérifier le cache d'abord
-    if (!forceRefresh && isCacheValid('privyUsers')) {
-        console.log('Utilisation du cache Privy');
-        return cache.data;
-    }
-
-    // Si une mise à jour est déjà en cours, attendre
-    if (cache.isUpdating) {
-        console.log('Mise à jour Privy en cours, attente...');
-        return await waitForUpdate('privyUsers');
-    }
-
-    // Marquer comme en cours de mise à jour
-    cache.isUpdating = true;
-
+async function getPrivyUsers() {
     try {
-        console.log('Récupération des utilisateurs Privy...');
+        console.log('Fetching Privy users...');
 
         // Créer une Promise avec timeout pour Privy
         const privyPromise = new Promise((resolve, reject) => {
@@ -221,29 +168,13 @@ async function getPrivyUsers(forceRefresh = false) {
                     reject(error);
                 });
         });
-
         const users = await privyPromise;
 
-        console.log(`${users.length} utilisateurs Privy récupérés`);
-
-        // Mise à jour du cache
-        cache.data = users;
-        cache.lastUpdate = Date.now();
-
+        console.log(`${users.length} Privy users fetched`);
         return users;
     } catch (error) {
-        console.error('Erreur lors de la récupération des utilisateurs Privy:', error);
-
-        // En cas d'erreur, retourner les données du cache si disponibles
-        if (cache.data) {
-            console.log('Utilisation des données Privy en cache suite à l\'erreur');
-            return cache.data;
-        }
-
-        // Sinon retourner un tableau vide
-        return [];
-    } finally {
-        cache.isUpdating = false;
+        console.error('Error fetching Privy users:', error);
+        return [];// Retourner un tableau vide en cas d'erreur
     }
 }
 
@@ -300,85 +231,128 @@ function getTwitterInfo(user) {
     };
 }
 
+// Cache des utilisateurs Privy pour éviter les appels redondants - Ok car lib côté serveur
+const getCachedPrivyUsers = unstable_cache(
+    async () => {
+        const users = await getPrivyUsers();
+        // Créer un map avec toutes les adresses wallet comme clés
+        const map = {};
+
+        users.forEach(user => {
+            // Extraire les infos Twitter
+            const twitterInfo = user.twitter ? {
+                username: user.twitter.username || user.twitter.name || null,
+                avatar: user.twitter.profilePictureUrl || null,
+                displayName: user.twitter.name || user.twitter.username || null
+            } : {
+                username: null,
+                avatar: null,
+                displayName: null
+            };
+
+            // Données minimales à stocker
+            const userData = {
+                mainWallet: user.wallet?.address || null,
+                twitter: twitterInfo
+            };
+
+            // Indexer par l'adresse principale du wallet
+            if (user.wallet?.address) {
+                const mainAddress = user.wallet.address.toLowerCase();
+                map[mainAddress] = userData;
+            }
+
+            // Indexer aussi par tous les linked_accounts de type wallet
+            if (user.linked_accounts) {
+                user.linked_accounts.forEach(account => {
+                    if (account.type === 'wallet' && account.address) {
+                        const linkedAddress = account.address.toLowerCase();
+                        map[linkedAddress] = userData;
+                    }
+                });
+            }
+        });
+
+        return map;
+    },
+    ['privy-users-map'],
+    {
+        tags: ['privy-users'],
+        revalidate: 3600,
+    }
+);
+
+// Fonction helper pour utiliser le map
+function findPrivyUserByWalletFromMap(privyMap, walletAddress) {
+    if (!privyMap || !walletAddress) return null;
+
+    const lowercasedWalletAddress = walletAddress.toLowerCase();
+    return privyMap[lowercasedWalletAddress] || null;
+}
+
+// Fonction helper pour extraire les infos Twitter depuis le map
+function getTwitterInfoFromMap(privyMap, walletAddress) {
+    const userData = findPrivyUserByWalletFromMap(privyMap, walletAddress);
+
+    if (!userData) {
+        return {
+            username: null,
+            avatar: null,
+            displayName: null
+        };
+    }
+
+    return userData.twitter;
+}
+
 /**
- * Calcule le leaderboard principal avec cache unifié
+ * Calcule le leaderboard principal
  */
-async function calculateLeaderboard(forceRefresh = false) {
-    const cache = cacheStore.leaderboard;
-
-    // Vérifier le cache d'abord
-    if (!forceRefresh && isCacheValid('leaderboard')) {
-        console.log('Utilisation du cache leaderboard');
-        return cache.data;
-    }
-
-    // Si une mise à jour est déjà en cours, attendre
-    if (cache.isUpdating) {
-        console.log('Calcul du leaderboard en cours, attente...');
-        return await waitForUpdate('leaderboard');
-    }
-
-    // Marquer comme en cours de mise à jour
-    cache.isUpdating = true;
+async function calculateLeaderboard() {
     const startTime = Date.now();
 
     try {
-        console.log('Calcul du leaderboard...');
+        console.log('Calculating leaderboard...');
 
-        // Récupération des données en parallèle
-        const [privyUsers, graphqlData] = await Promise.all([
-            getPrivyUsers(forceRefresh).catch(err => {
-                console.warn('Erreur Privy, continue sans:', err.message);
-                return [];
-            }),
+        // Récupération simple et parallèle
+        const [privyMap, graphqlData] = await Promise.all([
+            getCachedPrivyUsers(), // Appel simple et propre
             getLeaderboardFromGraphQL()
         ]);
 
-        console.log(`GraphQL: ${graphqlData.playerSeasonDatas.length} joueurs`);
-        console.log(`Privy: ${privyUsers.length} utilisateurs`);
+        console.log(`GraphQL: ${graphqlData.playerSeasonDatas.length} players`);
+        console.log(`Privy: ${Object.keys(privyMap).length} users`);
 
         // Construction du leaderboard
-        const leaderboard = [];
-
-        graphqlData.playerSeasonDatas.forEach((playerData, index) => {
-            // ===== ADAPTATION AUX NOUVELLES DONNÉES DU SUBGRAPH =====
+        const leaderboard = graphqlData.playerSeasonDatas.map((playerData, index) => {
             const playerAddress = playerData.player.address;
-
-            // Recherche de l'utilisateur Privy correspondant
-            const privyUser = findPrivyUserByWallet(privyUsers, playerAddress);
-            const twitterInfo = getTwitterInfo(privyUser);
-
-            // Convertir le score de micro-points à points (divisé par 1000000)
+            const privyUser = findPrivyUserByWalletFromMap(privyMap, playerAddress);
+            const twitterInfo = getTwitterInfoFromMap(privyMap, playerAddress);
             const scoreInPoints = parseInt(playerData.score) / 1000000;
 
-            // Inclure tous les joueurs, même sans Twitter
-            leaderboard.push({
+            return {
                 rank: index + 1,
                 walletAddress: playerAddress,
-                score: scoreInPoints, // Score en points (pas en micro-points)
+                score: scoreInPoints,
                 totalClicks: parseInt(playerData.totalClicks),
                 gameClicks: parseInt(playerData.gameClicks),
                 streak: parseInt(playerData.streak),
                 maxClicks: parseInt(playerData.maxClicks),
                 hasClaimedPoints: playerData.hasClaimedPoints,
-                totalPointsAllTime: parseInt(playerData.player.totalPointsAllTime) / 1000000, // Points tous les temps
+                totalPointsAllTime: parseInt(playerData.player.totalPointsAllTime) / 1000000,
                 firstGameAt: parseInt(playerData.player.firstGameAt),
                 updatedAt: parseInt(playerData.updatedAt),
-                twitter: {
-                    username: twitterInfo.username,
-                    avatar: twitterInfo.avatar,
-                    displayName: twitterInfo.displayName
-                },
+                twitter: twitterInfo,
                 user: {
                     createdAt: privyUser?.createdAt
                 }
-            });
+            };
         });
 
         const processingTime = Date.now() - startTime;
-        console.log(`Leaderboard calculé en ${processingTime}ms avec ${leaderboard.length} joueurs`);
+        console.log(`Leaderboard calculated in ${processingTime}ms with ${leaderboard.length} players`);
 
-        const result = {
+        return {
             leaderboard,
             metadata: {
                 totalPlayers: leaderboard.length,
@@ -389,42 +363,22 @@ async function calculateLeaderboard(forceRefresh = false) {
                 topMaxClicks: Math.max(...leaderboard.map(p => p.maxClicks), 0),
                 source: 'the-graph-subgraph',
                 processingTimeMs: processingTime,
-                privyUsersCount: privyUsers.length,
+                privyUsersCount: Object.keys(privyMap).length,
                 graphqlPlayersCount: graphqlData.playerSeasonDatas.length
             }
         };
 
-        // Mise à jour du cache
-        cache.data = result;
-        cache.lastUpdate = Date.now();
-
-        return result;
-
     } catch (error) {
-        console.error('Erreur lors du calcul du leaderboard:', error);
-
-        // En cas d'erreur, retourner les données du cache si disponibles
-        if (cache.data) {
-            console.log('Utilisation des données leaderboard en cache suite à l\'erreur');
-            return cache.data;
-        }
-
-        throw error;
-    } finally {
-        cache.isUpdating = false;
+        console.error('Error calculating leaderboard:', error);
+        throw error; // Laisse Next.js gérer l'erreur
     }
 }
 
 /**
  * Obtient le leaderboard
  */
-export async function getLeaderboard(forceRefresh = false) {
-    if (forceRefresh) {
-        console.log('Force refresh demandé - invalidation des caches');
-        cacheStore.leaderboard.lastUpdate = 0;
-    }
-
-    return await calculateLeaderboard(forceRefresh);
+export async function getLeaderboard() {
+    return await calculateLeaderboard();
 }
 
 /**
@@ -440,7 +394,7 @@ export async function getUserRank(walletAddress) {
 
         return userEntry || null;
     } catch (error) {
-        console.error('Erreur lors de la récupération du rang utilisateur:', error);
+        console.error('Error fetching user rank:', error);
         return null;
     }
 }
@@ -460,7 +414,7 @@ export async function getTopPlayers(limit = 10) {
             }
         };
     } catch (error) {
-        console.error('Erreur lors de la récupération du top players:', error);
+        console.error('Error fetching top players:', error);
         return { topPlayers: [], metadata: null };
     }
 }
@@ -485,7 +439,7 @@ export async function getTopStreakers(limit = 10) {
             }
         };
     } catch (error) {
-        console.error('Erreur lors de la récupération des top streakers:', error);
+        console.error('Error fetching top streakers:', error);
         return { topStreakers: [], metadata: null };
     }
 }
@@ -510,7 +464,7 @@ export async function getTopClickers(limit = 10) {
             }
         };
     } catch (error) {
-        console.error('Erreur lors de la récupération des top clickers:', error);
+        console.error('Error fetching top clickers:', error);
         return { topClickers: [], metadata: null };
     }
 }
@@ -542,7 +496,7 @@ export async function getLeaderboardStats() {
             }
         };
     } catch (error) {
-        console.error('Erreur lors de la récupération des stats:', error);
+        console.error('Error fetching leaderboard stats:', error);
         return null;
     }
 }
@@ -550,52 +504,15 @@ export async function getLeaderboardStats() {
 /**
  * Obtient les données complètes du leaderboard
  */
-export async function getCompleteLeaderboardData(forceRefresh = false) {
+export async function getCompleteLeaderboardData() {
     try {
-        const [leaderboardData] = await Promise.all([
-            getLeaderboard(forceRefresh)
-        ]);
-
+        const leaderboardData = await getLeaderboard();
         return {
             topPlayers: leaderboardData.leaderboard,
-            metadata: {
-                ...leaderboardData.metadata,
-            }
+            metadata: leaderboardData.metadata
         };
     } catch (error) {
-        console.error('Erreur lors de la récupération des données complètes:', error);
+        console.error('Error fetching complete leaderboard data:', error);
         throw error;
     }
-}
-
-/**
- * Démarre la mise à jour automatique
- */
-export function startLeaderboardUpdater() {
-    console.log('Démarrage de la mise à jour automatique du leaderboard (15 min)');
-
-    // Première exécution
-    Promise.all([
-        getLeaderboard(true).catch(console.error)
-    ]);
-
-    // Puis toutes les 15 minutes
-    setInterval(() => {
-        console.log('Mise à jour automatique du leaderboard...');
-        Promise.all([
-            getLeaderboard(true).catch(console.error)
-        ]);
-    }, CACHE_DURATION);
-}
-
-/**
- * Fonction utilitaire pour vider le cache manuellement
- */
-export function clearCache() {
-    Object.keys(cacheStore).forEach(key => {
-        cacheStore[key].data = null;
-        cacheStore[key].lastUpdate = 0;
-        cacheStore[key].isUpdating = false;
-    });
-    console.log('Cache vidé manuellement');
 }

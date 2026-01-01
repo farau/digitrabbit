@@ -1,8 +1,9 @@
 // src/hooks/useBlockchainHealth.js
+'use client';
+
 import { useState, useEffect, useRef } from 'react';
 import * as Sentry from '@sentry/nextjs';
 import { BLOCKCHAIN_HEALTH_CONFIG, canPlayWithStatus, getStatusDisplayInfo } from '@/lib/blockchainHealthConfig';
-import { useWalletClient } from './useWalletClient'
 
 export function useBlockchainHealth() {
     const [healthStatus, setHealthStatus] = useState(null);
@@ -10,56 +11,12 @@ export function useBlockchainHealth() {
     const [healthError, setHealthError] = useState(null);
     const hasChecked = useRef(false);
 
-    // Fonction pour récupérer le status depuis le cache
-    const getCachedHealth = () => {
-        if (!BLOCKCHAIN_HEALTH_CONFIG.STORAGE.ENABLED) return null;
-
-        try {
-            const cached = localStorage.getItem(BLOCKCHAIN_HEALTH_CONFIG.STORAGE.KEY);
-            if (cached) {
-                const parsed = JSON.parse(cached);
-                const now = Date.now();
-
-                // Vérifier si le cache n'a pas expiré
-                if (parsed.timestamp && (now - parsed.timestamp) < BLOCKCHAIN_HEALTH_CONFIG.TEST.CACHE_DURATION) {
-                    return parsed.data;
-                }
-            }
-        } catch (error) {
-            console.warn('Error reading cached blockchain health:', error);
-        }
-        return null;
-    };
-
-    // Fonction pour sauvegarder dans le cache
-    const setCachedHealth = (data) => {
-        if (!BLOCKCHAIN_HEALTH_CONFIG.STORAGE.ENABLED) return;
-
-        try {
-            const cacheData = {
-                data,
-                timestamp: Date.now()
-            };
-            localStorage.setItem(BLOCKCHAIN_HEALTH_CONFIG.STORAGE.KEY, JSON.stringify(cacheData));
-        } catch (error) {
-            console.warn('Error caching blockchain health:', error);
-        }
-    };
 
     // Fonction pour vérifier l'état de la blockchain
     const checkBlockchainHealth = async (force = false) => {
         // Éviter les appels multiples
         if (isCheckingHealth && !force) {
             return;
-        }
-
-        // Vérifier d'abord le cache si ce n'est pas forcé
-        if (!force) {
-            const cached = getCachedHealth();
-            if (cached) {
-                setHealthStatus(cached);
-                return cached;
-            }
         }
 
         setIsCheckingHealth(true);
@@ -72,7 +29,7 @@ export function useBlockchainHealth() {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                },
+                }
             });
 
             if (!response.ok) {
@@ -88,9 +45,8 @@ export function useBlockchainHealth() {
                 responseTime: data.details?.averageResponseTime
             });
 
-            // Mettre à jour l'état et le cache
+            // Mettre à jour l'état
             setHealthStatus(data);
-            setCachedHealth(data);
 
             // Log dans Sentry pour monitoring
             Sentry.addBreadcrumb({

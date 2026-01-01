@@ -22,6 +22,22 @@ const nextConfig = {
                 protocol: 'https',
                 hostname: 'explorer-api.walletconnect.com',
             },
+            {
+                protocol: 'https',
+                hostname: '*.alchemy.com',
+            },
+            {
+                protocol: 'https',
+                hostname: '*.alchemyapi.io',
+            },
+            {
+                protocol: 'https',
+                hostname: 'ipfs.io',
+            },
+            {
+                protocol: 'https',
+                hostname: 'gateway.ipfs.io',
+            },
         ],
     },
     compiler: {
@@ -31,17 +47,18 @@ const nextConfig = {
         const isDev = process.env.NODE_ENV === 'development';
         console.log('NODE_ENV:', process.env.NODE_ENV, 'isDev:', isDev);
 
-        // Sources de base avec support Sentry et Vercel (prod uniquement)
+        // Sources de base avec support Sentry, Vercel et Alchemy CDN
         const baseSources = {
             scriptSrc: isDev
-                ? "'self' https://challenges.cloudflare.com 'unsafe-eval' 'unsafe-inline' 'wasm-unsafe-eval' http://localhost:* https://localhost:*"
+                ? "'self' https://challenges.cloudflare.com https://va.vercel-scripts.com 'unsafe-eval' 'unsafe-inline' 'wasm-unsafe-eval' http://localhost:* https://localhost:*"
                 : "'self' https://challenges.cloudflare.com https://va.vercel-scripts.com 'unsafe-eval' 'unsafe-inline' 'wasm-unsafe-eval'",
             connectSrc: isDev
-                ? "'self' https://auth.privy.io wss://relay.walletconnect.com wss://relay.walletconnect.org wss://www.walletlink.org https://*.rpc.privy.systems https://explorer-api.walletconnect.com https://*.megaeth.com https://pulse.walletconnect.org https://api.web3modal.org https://*.ingest.sentry.io blob: http://localhost:* https://localhost:* ws://localhost:* wss://localhost:*"
-                : "'self' https://auth.privy.io https://privy.digitrabbits.com wss://relay.walletconnect.com wss://relay.walletconnect.org wss://www.walletlink.org https://*.rpc.privy.systems https://explorer-api.walletconnect.com https://*.megaeth.com https://pulse.walletconnect.org https://api.web3modal.org https://*.ingest.sentry.io https://vitals.vercel-insights.com https://va.vercel-scripts.com blob:",
+                ? "'self' https://auth.privy.io wss://*.alchemy.com wss://*.megaeth.com wss://relay.walletconnect.com wss://relay.walletconnect.org wss://www.walletlink.org https://*.rpc.privy.systems https://explorer-api.walletconnect.com https://*.megaeth.com https://pulse.walletconnect.org https://api.web3modal.org https://*.ingest.sentry.io https://eth.merkle.io https://*.infura.io https://*.alchemy.com https://*.ankr.com https://*.publicnode.com https://rpc.ankr.com https://cloudflare-eth.com https://eth-mainnet.public.blastapi.io blob: http://localhost:* https://localhost:* ws://localhost:* wss://localhost:*"
+                : "'self' https://auth.privy.io https://privy.digitrabbits.com wss://*.alchemy.com wss://*.megaeth.com wss://relay.walletconnect.com wss://relay.walletconnect.org wss://www.walletlink.org https://*.rpc.privy.systems https://explorer-api.walletconnect.com https://*.megaeth.com https://pulse.walletconnect.org https://api.web3modal.org https://*.ingest.sentry.io https://vitals.vercel-insights.com https://va.vercel-scripts.com https://eth.merkle.io https://*.infura.io https://*.alchemy.com https://*.ankr.com https://*.publicnode.com https://rpc.ankr.com https://cloudflare-eth.com https://eth-mainnet.public.blastapi.io blob:",
             styleSrc: "'self' 'unsafe-inline' https://fonts.googleapis.com",
             fontSrc: "'self' https://fonts.gstatic.com",
-            imgSrc: "'self' data: blob: https://pbs.twimg.com https://i.ibb.co https://explorer-api.walletconnect.com"
+            // 🚀 Ajout des domaines Alchemy CDN et IPFS pour les NFTs
+            imgSrc: "'self' data: blob: https://pbs.twimg.com https://i.ibb.co https://explorer-api.walletconnect.com https://*.alchemy.com https://*.alchemyapi.io https://ipfs.io https://gateway.ipfs.io https://*.ipfs.nftstorage.link https://*.ipfs.dweb.link https://cloudflare-ipfs.com https://nftstorage.link"
         };
 
         console.log('Script sources:', baseSources.scriptSrc);
@@ -50,6 +67,7 @@ const nextConfig = {
         const cspValueDev = [
             "default-src 'self'",
             `script-src ${baseSources.scriptSrc}`,
+            `script-src-elem ${baseSources.scriptSrc}`,
             `style-src ${baseSources.styleSrc}`,
             `img-src ${baseSources.imgSrc}`,
             `font-src ${baseSources.fontSrc}`,
@@ -60,7 +78,7 @@ const nextConfig = {
             "child-src https://auth.privy.io https://verify.walletconnect.com https://verify.walletconnect.org",
             "frame-src https://auth.privy.io https://verify.walletconnect.com https://verify.walletconnect.org https://challenges.cloudflare.com",
             `connect-src ${baseSources.connectSrc}`,
-            "worker-src 'self'",
+            "worker-src 'self' blob:",
             "manifest-src 'self'",
             "report-uri /api/csp-report"
         ].join("; ");
@@ -69,6 +87,7 @@ const nextConfig = {
         const cspValueProd = [
             "default-src 'self'",
             `script-src ${baseSources.scriptSrc}`,
+            `script-src-elem ${baseSources.scriptSrc}`,
             `style-src ${baseSources.styleSrc}`,
             `img-src ${baseSources.imgSrc}`,
             `font-src ${baseSources.fontSrc}`,

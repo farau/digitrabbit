@@ -1,7 +1,9 @@
 // hooks/usePreSignedPool.js - Version améliorée avec auto-initialisation
+'use client';
+
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { encodeFunctionData } from 'viem'
-import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS } from '@/utils/constants'
+import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, customMegaethTestnet } from '@/utils/constants'
 import { useWalletClient } from './useWalletClient'
 import { InternalRpcError } from 'viem';
 import { megaethTestnet } from 'viem/chains';
@@ -19,22 +21,6 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
     const extendingRef = useRef(false)
     const hasInitialized = useRef(false) // Pour éviter les re-initialisations
     const { walletClient } = useWalletClient(embeddedWallet)
-
-    // Configuration customisée du Megaeth Testnet avec une URL RPC spécifique
-    const customMegaethTestnet = {
-        ...megaethTestnet,
-        id: 6343, // Viem utilise 'id' plutôt que 'chainId'
-        chainId: 6343, // Garder aussi chainId pour compatibilité
-        name: 'MegaETH Testnet v2', // Optionnel mais recommandé
-        rpcUrls: {
-            default: {
-                http: ['https://timothy.megaeth.com/rpc'],
-            },
-            public: {
-                http: ['https://timothy.megaeth.com/rpc'],
-            },
-        },
-    };
 
     const defineGasPrice = async (walletClient) => {
         try {

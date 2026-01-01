@@ -1,24 +1,24 @@
 import { createPublicClient, http } from "viem"
 import { megaethTestnet, mainnet, berachain } from "viem/chains"
 // Configuration customisée du Megaeth Testnet avec une URL RPC spécifique
-const customMegaethTestnet = {
+export const customMegaethTestnet = {
   ...megaethTestnet,
   id: 6343, // Viem utilise 'id' plutôt que 'chainId'
   chainId: 6343, // Garder aussi chainId pour compatibilité
   name: 'MegaETH Testnet v2', // Optionnel mais recommandé
   rpcUrls: {
     default: {
-      http: ['https://timothy.megaeth.com/rpc'],
+      http: ['https://timothy.megaeth.com/rpc?vip=1&u=digitrabbits%20v2&v=5184000&s=mafia&verify=' + process.env.NEXT_PUBLIC_RPC_KEY],
     },
     public: {
-      http: ['https://timothy.megaeth.com/rpc'],
+      http: ['https://timothy.megaeth.com/rpc?vip=1&u=digitrabbits%20v2&v=5184000&s=mafia&verify=' + process.env.NEXT_PUBLIC_RPC_KEY],
     },
   },
 };
 
 export const publicClient = createPublicClient({
   chain: customMegaethTestnet,
-  transport: http(),
+  transport: http('https://timothy.megaeth.com/rpc?vip=1&u=digitrabbits%20v2&v=5184000&s=mafia&verify=' + process.env.NEXT_PUBLIC_RPC_KEY),
 })
 
 export const publicClientEth = createPublicClient({

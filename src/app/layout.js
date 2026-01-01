@@ -1,7 +1,6 @@
 import "98.css";
 import "./globals.css";
 import { ContextProvider } from '@/context'
-import LeaderboardProvider from '@/context/LeaderboardProvider';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Analytics } from "@vercel/analytics/next"
 
@@ -21,11 +20,9 @@ export default function RootLayout({ children }) {
     <html lang="en" className="dark">
       <body className="antialiased">
         <ContextProvider>
-          <LeaderboardProvider>
-            {children}
-            <SpeedInsights />
-            <Analytics />
-          </LeaderboardProvider>
+          {children}
+          <SpeedInsights />
+          <Analytics />
         </ContextProvider>
       </body>
     </html>

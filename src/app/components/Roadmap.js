@@ -6,7 +6,7 @@ import { useTheme } from '@/context'
 import { useState } from 'react'
 import { RotateCwIcon, Loader2 } from "lucide-react"
 
-export default function Roadmap({ embeddedWallet, refreshCounter, playerData, onReloadClicks }) {
+export default function Roadmap({ embeddedWallet, playerData, onReloadClicks }) {
     const { themeMode } = useTheme();
     const [isReloading, setIsReloading] = useState(false);
 
@@ -54,7 +54,7 @@ export default function Roadmap({ embeddedWallet, refreshCounter, playerData, on
     }
 
     const totalClicks = Number(playerData.totalClicksGame)
-    const target = 100000000;
+    const target = 10000000; // Changed to 10 million
     const progressPercentage = Math.min((totalClicks / target) * 100, 100);
 
     const formatNumber = (num) => {
@@ -183,7 +183,7 @@ export default function Roadmap({ embeddedWallet, refreshCounter, playerData, on
                                 margin: '2px 0 0 0',
                                 fontWeight: '500'
                             }}>
-                                Click, click, and click again to reach 100 million transactions! ✨
+                                Click, click, and click again to reach 10 million transactions! ✨
                             </p>
                         </div>
 

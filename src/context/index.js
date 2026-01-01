@@ -2,6 +2,7 @@
 
 import { appId, clientId } from '@/config';
 import { megaethTestnet } from 'viem/chains';
+import { customMegaethTestnet } from '@/utils/constants';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
@@ -14,22 +15,6 @@ import { wagmiConfig } from '@/wagmi-config';
 import { useWallets, usePrivy, getEmbeddedConnectedWallet } from '@privy-io/react-auth';
 
 if (!appId) throw new Error('App ID is not defined');
-
-// Configuration customisée du Megaeth Testnet avec une URL RPC spécifique
-const customMegaethTestnet = {
-  ...megaethTestnet,
-  id: 6343, // Viem utilise 'id' plutôt que 'chainId'
-  chainId: 6343, // Garder aussi chainId pour compatibilité
-  name: 'MegaETH Testnet v2', // Optionnel mais recommandé
-  rpcUrls: {
-    default: {
-      http: ['https://timothy.megaeth.com/rpc'],
-    },
-    public: {
-      http: ['https://timothy.megaeth.com/rpc'],
-    },
-  },
-};
 
 const ThemeContext = createContext();
 export const useTheme = () => useContext(ThemeContext);

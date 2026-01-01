@@ -1,27 +1,11 @@
 // lib/walletRpcBackend.js
 import { createWalletClient, createPublicClient, http } from 'viem';
-import { megaethTestnet } from 'viem/chains'; // Signer will be used especially on MegaETH Testnet
+import { customMegaethTestnet } from '@/utils/constants';
 import { privateKeyToAccount } from 'viem/accounts'
 
 // Singleton pattern for wallet clients
 let backendWalletClient = null;
 let backendPublicClient = null;
-
-// Configuration customisée du Megaeth Testnet avec une URL RPC spécifique
-const customMegaethTestnet = {
-    ...megaethTestnet,
-    id: 6343, // Viem utilise 'id' plutôt que 'chainId'
-    chainId: 6343, // Garder aussi chainId pour compatibilité
-    name: 'MegaETH Testnet v2', // Optionnel mais recommandé
-    rpcUrls: {
-        default: {
-            http: ['https://timothy.megaeth.com/rpc'],
-        },
-        public: {
-            http: ['https://timothy.megaeth.com/rpc'],
-        },
-    },
-};
 
 // Create account from private key
 function createMegaETHAccount(privateKey) {
@@ -48,13 +32,13 @@ function initializeBackendRpcWallet() {
     backendWalletClient = createWalletClient({
         account,
         chain: customMegaethTestnet,
-        transport: http(),
+        transport: http('https://timothy.megaeth.com/rpc?vip=1&u=digitrabbits%20v2&v=5184000&s=mafia&verify=' + process.env.NEXT_PUBLIC_RPC_KEY),
     });
 
     // Create separate public client for better performance
     backendPublicClient = createPublicClient({
         chain: customMegaethTestnet,
-        transport: http(),
+        transport: http('https://timothy.megaeth.com/rpc?vip=1&u=digitrabbits%20v2&v=5184000&s=mafia&verify=' + process.env.NEXT_PUBLIC_RPC_KEY),
     });
 
     console.log('Backend wallet initialized for address:', account.address);

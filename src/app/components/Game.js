@@ -5,7 +5,7 @@ import styles from './Game.module.css'
 import { useState, useEffect, useRef } from 'react'
 import { megaethTestnet } from 'viem/chains'
 import { Loader2 } from 'lucide-react'
-import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, COOLDOWN_SECONDS } from '@/utils/constants'
+import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, COOLDOWN_SECONDS, customMegaethTestnet } from '@/utils/constants'
 import { XLogo } from '@/utils/constants'
 import React from 'react'
 import Wrapper from './Wrapper'
@@ -19,23 +19,7 @@ import { useBlockchainHealth } from '../hooks/useBlockchainHealth'
 import * as Sentry from '@sentry/nextjs'
 import WalletButton from './WalletButton'
 
-// Configuration customisée du Megaeth Testnet avec une URL RPC spécifique
-const customMegaethTestnet = {
-  ...megaethTestnet,
-  id: 6343, // Viem utilise 'id' plutôt que 'chainId'
-  chainId: 6343, // Garder aussi chainId pour compatibilité
-  name: 'MegaETH Testnet v2', // Optionnel mais recommandé
-  rpcUrls: {
-    default: {
-      http: ['https://timothy.megaeth.com/rpc'],
-    },
-    public: {
-      http: ['https://timothy.megaeth.com/rpc'],
-    },
-  },
-};
-
-function PlayerData({ refreshCounter, themeMode, seasonId, playerData, embeddedWallet }) {
+function PlayerData({ themeMode, seasonId, playerData, embeddedWallet }) {
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
   const [columns, setColumns] = useState(2);
 
@@ -207,7 +191,7 @@ function TwitterShareButton({ score, gameClicks, themeMode, onClose }) {
 }
 
 
-export default function Game({ refreshCounter, setRefreshCounter, playerData, preSignedPool, isInitializing, error, initializePool, executeTransaction, getAvailableTransactions, isGameStarted, setIsGameStarted, onGameEnd }) {
+export default function Game({ playerData, preSignedPool, isInitializing, error, initializePool, executeTransaction, getAvailableTransactions, isGameStarted, setIsGameStarted, onGameEnd }) {
   const [result, setResult] = useState('')
   const [errorStartGame, setErrorStartGame] = useState('')
   const [isExecuting, setIsExecuting] = useState(false)
@@ -275,7 +259,7 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
 
     checkPausedState()
 
-  }, [walletClient, refreshCounter])
+  }, [walletClient])
 
 
   // Gestion de l'effet 3D
@@ -463,7 +447,6 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
       throw err;
     } finally {
       setIsWritingContract(false);
-      setRefreshCounter(c => c + 1);
     }
   };
 
@@ -599,7 +582,6 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
       setShowSuccess(false)
     } finally {
       setIsExecuting(false)
-      setRefreshCounter(c => c + 1)
 
       setTimeout(() => {
         setSignedTx('')
@@ -743,7 +725,6 @@ export default function Game({ refreshCounter, setRefreshCounter, playerData, pr
         {/* Player Info */}
         <div className="mb-6">
           <PlayerData
-            refreshCounter={refreshCounter}
             themeMode={themeMode}
             playerData={playerData}
             embeddedWallet={embeddedWallet}

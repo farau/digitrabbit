@@ -16,11 +16,12 @@ import { useTheme, useGame } from "@/context";
 import DraggableWindow from "./DraggableWindow";
 import Game from "./Game";
 import Chill from "./Chill";
-import Shop from "./Shop";
+//import Wardrobe from "./Wardrobe";
 import Assets from "./Assets";
 import FAQ from "./FAQ";
 import Roadmap from "./Roadmap";
 import MobileBackground from "./MobileBackground";
+import { useWebSocket } from "../hooks/useWebSocket";
 
 import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, publicClient, NUM_SLOTS } from '@/utils/constants'
 import { usePreSignedPool } from "../hooks/usePreSignedPool";
@@ -48,7 +49,7 @@ export default function MainPage() {
   const [assetsList, setAssetsList] = useState([]);
 
   // Refresher compteur pour réactualiser les valeurs du player
-  const [refreshCounter, setRefreshCounter] = useState(0)
+  //const [refreshCounter, setRefreshCounter] = useState(0)
   const [seasonId, setSeasonId] = useState(null)
 
   const [playerData, setPlayerData] = useState({
@@ -81,6 +82,9 @@ export default function MainPage() {
     getAvailableTransactions,
     resetPool
   } = usePreSignedPool({ embeddedWallet })
+
+  // ✅ Hook WebSocket Alchemy
+  const { isConnected } = useWebSocket({ embeddedWallet, seasonId });
 
 
   // Récupération de la liste des assets et des memes
@@ -154,56 +158,74 @@ export default function MainPage() {
     }
   }
 
-  // Fonction séparée pour récupérer toutes les données du joueur
-  const fetchPlayerData = async () => {
-    if (!embeddedWallet?.address || seasonId === null) return
+  // Fonction pour fetch toutes les données du joueur
+  const fetchPlayerData = useCallback(async () => {
+    if (!embeddedWallet?.address || seasonId === null) return;
 
-    //console.log("📥 Fetching player data for", embeddedWallet.address, "Season:", seasonId)
+    console.log("📥 Fetching player data");
     try {
       const result = await publicClient.readContract({
         address: DIGIT_RABBITS_ADDRESS,
         abi: DIGIT_RABBITS_ABI,
         functionName: 'getPlayerData',
         args: [embeddedWallet.address, seasonId],
-      })
+      });
 
-      // On récupère aussi le nombre total de clics
       const totalClicksGame = await publicClient.readContract({
         address: DIGIT_RABBITS_ADDRESS,
         abi: DIGIT_RABBITS_ABI,
         functionName: 'totalClicksGame',
         args: [],
-      })
+      });
 
-      const rabbitPoints = result[0] !== undefined ? Number(result[0]) / 1_000_000 : -1
-      const [totalClicks, gameClicks, sessionEndsAt, streak, hasClaimedPoints, maxClicks] = result.slice(1)
+      const rabbitPoints = result[0] !== undefined ? Number(result[0]) / 1_000_000 : -1;
+      const [totalClicks, gameClicks, sessionEndsAt, streak, hasClaimedPoints, maxClicks] = result.slice(1);
 
-      const data = {
+      setPlayerData({
         rabbitPoints,
-        totalClicks,
-        gameClicks,
+        totalClicks: Number(totalClicks),
+        gameClicks: Number(gameClicks),
         playerItems: Array(NUM_SLOTS).fill(0),
-        sessionEndsAt,
-        streak,
+        sessionEndsAt: Number(sessionEndsAt),
+        streak: Number(streak),
         hasClaimedPoints,
-        maxClicks,
-        totalClicksGame
-      }
-      setPlayerData(data)
+        maxClicks: Number(maxClicks),
+        totalClicksGame: Number(totalClicksGame)
+      });
     } catch (error) {
-      console.error("Error fetching player data:", error)
+      console.error("Error fetching player data:", error);
     }
-  }
+  }, [embeddedWallet?.address, seasonId]);
 
-  // useEffect simplifié
+  // Chargement initial
   useEffect(() => {
     if (!embeddedWallet?.address || seasonId === null) {
-      fetchTotalClicks()
-      return
+      fetchTotalClicks();
+      return;
     }
+    fetchPlayerData();
+  }, [embeddedWallet?.address, seasonId]);
 
-    fetchPlayerData()
-  }, [embeddedWallet?.address, seasonId, refreshCounter])
+  // ✅ Écouter les événements WebSocket
+  useEffect(() => {
+    const handleContractEvent = () => {
+      console.log('🔄 Événement contrat détecté, refresh...');
+      fetchPlayerData();
+    };
+
+    const handleAutoRefresh = () => {
+      console.log('🔄 Auto-refresh (nouveau bloc)');
+      fetchPlayerData();
+    };
+
+    window.addEventListener('contractEvent', handleContractEvent);
+    window.addEventListener('autoRefresh', handleAutoRefresh);
+
+    return () => {
+      window.removeEventListener('contractEvent', handleContractEvent);
+      window.removeEventListener('autoRefresh', handleAutoRefresh);
+    };
+  }, [fetchPlayerData]);
 
   // Fonction pour recharger uniquement les clics totaux (pour le bouton reload)
   const reloadTotalClicks = async () => {
@@ -319,13 +341,10 @@ export default function MainPage() {
         return <Assets assetsList={assetsList} setSelectedAssetsIndex={setSelectedAssetsIndex} />;
       case "Profile":
         return <Profile playerData={playerData}
-          setRefreshCounter={setRefreshCounter}
           isGameStarted={isGameStarted}
         />;
       case "Game":
         return <Game
-          refreshCounter={refreshCounter}
-          setRefreshCounter={setRefreshCounter}
           playerData={playerData}
           embeddedWallet={embeddedWallet}
           preSignedPool={preSignedPool}
@@ -337,12 +356,11 @@ export default function MainPage() {
           onGameEnd={onGameEnd}
           getAvailableTransactions={getAvailableTransactions}
         />;
-      case "Shop":
-      /*return <Shop refreshCounter={refreshCounter}
-        setRefreshCounter={setRefreshCounter}
-        playerData={playerData}
-        isGameStarted={isGameStarted}
-      />;*/
+      /*case "Wardrobe":
+        return <Wardrobe
+          playerData={playerData}
+          isGameStarted={isGameStarted}
+        />;*/
       case "Leaderboard":
         return <Leaderboard />;
       case "Settings":
@@ -361,7 +379,6 @@ export default function MainPage() {
       case "Roadmap":
         return <Roadmap
           embeddedWallet={embeddedWallet}
-          refreshCounter={refreshCounter}
           playerData={playerData}
           onReloadClicks={reloadTotalClicks}
         />
@@ -429,10 +446,10 @@ export default function MainPage() {
         position={{ x: 30, y: "75%" }}
       />
       {/*<Icon
-        name="Shop"
-        src="/img/icons/shop.png"
-        label="Shop"
-        onClick={() => restoreApp("Shop")}
+        name="Wardrobe"
+        src="/img/icons/wardrobe.png"
+        label="Wardrobe"
+        onClick={() => restoreApp("Wardrobe")}
         position={{ x: -100, y: "50%" }}
       />*/}
       <Icon

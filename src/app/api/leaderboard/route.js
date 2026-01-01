@@ -10,7 +10,6 @@ export async function GET(request) {
         const limit = searchParams.get('limit');
         const user = searchParams.get('user');
         const complete = searchParams.get('complete');
-        const forceRefresh = searchParams.get('forceRefresh') === 'true';
 
         // Gestion du paramètre user pour obtenir le rang d'un utilisateur spécifique
         if (user) {
@@ -29,7 +28,7 @@ export async function GET(request) {
 
         // Gestion du paramètre complete pour retourner leaderboard + top clicker
         if (complete === 'true') {
-            const completeData = await getCompleteLeaderboardData(forceRefresh);
+            const completeData = await getCompleteLeaderboardData();
             const processingTime = Date.now() - startTime;
 
             return NextResponse.json({
@@ -46,7 +45,7 @@ export async function GET(request) {
             const limitNum = parseInt(limit, 10);
             if (isNaN(limitNum) || limitNum < 1 || limitNum > 100) {
                 return NextResponse.json(
-                    { error: 'Le paramètre limit doit être un nombre entre 1 et 100' },
+                    { error: "The 'limit' parameter must be a number between 1 and 100" },
                     { status: 400 }
                 );
             }
@@ -64,7 +63,7 @@ export async function GET(request) {
         }
 
         // Retourner le leaderboard complet par défaut
-        const leaderboardData = await getLeaderboard(forceRefresh);
+        const leaderboardData = await getLeaderboard();
         const processingTime = Date.now() - startTime;
 
         return NextResponse.json({
@@ -76,20 +75,20 @@ export async function GET(request) {
         });
 
     } catch (error) {
-        console.error('Erreur API leaderboard:', error);
+        console.error('Leaderboard API error:', error);
         const processingTime = Date.now() - startTime;
 
-        // Gestion des erreurs spécifiques
+        // Specific error handling
         let statusCode = 500;
-        let errorMessage = 'Erreur interne du serveur';
+        let errorMessage = 'Internal server error';
 
         if (error.message.includes('GraphQL')) {
-            errorMessage = 'Erreur lors de la récupération des données du leaderboard';
+            errorMessage = 'Error fetching leaderboard data';
         } else if (error.message.includes('Privy')) {
-            errorMessage = 'Erreur lors de la récupération des données utilisateur';
+            errorMessage = 'Error fetching user data';
         } else if (error.message.includes('network') || error.message.includes('fetch')) {
             statusCode = 503;
-            errorMessage = 'Service temporairement indisponible';
+            errorMessage = 'Service temporarily unavailable';
         }
 
         return NextResponse.json(
@@ -102,7 +101,16 @@ export async function GET(request) {
                     hasError: true
                 }
             },
-            { status: statusCode }
+            {
+                status: statusCode,
+                headers: {
+                    "Cache-Control": "public, max-age=900, s-maxage=900, stale-while-revalidate=300"
+                    //               ^^^^^^ tout le monde peut cacher
+                    //                     ^^^^^^^^^^^^ cache 15 min
+                    //                                  ^^^^^^^^^^^^ cache 15 min CDN
+                    //                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ sert stale 5 min de plus
+                }
+            }
         );
     }
 }
