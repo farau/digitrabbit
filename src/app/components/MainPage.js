@@ -23,7 +23,7 @@ import Roadmap from "./Roadmap";
 import MobileBackground from "./MobileBackground";
 import { useWebSocket } from "../hooks/useWebSocket";
 
-import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, publicClient, NUM_SLOTS } from '@/utils/constants'
+import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, publicClient, NUM_SLOTS } from '@/utils/chainConfig'
 import { usePreSignedPool } from "../hooks/usePreSignedPool";
 
 
@@ -209,21 +209,14 @@ export default function MainPage() {
   // ✅ Écouter les événements WebSocket
   useEffect(() => {
     const handleContractEvent = () => {
-      console.log('🔄 Événement contrat détecté, refresh...');
-      fetchPlayerData();
-    };
-
-    const handleAutoRefresh = () => {
-      console.log('🔄 Auto-refresh (nouveau bloc)');
+      // console.log('🔄 Contract event detected, refresh...');
       fetchPlayerData();
     };
 
     window.addEventListener('contractEvent', handleContractEvent);
-    window.addEventListener('autoRefresh', handleAutoRefresh);
 
     return () => {
       window.removeEventListener('contractEvent', handleContractEvent);
-      window.removeEventListener('autoRefresh', handleAutoRefresh);
     };
   }, [fetchPlayerData]);
 

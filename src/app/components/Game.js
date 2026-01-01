@@ -3,9 +3,8 @@
 
 import styles from './Game.module.css'
 import { useState, useEffect, useRef } from 'react'
-import { megaethTestnet } from 'viem/chains'
 import { Loader2 } from 'lucide-react'
-import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, COOLDOWN_SECONDS, customMegaethTestnet } from '@/utils/constants'
+import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, COOLDOWN_SECONDS, customMegaethTestnet } from '@/utils/chainConfig'
 import { XLogo } from '@/utils/constants'
 import React from 'react'
 import Wrapper from './Wrapper'

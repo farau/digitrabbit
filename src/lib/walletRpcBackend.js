@@ -1,6 +1,6 @@
 // lib/walletRpcBackend.js
 import { createWalletClient, createPublicClient, http } from 'viem';
-import { customMegaethTestnet } from '@/utils/constants';
+import { customMegaethTestnet } from '@/utils/chainConfig';
 import { privateKeyToAccount } from 'viem/accounts'
 
 // Singleton pattern for wallet clients

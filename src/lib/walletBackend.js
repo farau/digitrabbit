@@ -1,10 +1,9 @@
 // lib/walletBackend.js
 import { createWalletClient, createPublicClient, http } from 'viem';
-import customMegaethTestnet from '@/utils/constants';
 import { privateKeyToAccount } from 'viem/accounts'
 import { encodePacked, keccak256, hashMessage } from 'viem';
 import { recoverAddress } from 'viem'
-import { customMegaethTestnet } from '@/utils/constants';
+import { customMegaethTestnet } from '@/utils/chainConfig'
 
 // Singleton pattern for wallet clients
 let backendWalletClient = null;

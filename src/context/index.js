@@ -1,8 +1,7 @@
 'use client';
 
 import { appId, clientId } from '@/config';
-import { megaethTestnet } from 'viem/chains';
-import { customMegaethTestnet } from '@/utils/constants';
+import { customMegaethTestnet } from '@/utils/chainConfig';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 

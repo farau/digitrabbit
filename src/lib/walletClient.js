@@ -1,7 +1,6 @@
 // lib/walletClient.js
 import { createWalletClient, custom, publicActions, http } from 'viem';
-import { megaethTestnet } from 'viem/chains';
-import { customMegaethTestnet } from '@/utils/constants';
+import { customMegaethTestnet } from '@/utils/chainConfig';
 
 let client = null;
 

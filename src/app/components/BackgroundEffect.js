@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import * as THREE from 'three'
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer'
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass'
@@ -9,21 +9,62 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass'
 
 export default function BackgroundEffect({ mode = 'sun' }) {
   const containerRef = useRef(null)
+  const animationRef = useRef(null)
+  const resourcesRef = useRef([])
+
+  const cleanup = useCallback(() => {
+    // Stop animation
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current)
+      animationRef.current = null
+    }
+
+    // Dispose toutes les ressources
+    resourcesRef.current.forEach(resource => {
+      if (resource.geometry) resource.geometry.dispose()
+      if (resource.material) {
+        if (Array.isArray(resource.material)) {
+          resource.material.forEach(m => m.dispose())
+        } else {
+          resource.material.dispose()
+        }
+      }
+    })
+    resourcesRef.current = []
+
+    // Nettoie le container
+    if (containerRef.current) {
+      containerRef.current.innerHTML = ''
+    }
+  }, [])
 
   useEffect(() => {
     const container = containerRef.current
-    if (!container) return
-    container.innerHTML = '' // Reset
+    if (!container) return cleanup()
 
+    cleanup() // Cleanup précédent
+
+    // === CRÉATION COMPLETELY NOUVELLE ===
     const scene = new THREE.Scene()
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100)
     camera.position.z = 5
     camera.layers.enable(1)
 
-    const renderer = new THREE.WebGLRenderer({ alpha: true })
+    // NOUVEAU canvas / renderer à chaque fois
+    const canvas = document.createElement('canvas')
+    canvas.style.position = 'absolute'
+    canvas.style.top = '0'
+    canvas.style.left = '0'
+    container.appendChild(canvas)
+
+    const renderer = new THREE.WebGLRenderer({
+      canvas,
+      alpha: true,
+      antialias: true
+    })
     renderer.setSize(window.innerWidth, window.innerHeight)
-    renderer.setPixelRatio(window.devicePixelRatio)
-    container.appendChild(renderer.domElement)
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    resourcesRef.current.push(renderer)
 
     let object, light, initialMoonOffset
 
@@ -32,10 +73,12 @@ export default function BackgroundEffect({ mode = 'sun' }) {
       object = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), material)
       object.position.set(5, 5, -5)
       scene.add(object)
+      resourcesRef.current.push({ geometry: object.geometry, material: object.material })
 
       light = new THREE.PointLight(0xffa500, 0.1, 10)
       light.position.copy(object.position)
       scene.add(light)
+      resourcesRef.current.push(light)
 
     } else {
       const geometry = new THREE.SphereGeometry(0.4, 36, 36)
@@ -62,19 +105,17 @@ export default function BackgroundEffect({ mode = 'sun' }) {
         `,
         transparent: true,
       })
-
       object = new THREE.Mesh(geometry, material)
-
-      // Position initiale, sera mise à jour dans animate()
       initialMoonOffset = new THREE.Vector3(2.5, 2.5, -5)
-
       scene.add(object)
+      resourcesRef.current.push({ geometry: object.geometry, material: object.material })
 
       light = new THREE.PointLight(0xf0f0f5, 0.12, 10)
       scene.add(light)
+      resourcesRef.current.push(light)
     }
 
-    // BLOOM composer
+    // Composers
     const bloomComposer = new EffectComposer(renderer)
     bloomComposer.renderToScreen = false
     const renderScene = new RenderPass(scene, camera)
@@ -85,7 +126,6 @@ export default function BackgroundEffect({ mode = 'sun' }) {
     )
     bloomComposer.addPass(bloomPass)
 
-    // FINAL composer
     const finalComposer = new EffectComposer(renderer)
     finalComposer.addPass(renderScene)
     const finalPass = new ShaderPass(
@@ -102,12 +142,12 @@ export default function BackgroundEffect({ mode = 'sun' }) {
     finalPass.needsSwap = true
     finalComposer.addPass(finalPass)
 
-    let animationId
-    let time = 0
-    const moonOffset = new THREE.Vector3(2.5, 2.5, -5)
+    resourcesRef.current.push(bloomComposer, finalComposer)
 
-    function animate() {
-      animationId = requestAnimationFrame(animate)
+    let time = 0
+
+    const animate = () => {
+      animationRef.current = requestAnimationFrame(animate)
       time += 0.01
 
       if (mode === 'sun') {
@@ -115,56 +155,41 @@ export default function BackgroundEffect({ mode = 'sun' }) {
         object.scale.set(flicker, flicker, flicker)
         light.intensity = 2 + 0.3 * Math.sin(time * 8 + Math.random())
       } else {
-        // Scintillement subtil
         const flicker = 1 + 0.01 * Math.sin(time * 5 + Math.random() * 0.5)
         object.scale.set(flicker, flicker, flicker)
-
-        // Lumière plus douce, variation faible
         light.intensity = 0.12 + 0.005 * Math.sin(time * 3 + Math.random() * 0.5)
-
-        // Met à jour la position de la lune en fonction de la position et rotation de la caméra
-        object.position.copy(camera.position).add(initialMoonOffset.clone().applyQuaternion(camera.quaternion))
+        object.position.copy(camera.position)
+          .add(initialMoonOffset.clone().applyQuaternion(camera.quaternion))
         light.position.copy(object.position)
       }
 
-      // Bloom render (only layer 1)
+      // Render passes
       scene.traverse(obj => obj.isMesh && obj.layers.set(1))
       bloomComposer.render()
-
-      // Scene render (only base layer)
       scene.traverse(obj => obj.isMesh && obj.layers.set(0))
       finalComposer.render()
     }
 
     animate()
 
-    function handleResize() {
+    const handleResize = () => {
       camera.aspect = window.innerWidth / window.innerHeight
       camera.updateProjectionMatrix()
       renderer.setSize(window.innerWidth, window.innerHeight)
       bloomComposer.setSize(window.innerWidth, window.innerHeight)
       finalComposer.setSize(window.innerWidth, window.innerHeight)
     }
-
     window.addEventListener('resize', handleResize, { passive: true })
 
     return () => {
-      cancelAnimationFrame(animationId)
       window.removeEventListener('resize', handleResize)
-      container.removeChild(renderer.domElement)
-
-      renderer.dispose()
-      bloomComposer.dispose()
-      finalComposer.dispose()
-
-      object.geometry.dispose()
-      if (Array.isArray(object.material)) {
-        object.material.forEach(m => m.dispose())
-      } else {
-        object.material.dispose()
+      cleanup()
+      if (renderer) {
+        renderer.forceContextLoss()
+        renderer.dispose()
       }
     }
-  }, [mode])
+  }, [mode, cleanup])
 
   return (
     <div

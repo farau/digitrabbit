@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, NUM_SLOTS, MAX_LEVEL } from '@/utils/constants'
+import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, NUM_SLOTS, MAX_LEVEL } from '@/utils/chainConfig'
 import { megaethTestnet } from 'viem/chains'
 import { Loader2, ArrowLeft, ArrowRight } from 'lucide-react'
 import Wrapper from './Wrapper'

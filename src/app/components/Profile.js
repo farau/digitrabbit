@@ -9,7 +9,7 @@ import DynamicAvatar from '@/app/components/DynamicAvatar'
 import { useState } from 'react'
 import { useWallets, usePrivy } from '@privy-io/react-auth'
 import { useWalletClient } from '../hooks/useWalletClient'
-import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS } from '@/utils/constants'
+import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS } from '@/utils/chainConfig'
 import WalletButton from './WalletButton'
 import { useBalance } from 'wagmi'
 import {

@@ -4,7 +4,7 @@ import { mainnet } from 'viem/chains'
 import {
     DIGIT_RABBITS_ADDRESS,
     DIGIT_RABBITS_ABI,
-} from '@/utils/constants'
+} from '@/utils/chainConfig'
 
 export const useWebSocket = ({ embeddedWallet, seasonId }) => {
     const [isConnected, setIsConnected] = useState(false)
@@ -26,7 +26,7 @@ export const useWebSocket = ({ embeddedWallet, seasonId }) => {
         })
 
         setIsConnected(true)
-        console.log('✅ WebSocket connected')
+        // console.log('✅ WebSocket connected')
         unwatchContractRef.current = client.watchContractEvent({
             address: DIGIT_RABBITS_ADDRESS,
             abi: DIGIT_RABBITS_ABI,

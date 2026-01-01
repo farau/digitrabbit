@@ -3,10 +3,11 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { encodeFunctionData } from 'viem'
-import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, customMegaethTestnet } from '@/utils/constants'
+import { customMegaethTestnet } from '@/utils/chainConfig'
+import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS } from '@/utils/chainConfig'
 import { useWalletClient } from './useWalletClient'
 import { InternalRpcError } from 'viem';
-import { megaethTestnet } from 'viem/chains';
+
 
 const play = encodeFunctionData({
     abi: DIGIT_RABBITS_ABI,
@@ -63,7 +64,7 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
             const existingTxs = currentPool.transactions
             const nextNonce = baseNonce + existingTxs.length
 
-            console.log("➡️ Start extension at nonce:", nextNonce)
+            // console.log("➡️ Start extension at nonce:", nextNonce)
 
             const { gasPrice, gasLimit } = await defineGasPrice(walletClient)
 
@@ -93,7 +94,7 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
                 }
             })
 
-            console.log(`✅ Extended pool from ${nextNonce} to ${nextNonce + 9}`)
+            // console.log(`✅ Extended pool from ${nextNonce} to ${nextNonce + 9}`)
 
         } catch (err) {
             console.error("❌ Error extending pool:", err)
@@ -112,7 +113,7 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
             if (!walletClient) return null
             if (!embeddedWallet?.address) throw new Error('Wallet address missing')
 
-            console.log(`🚀 Initializing MegaETH with pre-signed transactions...`)
+            // console.log(`🚀 Initializing MegaETH with pre-signed transactions...`)
 
             let nonce = await walletClient.getTransactionCount({
                 address: embeddedWallet?.address,
@@ -129,7 +130,7 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
 
             const { gasPrice, gasLimit } = await defineGasPrice(walletClient)
 
-            console.log(`Pre-signing 10 transactions...`)
+            // console.log(`Pre-signing 10 transactions...`)
             const signingPromises = Array.from({ length: sizePool }, async (_, i) => {
                 return await walletClient.signTransaction({
                     account: embeddedWallet?.address,
@@ -155,7 +156,7 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
             setPreSignedPool(poolData)
 
             hasInitialized.current = true
-            console.log(`✅ Pre-signed 10 transactions for MegaETH`)
+            // console.log(`✅ Pre-signed 10 transactions for MegaETH`)
             return poolData
         } catch (err) {
             console.error('❌ Error initializing network:', err)
@@ -208,7 +209,7 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
 
                 // Refill every 5 transactions (50% of initial 10), but only once per batch
                 if (newCurrentIndex % 5 === 0 && !prev.hasTriggeredRefill) {
-                    console.log(`🔔 Triggering refill at ${newCurrentIndex} transactions used`)
+                    // console.log(`🔔 Triggering refill at ${newCurrentIndex} transactions used`)
                     setTimeout(() => extendPool(), 0)
                     return {
                         ...prev,
@@ -232,12 +233,12 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
             console.error('❌ Error executing:', err)
             setError(err.message)
             if (err.details?.includes('already known')) {
-                console.log("On incrémente l'index car erreur nonce too low")
+                // console.log("On incrémente l'index car erreur nonce too low")
                 incrementIndex();
             }
 
             if (err instanceof InternalRpcError && err.details?.includes('already known')) {
-                console.log("On incrémente l'index car erreur already known : ", preSignedPool.currentIndex, " baseNonce: ", preSignedPool.baseNonce)
+                // console.log("On incrémente l'index car erreur already known : ", preSignedPool.currentIndex, " baseNonce: ", preSignedPool.baseNonce)
                 incrementIndex();
             }
 
