@@ -6,7 +6,6 @@ import styles from "./MainPage.module.css";
 import Icon from "./Icon";
 import Footer from "./Footer";
 import MemeGallery from "./MemeGallery";
-import BackgroundEffect from "./BackgroundEffect";
 import Profile from "./Profile";
 import Settings from "./Settings";
 import { useWindowSize } from "../hooks/useWindowSize"; // Assurez-vous d'importer le bon hook
@@ -26,6 +25,10 @@ import { useWebSocket } from "../hooks/useWebSocket";
 import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, publicClient, NUM_SLOTS } from '@/utils/chainConfig'
 import { usePreSignedPool } from "../hooks/usePreSignedPool";
 
+// Dynamic import pour le BackgroundEffect
+import dynamic from 'next/dynamic';
+import { Suspense } from 'react';
+
 
 export default function MainPage() {
 
@@ -39,7 +42,7 @@ export default function MainPage() {
   const [volumePlayer, setVolumePlayer] = useState(0.2); // Volume musique principale
 
   const { themeMode, toggleTheme, show3DEffects, toggle3DEffects } = useTheme();
-  const { width } = useWindowSize();
+  const { width, isMobile } = useWindowSize();
   // Setters pour memes
   const [selectedMemeIndex, setSelectedMemeIndex] = useState(null);
   const [memeList, setMemeList] = useState([]);
@@ -240,14 +243,6 @@ export default function MainPage() {
     }
   }
 
-  function BackgroundSwitcher() {
-
-    return (
-      <>
-        {themeMode === 'light' ? <BackgroundEffect /> : <BackgroundEffect mode="moon" />}
-      </>
-    );
-  }
 
   const restoreApp = (appName) => {
     setVisibleApps((apps) => {
@@ -392,6 +387,8 @@ export default function MainPage() {
     margin: "0 clamp(10px, 2vw, 20px)", // marge latérale responsive
   };
 
+
+  const BackgroundEffect = dynamic(() => import('./BackgroundEffect'), { ssr: false });
 
   return (
     <div className={`${themeMode === 'light' ? styles.bgDay : styles.bgNight}`}>
@@ -604,7 +601,12 @@ export default function MainPage() {
         </DraggableWindow>
       ))}
 
-      {show3DEffects && <BackgroundSwitcher />}
+      {show3DEffects && !isMobile && (
+        <Suspense fallback={null}>
+          {themeMode === 'light' ? <BackgroundEffect /> : <BackgroundEffect mode="moon" />}
+        </Suspense>
+      )}
+
       <Footer visibleApps={visibleApps}
         setVisibleApps={setVisibleApps}
         appZIndices={appZIndices}
