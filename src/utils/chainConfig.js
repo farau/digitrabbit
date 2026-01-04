@@ -1,4 +1,4 @@
-import { createPublicClient, http } from "viem"
+import { createPublicClient, http, webSocket } from "viem"
 import { megaethTestnet, mainnet, berachain } from "viem/chains"
 // Configuration customisée du Megaeth Testnet avec une URL RPC spécifique
 export const customMegaethTestnet = {
@@ -19,6 +19,16 @@ export const customMegaethTestnet = {
 export const publicClient = createPublicClient({
   chain: customMegaethTestnet,
   transport: http('https://timothy.megaeth.com/rpc?vip=1&u=digitrabbits%20v2&v=5184000&s=mafia&verify=' + process.env.NEXT_PUBLIC_RPC_KEY),
+})
+
+export const wsPublicClient = createPublicClient({
+  chain: customMegaethTestnet,
+  transport: webSocket(
+    `wss://carrot.megaeth.com/ws?vip=1&u=digitrabbits%20v2&v=5184000&s=mafia&verify=${process.env.NEXT_PUBLIC_RPC_KEY}`,
+    {
+      reconnect: { attempts: 10, delay: 3000 },
+    }
+  ),
 })
 
 export const publicClientEth = createPublicClient({
