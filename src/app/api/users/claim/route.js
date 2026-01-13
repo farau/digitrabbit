@@ -1,17 +1,11 @@
 // api/users/claim/route.js
 import { NextResponse } from 'next/server';
-import { PrivyClient } from '@privy-io/server-auth';
+import { privy, verifyAndGetUser } from '@/lib/privyClient';
 import { cookies } from 'next/headers';
 import { signMessage } from '@/lib/walletBackend';
 import fs from 'fs';
 import path from 'path';
 import Papa from 'papaparse';
-
-// Initialize the Privy Server Client
-const privy = new PrivyClient(
-    process.env.NEXT_PUBLIC_PRIVY_APP_ID,
-    process.env.PRIVY_APP_SECRET
-);
 
 // Points par NFT
 const POINTS_PER_NFT = 750;
@@ -199,7 +193,7 @@ export async function POST() {
             }
 
             // Parse and verify the token
-            user = await privy.getUser({ idToken });
+            user = await verifyAndGetUser(idToken);
 
             // Extraire les portefeuilles de l'objet utilisateur
             embeddedWallet = user.linkedAccounts.find(
@@ -280,7 +274,7 @@ export async function GET(request) {
         }
 
         // Parse and verify the token
-        const user = await privy.getUser({ idToken });
+        const user = await verifyAndGetUser(idToken);
 
         // Extraire les adresses des portefeuilles
         const linkedWallets = user.linkedAccounts

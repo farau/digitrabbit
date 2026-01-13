@@ -15,7 +15,8 @@ import { useTheme, useGame } from "@/context";
 import DraggableWindow from "./DraggableWindow";
 import Game from "./Game";
 import Chill from "./Chill";
-//import Wardrobe from "./Wardrobe";
+import Wardrobe from "./Wardrobe";
+import RabbitChat from '@/app/components/RabbitChat'
 import Assets from "./Assets";
 import FAQ from "./FAQ";
 import Roadmap from "./Roadmap";
@@ -86,9 +87,13 @@ export default function MainPage() {
     resetPool
   } = usePreSignedPool({ embeddedWallet })
 
-  // ✅ Hook WebSocket Alchemy
-  const { isConnected } = useWebSocket({ embeddedWallet, seasonId });
-
+  // ✅ Hook WebSocket
+  const {
+    messages,
+    isConnected,
+    isSubscribed,
+    resyncMessages
+  } = useWebSocket({ embeddedWallet, seasonId })
 
   // Récupération de la liste des assets et des memes
   useEffect(() => {
@@ -344,11 +349,19 @@ export default function MainPage() {
           onGameEnd={onGameEnd}
           getAvailableTransactions={getAvailableTransactions}
         />;
-      /*case "Wardrobe":
+      case "Wardrobe":
         return <Wardrobe
           playerData={playerData}
           isGameStarted={isGameStarted}
-        />;*/
+        />;
+      case "RabbitChat":
+        return <RabbitChat
+          playerData={playerData}
+          messages={messages}
+          isConnected={isConnected}
+          isSubscribed={isSubscribed}
+          resyncMessages={resyncMessages}
+        />;
       case "Leaderboard":
         return <Leaderboard />;
       case "Settings":
@@ -442,6 +455,13 @@ export default function MainPage() {
         onClick={() => restoreApp("Wardrobe")}
         position={{ x: -100, y: "50%" }}
       />*/}
+      <Icon
+        name="RabbitChat"
+        src="/img/icons/rabbitchat.png"
+        label="RabbitChat"
+        onClick={() => restoreApp("RabbitChat")}
+        position={{ x: -100, y: "50%" }}
+      />
       <Icon
         name="digit-head"
         src="/3d/head"

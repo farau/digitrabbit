@@ -34,13 +34,13 @@ function initializeBackendWallet() {
   backendWalletClient = createWalletClient({
     account,
     chain: customMegaethTestnet,
-    transport: http('https://timothy.megaeth.com/rpc?vip=1&u=digitrabbits%20v2&v=5184000&s=mafia&verify=' + process.env.NEXT_PUBLIC_RPC_KEY),
+    transport: http('https://carrot.megaeth.com/rpc?vip=1&u=digitrabbits%20v2&v=5184000&s=mafia&verify=' + process.env.NEXT_VIP_RPC_KEY),
   });
 
   // Create separate public client for better performance
   backendPublicClient = createPublicClient({
     chain: customMegaethTestnet,
-    transport: http('https://timothy.megaeth.com/rpc?vip=1&u=digitrabbits%20v2&v=5184000&s=mafia&verify=' + process.env.NEXT_PUBLIC_RPC_KEY),
+    transport: http('https://carrot.megaeth.com/rpc?vip=1&u=digitrabbits%20v2&v=5184000&s=mafia&verify=' + process.env.NEXT_VIP_RPC_KEY),
   });
 
   console.log('Backend wallet initialized for address:', account.address);
@@ -51,6 +51,31 @@ function initializeBackendWallet() {
 // Get backend wallet (lazy initialization)
 function getBackendWallet() {
   return initializeBackendWallet();
+}
+
+// Sign start game authorization message
+export async function signMessageStartGame(userAddress, nonce) {
+  const { walletClient } = getBackendWallet();
+
+  // Create message to sign (same as Solidity createMessageHash)
+  const packed = encodePacked(
+    ['address', 'string', 'uint256'],
+    [userAddress, 'START_GAME', nonce]
+  );
+
+  // Create the hash (equivalent to keccak256(abi.encodePacked(...)) in Solidity)
+  const messageHash = keccak256(packed);
+
+  try {
+    // Sign the raw hash - viem will automatically apply the Ethereum signed message prefix
+    const signature = await walletClient.signMessage({
+      message: { raw: messageHash }, // Sign the raw hash, not the packed data
+    });
+    return signature;
+  } catch (error) {
+    console.error('Error signing start game message:', error);
+    throw new Error('Failed to sign start game message');
+  }
 }
 
 // Sign message function
@@ -72,15 +97,6 @@ async function signMessage(userAddress, amount, nonce) {
       message: { raw: messageHash }, // Sign the raw hash, not the packed data
     });
 
-    // For verification, let's check what we signed
-    const ethSignedMessageHash = hashMessage(messageHash);
-
-    // Recover the signer to verify
-    const recoveredAddress = await recoverAddress({
-      hash: ethSignedMessageHash,
-      signature
-    });
-
     return signature;
   } catch (error) {
     console.error('Error signing message:', error);
@@ -88,43 +104,29 @@ async function signMessage(userAddress, amount, nonce) {
   }
 }
 
-// Alternative: Sign typed data (EIP-712) - more secure approach
-async function signTypedData(userAddress, amount, nonce) {
+// Sign message chat function
+async function signMessageChat(userAddress, content, score, nonce) {
   const { walletClient } = getBackendWallet();
 
-  const domain = {
-    name: 'MegaETH Claims',
-    version: '1',
-    chainId: megaethTestnet.id,
-    verifyingContract: '0x0000000000000000000000000000000000000000', // Replace with your contract address
-  };
+  // Create message to sign (same as Solidity createMessageHash)
+  const packed = encodePacked(
+    ['address', 'string', 'uint256', 'uint256'],
+    [userAddress, content, score, nonce]
+  );
 
-  const types = {
-    Claim: [
-      { name: 'user', type: 'address' },
-      { name: 'amount', type: 'uint256' },
-      { name: 'nonce', type: 'uint256' },
-    ],
-  };
-
-  const value = {
-    user: userAddress,
-    amount: BigInt(amount),
-    nonce: BigInt(nonce),
-  };
+  // Create the hash (equivalent to keccak256(abi.encodePacked(...)) in Solidity)
+  const messageHash = keccak256(packed);
 
   try {
-    const signature = await walletClient.signTypedData({
-      domain,
-      types,
-      primaryType: 'Claim',
-      message: value,
+    // Sign the raw hash - viem will automatically apply the Ethereum signed message prefix
+    const signature = await walletClient.signMessage({
+      message: { raw: messageHash }, // Sign the raw hash, not the packed data
     });
 
     return signature;
   } catch (error) {
-    console.error('Error signing typed data:', error);
-    throw new Error('Failed to sign typed data');
+    console.error('Error signing chat message:', error);
+    throw new Error('Failed to sign chat message');
   }
 }
 
@@ -132,5 +134,5 @@ export {
   initializeBackendWallet,
   getBackendWallet,
   signMessage,
-  signTypedData,
+  signMessageChat
 };

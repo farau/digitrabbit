@@ -201,7 +201,7 @@ export default function Game({ playerData, preSignedPool, isInitializing, error,
   const [signedTx, setSignedTx] = useState('')
   const [currentTransactionHash, setCurrentTransactionHash] = useState('')
   const { themeMode, show3DEffects, toggle3DEffects } = useTheme()
-  const [timer, setTimer] = useState(60)
+  const [timer, setTimer] = useState(30)
   const [showTwitterShare, setShowTwitterShare] = useState(false)
   const [finalScore, setFinalScore] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
@@ -329,9 +329,26 @@ export default function Game({ playerData, preSignedPool, isInitializing, error,
         throw new Error('No wallet client set');
       }
 
-      // 2. Vérification et initialisation du pool si nécessaire
       setIsWritingContract(true);
       setErrorStartGame('');
+      // 2. Obtenir l'autorisation de démarrer le jeu depuis le backend
+      const response = await fetch('/api/game/start-authorization', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          embeddedWalletAddress: embeddedWallet.address
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to get game start authorization');
+      }
+      const { signature, nonce } = data;
+
+
+      // 3. Vérification et initialisation du pool si nécessaire
 
       let currentPool = preSignedPool;
       const hasValidePool = currentPool?.transactions?.length > 0 && getAvailableTransactions() > 0;
@@ -356,14 +373,13 @@ export default function Game({ playerData, preSignedPool, isInitializing, error,
 
       console.log(`Starting game on MegaETH Testnet...`);
 
-
       // 5. Démarrer le jeu (envoi réel)
       const txHash = await walletClient.writeContract({
         account: embeddedWallet.address,
         address: DIGIT_RABBITS_ADDRESS,
         abi: DIGIT_RABBITS_ABI,
         functionName: 'startGame',
-        args: [],
+        args: [nonce, signature],
         chain: customMegaethTestnet,
         gas: 30000000n
       });
@@ -378,8 +394,25 @@ export default function Game({ playerData, preSignedPool, isInitializing, error,
         const tx = await walletClient.getTransaction({ hash: txHash });
         console.log({ tx })
         try {
-          await walletClient.call({ to: tx.to, data: tx.input, from: tx.from, gas: tx.gasPrice });
+          await walletClient.call({ to: tx.to, data: tx.input, from: tx.from, /*gas: tx.gasPrice */ });
         } catch (error) {
+          Sentry.captureException(error, {
+            tags: {
+              action: 'start_game',
+              component: 'Game'
+            },
+            extra: {
+              walletAddress: embeddedWallet?.address,
+              availableTransactions: getAvailableTransactions(),
+              blockchainHealth: healthStatus?.status,
+              poolStats: preSignedPool ? {
+                totalTransactions: preSignedPool.transactions?.length || 0,
+                currentIndex: preSignedPool.currentIndex || 0,
+                baseNonce: preSignedPool.baseNonce || 0,
+                hasTransactions: Array.isArray(preSignedPool.transactions)
+              } : null
+            }
+          });
           const revertReason = error.details || error.message || 'Transaction reverted';
           throw new Error(`Transaction reverted: ${revertReason}`);
         }
@@ -410,7 +443,7 @@ export default function Game({ playerData, preSignedPool, isInitializing, error,
       });
 
       setIsGameStarted(true);
-      setTimer(60);
+      setTimer(30);
       setResult(`Hash: ${txHash}`);
 
     } catch (err) {

@@ -1,7 +1,6 @@
 import "98.css";
 import "./globals.css";
 import { ContextProvider } from '@/context'
-import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Analytics } from "@vercel/analytics/next"
 
 export const metadata = {
@@ -21,7 +20,6 @@ export default function RootLayout({ children }) {
       <body className="antialiased">
         <ContextProvider>
           {children}
-          <SpeedInsights />
           <Analytics />
         </ContextProvider>
       </body>

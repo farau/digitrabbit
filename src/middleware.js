@@ -164,16 +164,6 @@ export async function middleware(req) {
             return new Response('Unauthorized', { status: 401 });
         }
 
-        try {
-            await privy.verifyAuthToken(accessToken);
-            return NextResponse.next();
-        } catch (error) {
-            console.error('Token verification failed:', error);
-            return NextResponse.json(
-                { error: 'Authentication failed. Invalid or expired token.' },
-                { status: 401 }
-            );
-        }
     }
 
     // =============== PROTECTION TEST (toutes les routes) ===============

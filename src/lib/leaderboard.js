@@ -1,14 +1,9 @@
 // lib/leaderboard.js
 import { unstable_cache } from 'next/cache'
-import { PrivyClient } from '@privy-io/server-auth';
+import { privy } from '@/lib/privyClient';
 
 // Configuration
-const PRIVY_APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
-const PRIVY_APP_SECRET = process.env.PRIVY_APP_SECRET;
 const GRAPHQL_ENDPOINT = process.env.GRAPHQL_METH_ENDPOINT || process.env.NEXT_PUBLIC_GRAPHQL_METH_ENDPOINT;
-
-// Client Privy
-const privy = new PrivyClient(PRIVY_APP_ID, PRIVY_APP_SECRET);
 
 const REQUEST_TIMEOUT = 25000; // 25 secondes timeout pour GraphQL
 const PRIVY_TIMEOUT = 15000; // 15 secondes timeout pour Privy

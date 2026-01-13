@@ -1,4 +1,4 @@
-import { createPublicClient, http, webSocket } from "viem"
+import { createPublicClient, http, webSocket, parseAbi } from "viem"
 import { megaethTestnet, mainnet, berachain } from "viem/chains"
 // Configuration customisée du Megaeth Testnet avec une URL RPC spécifique
 export const customMegaethTestnet = {
@@ -8,23 +8,23 @@ export const customMegaethTestnet = {
   name: 'MegaETH Testnet v2', // Optionnel mais recommandé
   rpcUrls: {
     default: {
-      http: ['https://timothy.megaeth.com/rpc?vip=1&u=digitrabbits%20v2&v=5184000&s=mafia&verify=' + process.env.NEXT_PUBLIC_RPC_KEY],
+      http: ['https://carrot.megaeth.com/rpc'],
     },
     public: {
-      http: ['https://timothy.megaeth.com/rpc?vip=1&u=digitrabbits%20v2&v=5184000&s=mafia&verify=' + process.env.NEXT_PUBLIC_RPC_KEY],
+      http: ['https://carrot.megaeth.com/rpc'],
     },
   },
 };
 
 export const publicClient = createPublicClient({
   chain: customMegaethTestnet,
-  transport: http('https://timothy.megaeth.com/rpc?vip=1&u=digitrabbits%20v2&v=5184000&s=mafia&verify=' + process.env.NEXT_PUBLIC_RPC_KEY),
+  transport: http('https://carrot.megaeth.com/rpc'),
 })
 
 export const wsPublicClient = createPublicClient({
   chain: customMegaethTestnet,
   transport: webSocket(
-    `wss://carrot.megaeth.com/ws?vip=1&u=digitrabbits%20v2&v=5184000&s=mafia&verify=${process.env.NEXT_PUBLIC_RPC_KEY}`,
+    'wss://carrot.megaeth.com/ws',
     {
       reconnect: { attempts: 10, delay: 3000 },
     }
@@ -41,945 +41,153 @@ export const publicClientBera = createPublicClient({
   transport: http(), // Utilise l’URL par défaut ou ajoute une RPC custom ici
 })
 
-// Logo X officiel
-export const XLogo = ({ className = '', size = 20 }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    className={`align-text-bottom inline ${className}`}
-    aria-hidden="true"
-  >
-    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-  </svg>
-)
 
+export const defineGasPrice = async (walletClient) => {
+  try {
+    let estimatedGas = await walletClient.estimateContractGas({
+      account: embeddedWallet.address,
+      address: DIGIT_RABBITS_ADDRESS,
+      abi: DIGIT_RABBITS_ABI,
+      functionName: 'play',
+      args: [],
+      chain: customMegaethTestnet
+    });
+
+    // Ajouter une marge de sécurité de 20%
+
+    return {
+      gasPrice: (estimatedGas * 120n) / 100n,
+      gasLimit: 30000000n
+    }
+
+  } catch (error) {
+    console.warn('⚠️ Failed to get gas price, using fallback:', error)
+    return {
+      gasPrice: 30000000n,
+      gasLimit: 30000000n
+    }
+  }
+}
 
 // Digit Rabbits smart contract on MegaETH Testnet
 export const DIGIT_RABBITS_ADDRESS = process.env.NEXT_PUBLIC_DIGIT_RABBITS_ADDRESS
+export const DIGIT_RABBITS_CHAT_ADDRESS = process.env.NEXT_PUBLIC_DIGIT_RABBITS_CHAT_ADDRESS
 export const NUM_SLOTS = 5
 export const MAX_LEVEL = 5
-export const COOLDOWN_SECONDS = 2 * 60 * 60; // 2h cooldown
+export const COOLDOWN_SECONDS = 12 * 60 * 60; // 12h cooldown
 
-export const DIGIT_RABBITS_ABI = [
-  {
-    "inputs": [],
-    "stateMutability": "nonpayable",
-    "type": "constructor"
-  },
-  {
-    "inputs": [],
-    "name": "ECDSAInvalidSignature",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "length",
-        "type": "uint256"
-      }
-    ],
-    "name": "ECDSAInvalidSignatureLength",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "s",
-        "type": "bytes32"
-      }
-    ],
-    "name": "ECDSAInvalidSignatureS",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "owner",
-        "type": "address"
-      }
-    ],
-    "name": "OwnableInvalidOwner",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "account",
-        "type": "address"
-      }
-    ],
-    "name": "OwnableUnauthorizedAccount",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "ReentrancyGuardReentrantCall",
-    "type": "error"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "by",
-        "type": "address"
-      }
-    ],
-    "name": "ContractPaused",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "by",
-        "type": "address"
-      }
-    ],
-    "name": "ContractUnpaused",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "player",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "seasonId",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "clicks",
-        "type": "uint256"
-      }
-    ],
-    "name": "GamePlayed",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "player",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "seasonId",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "sessionEndsAt",
-        "type": "uint256"
-      }
-    ],
-    "name": "GameStarted",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "player",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint8",
-        "name": "slot",
-        "type": "uint8"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint8",
-        "name": "level",
-        "type": "uint8"
-      }
-    ],
-    "name": "ItemBought",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "previousOwner",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "newOwner",
-        "type": "address"
-      }
-    ],
-    "name": "OwnershipTransferred",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "player",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "seasonId",
-        "type": "uint256"
-      }
-    ],
-    "name": "PlayerAdded",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "player",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "PointsClaimed",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "seasonId",
-        "type": "uint256"
-      }
-    ],
-    "name": "SeasonStarted",
-    "type": "event"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "seasonId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "address",
-        "name": "player",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "adminGrantPoints",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "seasonId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "address",
-        "name": "player",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "adminRemovePoints",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "nonce",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bytes",
-        "name": "signature",
-        "type": "bytes"
-      }
-    ],
-    "name": "claimPoints",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "user",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "nonce",
-        "type": "uint256"
-      }
-    ],
-    "name": "createMessageHash",
-    "outputs": [
-      {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
-    ],
-    "stateMutability": "pure",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "currentSeasonId",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getAllPlayersSeasonData",
-    "outputs": [
-      {
-        "internalType": "address[]",
-        "name": "addresses",
-        "type": "address[]"
-      },
-      {
-        "internalType": "uint256[]",
-        "name": "scores",
-        "type": "uint256[]"
-      },
-      {
-        "internalType": "uint256[]",
-        "name": "totalClicks",
-        "type": "uint256[]"
-      },
-      {
-        "internalType": "uint256[]",
-        "name": "streak",
-        "type": "uint256[]"
-      },
-      {
-        "internalType": "bool[]",
-        "name": "hasClaimedPoints",
-        "type": "bool[]"
-      },
-      {
-        "internalType": "uint256[]",
-        "name": "maxClicks",
-        "type": "uint256[]"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "user",
-        "type": "address"
-      }
-    ],
-    "name": "getPlayerCurrentSeasonData",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "score",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "totalClicks",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "gameClicks",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "sessionEndsAt",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "streak",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bool",
-        "name": "hasClaimedPoints",
-        "type": "bool"
-      },
-      {
-        "internalType": "uint256",
-        "name": "maxClicks",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "user",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "seasonId",
-        "type": "uint256"
-      }
-    ],
-    "name": "getPlayerData",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "score",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "totalClicks",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "gameClicks",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "sessionEndsAt",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "streak",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bool",
-        "name": "hasClaimedPoints",
-        "type": "bool"
-      },
-      {
-        "internalType": "uint256",
-        "name": "maxClicks",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "seasonId",
-        "type": "uint256"
-      }
-    ],
-    "name": "getPlayersCountInSeason",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "user",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "nonce",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bytes",
-        "name": "signature",
-        "type": "bytes"
-      }
-    ],
-    "name": "getSignatureInfo",
-    "outputs": [
-      {
-        "internalType": "bytes32",
-        "name": "messageHash",
-        "type": "bytes32"
-      },
-      {
-        "internalType": "bytes32",
-        "name": "ethSignedMessageHash",
-        "type": "bytes32"
-      },
-      {
-        "internalType": "address",
-        "name": "recoveredSigner",
-        "type": "address"
-      },
-      {
-        "internalType": "bool",
-        "name": "isValid",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getTopClicker",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "topPlayer",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "maxClicks",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "totalClicks",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "seasonId",
-        "type": "uint256"
-      }
-    ],
-    "name": "getTopClickerBySeason",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "topPlayer",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "maxClicks",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "totalClicks",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "isPaused",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "player",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "seasonId",
-        "type": "uint256"
-      }
-    ],
-    "name": "isPlayerInSeason",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "owner",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "pauseContract",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "paused",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "play",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      },
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "name": "playerExistsInSeason",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "playersPerSeason",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "renounceOwnership",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      },
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "name": "seasonStats",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "score",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "totalClicks",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "gameClicks",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "sessionEndsAt",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "streak",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "lastStreakUpdate",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bool",
-        "name": "hasClaimedPoints",
-        "type": "bool"
-      },
-      {
-        "internalType": "uint256",
-        "name": "maxClicks",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "_newSigner",
-        "type": "address"
-      }
-    ],
-    "name": "setTrustedSigner",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "startGame",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "startSeason",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "totalClicksGame",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "newOwner",
-        "type": "address"
-      }
-    ],
-    "name": "transferOwnership",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "trustedSigner",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "unpauseContract",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "usedNonces",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "user",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "nonce",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bytes",
-        "name": "signature",
-        "type": "bytes"
-      }
-    ],
-    "name": "verifySignature",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  }
-]
+export const DIGIT_RABBITS_ABI = parseAbi([
+  // Season1 ABI - State variables
+  'function totalClicksGame() external view returns (uint256)',
+
+  // Season1 ABI - Functions
+  'function startGame(uint256 nonce, bytes memory signature) external',
+  'function play() external',
+  'function claimPoints(uint256 amount, uint256 nonce, bytes memory signature) public',
+  'function getPlayerCurrentSeasonData(address user) external view returns (uint256 score, uint256 totalClicks, uint256 gameClicks, uint256 sessionEndsAt, uint256 streak, uint256 lastClaimTimestamp, uint256 maxClicks)',
+  'function currentSeasonId() external view returns (uint256)',
+  'function getPlayerData(address user, uint256 seasonId) external view returns (uint256 score, uint256 totalClicks, uint256 gameClicks, uint256 sessionEndsAt, uint256 streak, uint256 lastClaimTimestamp, uint256 maxClicks)',
+  'function isPaused() external view returns (bool)',
+  'function sendChatMessage(string calldata content, uint256 score, uint256 nonce, string calldata twitterUsername, string calldata twitterProfilePictureUrl, bytes memory signature, uint256 replyToMessageId) external',
+
+  // Season1 ABI - Events
+  'event GameStarted(address indexed player, uint256 seasonId, uint256 sessionEndsAt)',
+  'event GamePlayed(address indexed player, uint256 seasonId, uint256 clicks)',
+  'event PointsClaimed(address indexed player, uint256 amount)',
+])
+
+export const DIGIT_RABBITS_CHAT_ABI = parseAbi([
+  // RabbitChat ABI - Core Functions
+  'function sendMessageFromSeason1(address user, string calldata content, uint256 score, uint256 nonce, string calldata twitterUsername, string calldata twitterProfilePictureUrl, bytes memory signature, uint256 replyToMessageId) external returns (uint256)',
+
+  // RabbitChat ABI - Payment Functions
+  'function buyConfirmedRabbit() external payable',
+  'function withdraw() external',
+  'function withdrawAmount(uint256 amount) external',
+  'function getBalance() external view returns (uint256)',
+
+  // RabbitChat ABI - Moderator Functions
+  'function promoteToConfirmedRabbit(address _user) external',
+  'function demoteToRabbitMob(address _user) external',
+  'function muteUser(address _user, uint256 _duration) external',
+  'function unmuteUser(address _user) external',
+
+  // RabbitChat ABI - Admin Functions
+  'function addModerator(address _user) external',
+  'function removeModerator(address _user) external',
+  'function pauseContract() external',
+  'function unpauseContract() external',
+  'function setSeason1Contract(address _newContract) external',
+  'function setTrustedSigner(address _newSigner) external',
+  'function setMinMessageCooldown(uint256 _seconds) external',
+  'function setMaxMessageLength(uint256 _length) external',
+  'function setRoleBonus(uint8 _role, uint256 _bonusPercent) external',
+
+  // RabbitChat ABI - View Functions
+  'function getUserData(address user) external view returns (uint8 role, uint256 messageCount, uint256 totalScore, uint256 lastMessageTimestamp, bool canSendMessage, bool isMuted, uint256 muteExpiresAt)',
+  'function getMessage(uint256 messageId) external view returns (address sender, string memory content, uint256 timestamp, uint256 score, uint8 senderRole)',
+  'function getMessageCooldown(address user) external view returns (bool canSend, uint256 remainingTime)',
+  'function getUserRole(address user) external view returns (uint8)',
+  'function isModerator(address user) external view returns (bool)',
+  'function isUserMuted(address user) external view returns (bool isMuted, uint256 expiresAt)',
+  'function getRoleBonus(uint8 role) external view returns (uint256)',
+  'function getTotalMessages() external view returns (uint256)',
+  'function calculatePointsWithBonus(address user, uint256 baseScore) external view returns (uint256 totalPoints, uint256 bonus)',
+  'function getUserMessageCountInLastDays(address user, uint256 daysCount) external view returns (uint256 count)',
+  'function messageCounter() external view returns (uint256)',
+  'function trustedSigner() external view returns (address)',
+  'function season1Contract() external view returns (address)',
+  'function paused() external view returns (bool)',
+  'function minMessageCooldown() external view returns (uint256)',
+  'function maxMessageLength() external view returns (uint256)',
+
+  // RabbitChat ABI - Signature Functions
+  'function createMessageHash(address user, string memory content, uint256 score, string memory twitterUsername, string memory twitterProfilePictureUrl, uint256 nonce) public pure returns (bytes32)',
+  'function verifySignature(address user, string memory content, uint256 score, uint256 nonce, string memory twitterUsername, string memory twitterProfilePictureUrl, bytes memory signature) public view returns (bool)',
+
+  // RabbitChat ABI - Events
+  'event MessageSent(uint256 indexed messageId, address indexed sender, string content, uint256 score, uint8 senderRole, string twitterUsername, string twitterProfilePictureUrl, uint256 timestamp, uint256 replyToMessageId)',
+  'event RoleChanged(address indexed user, uint8 oldRole, uint8 newRole, address indexed changedBy)',
+  'event PointsAwarded(address indexed user, uint256 baseScore, uint256 bonusPoints, uint256 totalPoints)',
+  'event UserMuted(address indexed user, uint256 duration, uint256 expiresAt, address indexed mutedBy)',
+  'event UserUnmuted(address indexed user, address indexed unmutedBy)',
+  'event ConfirmedRabbitPurchased(address indexed user, uint256 amountPaid)',
+  'event FundsWithdrawn(address indexed to, uint256 amount)',
+  'event ContractPaused(address indexed by)',
+  'event ContractUnpaused(address indexed by)',
+  'event Season1ContractUpdated(address indexed oldContract, address indexed newContract)',
+  'event TrustedSignerUpdated(address indexed oldSigner, address indexed newSigner)',
+])
+// ==================== HELPERS ====================
+
+// Role names
+export const ROLE_NAMES = {
+  0: 'Rabbit Mob',
+  1: 'Confirmed Rabbit',
+  2: 'Moderator'
+}
+
+// Role badges
+export const ROLE_BADGES = {
+  0: '🐰',
+  1: '✨🐰',
+  2: '👑'
+}
+
+// Role colors (Tailwind classes)
+export const ROLE_COLORS = {
+  0: 'text-gray-400',
+  1: 'text-blue-400',
+  2: 'text-red-400'
+}
+
+// Helper: Format address
+export const formatAddress = (address) => {
+  if (!address) return '0x0000...0000'
+  return `${address.slice(0, 6)}...${address.slice(-4)}`
+}
+
+// Helper: Format timestamp
+export const formatTimestamp = (timestamp) => {
+  return new Date(timestamp * 1000).toLocaleString()
+}

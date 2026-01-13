@@ -32,13 +32,13 @@ function initializeBackendRpcWallet() {
     backendWalletClient = createWalletClient({
         account,
         chain: customMegaethTestnet,
-        transport: http('https://timothy.megaeth.com/rpc?vip=1&u=digitrabbits%20v2&v=5184000&s=mafia&verify=' + process.env.NEXT_PUBLIC_RPC_KEY),
+        transport: http('https://carrot.megaeth.com/rpc'),
     });
 
     // Create separate public client for better performance
     backendPublicClient = createPublicClient({
         chain: customMegaethTestnet,
-        transport: http('https://timothy.megaeth.com/rpc?vip=1&u=digitrabbits%20v2&v=5184000&s=mafia&verify=' + process.env.NEXT_PUBLIC_RPC_KEY),
+        transport: http('https://carrot.megaeth.com/rpc'),
     });
 
     console.log('Backend wallet initialized for address:', account.address);

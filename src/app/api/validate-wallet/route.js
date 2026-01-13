@@ -1,6 +1,6 @@
 // /api/validate-wallet/route.js (Next.js 13+ App Router)
 import { NextResponse } from 'next/server';
-import { privy } from '@/lib/privyClient';
+import { privy, verifyAndGetUser } from '@/lib/privyClient';
 import { cookies } from 'next/headers';
 
 // Cache pour éviter les appels répétés (optionnel)
@@ -16,7 +16,6 @@ export async function POST(request) {
         if (!idToken) {
             return NextResponse.json({ message: 'Authentication token missing' }, { status: 401 });
         }
-
 
         // 2. Parser le body
         const { walletAddress } = await request.json();
@@ -46,18 +45,8 @@ export async function POST(request) {
             });
         }
 
-        // Parse and verify the token
-        const user = await privy.getUser({ idToken });
-
-        if (!user || !user.linkedAccounts) {
-            return NextResponse.json(
-                { isValid: false, message: 'No wallet found for this user' },
-                { status: 404 }
-            );
-        }
-
-        // 7. Vérifier si le wallet appartient à l'utilisateur
-
+        // 5. Vérifier si le wallet appartient à l'utilisateur
+        const user = await verifyAndGetUser(idToken);
         const walletMatch = user.linkedAccounts.find(
             (account) => account.type === 'wallet' &&
                 account.walletClientType === 'privy' &&
@@ -66,7 +55,7 @@ export async function POST(request) {
 
         const isValid = !!walletMatch;
 
-        // 8. Vérifications supplémentaires de sécurité
+        // 6. Vérifications supplémentaires de sécurité
         if (isValid) {
             // Vérifier que le wallet est actif
             const isWalletActive = await checkWalletStatus(walletAddress);
@@ -87,16 +76,16 @@ export async function POST(request) {
             }
         }
 
-        // 9. Mettre en cache le résultat
+        // 7. Mettre en cache le résultat
         validationCache.set(cacheKey, {
             isValid,
             timestamp: Date.now()
         });
 
-        // 10. Logger pour la sécurité
+        // 8. Logger pour la sécurité
         console.log(`Wallet validation: ${walletAddress} for user ${user.id} - ${isValid ? 'SUCCESS' : 'FAILED'}`);
 
-        // 11. Retourner le résultat
+        // 9. Retourner le résultat
         return NextResponse.json({
             isValid,
             message: isValid ? 'Wallet successfully validated!' : 'Wallet not associated with user',

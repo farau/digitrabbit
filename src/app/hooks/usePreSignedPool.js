@@ -3,7 +3,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { encodeFunctionData } from 'viem'
-import { customMegaethTestnet } from '@/utils/chainConfig'
+import { customMegaethTestnet, defineGasPrice } from '@/utils/chainConfig'
 import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS } from '@/utils/chainConfig'
 import { useWalletClient } from './useWalletClient'
 import { InternalRpcError } from 'viem';
@@ -23,32 +23,7 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
     const hasInitialized = useRef(false) // Pour éviter les re-initialisations
     const { walletClient } = useWalletClient(embeddedWallet)
 
-    const defineGasPrice = async (walletClient) => {
-        try {
-            let estimatedGas = await walletClient.estimateContractGas({
-                account: embeddedWallet.address,
-                address: DIGIT_RABBITS_ADDRESS,
-                abi: DIGIT_RABBITS_ABI,
-                functionName: 'play',
-                args: [],
-                chain: customMegaethTestnet
-            });
 
-            // Ajouter une marge de sécurité de 20%
-
-            return {
-                gasPrice: (estimatedGas * 120n) / 100n,
-                gasLimit: 30000000n
-            }
-
-        } catch (error) {
-            console.warn('⚠️ Failed to get gas price, using fallback:', error)
-            return {
-                gasPrice: 30000000n,
-                gasLimit: 30000000n
-            }
-        }
-    }
 
     const extendPool = useCallback(async () => {
         if (extendingRef.current) return
@@ -187,7 +162,6 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
             if (!embeddedWallet?.address) throw new Error('Wallet address missing')
 
             const signedTx = preSignedPool.transactions[preSignedPool.currentIndex]
-            const startTime = performance.now()
 
             const result = await walletClient.request({
                 method: 'realtime_sendRawTransaction',
@@ -197,9 +171,6 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
             if (!result) {
                 throw new Error('Failed to play the game')
             }
-
-            const endTime = performance.now()
-            const timeTaken = Math.round(endTime - startTime)
 
             // Mettre à jour le pool de transactions
             setPreSignedPool(prev => {
@@ -226,7 +197,6 @@ export const usePreSignedPool = ({ embeddedWallet }) => {
 
             return {
                 hash: result.transactionHash || result,
-                timeTaken
             }
 
         } catch (err) {
