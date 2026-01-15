@@ -1,5 +1,6 @@
 'use client'
 
+
 import { Download, Gift, Loader2, Trophy } from 'lucide-react'
 import Image from 'next/image'
 import { XLogo } from '@/utils/constants'
@@ -7,9 +8,7 @@ import Wrapper from '@/app/components/Wrapper'
 import { useTheme, useGame } from '@/context'
 import DynamicAvatar from '@/app/components/DynamicAvatar'
 import { useState } from 'react'
-import { useWallets, usePrivy } from '@privy-io/react-auth'
-import { useWalletClient } from '../hooks/useWalletClient'
-import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS } from '@/utils/chainConfig'
+import { usePrivy } from '@privy-io/react-auth'
 import WalletButton from './WalletButton'
 import { useBalance } from 'wagmi'
 import {
@@ -20,16 +19,23 @@ import {
   Radar,
   ResponsiveContainer,
   Tooltip,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
 } from 'recharts'
+
 
 function XProfileDisplay() {
   const { user } = usePrivy();
   const { themeMode } = useTheme();
 
+
   // Find the X/Twitter account from the user's linked accounts
   const twitterAccount = user?.linkedAccounts.find(
     (account) => account.type === 'twitter_oauth'
   );
+
 
   const isNight = themeMode === 'dark';
   const cardBg = isNight ? '#222' : '#f3f3f3';
@@ -38,17 +44,21 @@ function XProfileDisplay() {
   const textColor = isNight ? 'text-white' : 'text-black';
   const subTextColor = isNight ? 'text-zinc-400' : 'text-gray-600';
 
+
   // If the user has no linked Twitter account, don't render anything
   if (!twitterAccount) {
     return null;
   }
 
+
   const { name, username, profilePictureUrl } = twitterAccount;
+
 
   return (
     <div
       style={{
         background: cardBg,
+        marginBottom: 30,
         padding: '15px',
         borderRadius: '10px',
         marginTop: 12,
@@ -78,6 +88,7 @@ function XProfileDisplay() {
           </div>
         </div>
 
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <XLogo className={`${isNight ? 'text-white' : 'text-black'}`} size={20} />
           <span className={`text-sm ${subTextColor}`}>Connected</span>
@@ -87,427 +98,9 @@ function XProfileDisplay() {
   );
 }
 
-// Configuration des collections avec leurs images
-const COLLECTIONS_CONFIG = [
-  {
-    name: 'digitrabbits',
-    displayName: 'Digit Rabbits - testnet NFT',
-    image: '/img/collections/digitrabbits.jpg',
-  },
-];
 
-function PointsModal({ isOpen, onClose, pointsData, onClaim, isClaiming, isNight }) {
-  if (!isOpen || !pointsData) return null;
 
-  const textColor = isNight ? '#eee' : '#333';
-  const cardBg = isNight ? '#222' : '#f3f3f3';
-  const borderColor = isNight ? '#444' : '#ddd';
-  const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)';
-  const overlayBg = isNight ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.2)';
-  const subTextColor = isNight ? '#ccc' : '#666';
-
-  // Créer la liste des collections avec leurs données
-  const collections = COLLECTIONS_CONFIG.map(config => {
-    const collectionData = pointsData.collectionsBreakdown?.[config.name];
-    return {
-      ...config,
-      count: collectionData?.totalCount || 0,
-      points: collectionData?.totalPoints || 0
-    };
-  }).filter(collection => collection.count > 0); // Filtrer seulement les collections avec des NFTs
-
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        minHeight: '110vh',
-        right: 0,
-        bottom: 0,
-        backgroundColor: overlayBg,
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 50,
-        padding: '20px'
-      }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          backgroundColor: cardBg,
-          borderRadius: '12px',
-          padding: '24px',
-          maxWidth: '520px',
-          width: '100%',
-          maxHeight: '75vh',
-          overflowY: 'auto',
-          border: `1px solid ${borderColor}`,
-          boxShadow,
-          color: textColor,
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '20px',
-          paddingBottom: '15px',
-          borderBottom: `1px solid ${borderColor}`
-        }}>
-          <h2 style={{
-            fontSize: '20px',
-            fontWeight: '600',
-            margin: 0,
-            color: textColor
-          }}>
-            Available Rewards
-          </h2>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              fontSize: '18px',
-              cursor: 'pointer',
-              color: subTextColor,
-              padding: '4px 8px',
-              borderRadius: '4px',
-              outline: 'none'
-            }}
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* Collections */}
-        <div style={{ marginBottom: '20px' }}>
-          {collections.map((collection, index) => (
-            <div
-              key={collection.name}
-              style={{
-                background: cardBg,
-                border: `1px solid ${borderColor}`,
-                borderRadius: '8px',
-                padding: '12px',
-                marginBottom: index < collections.length - 1 ? '8px' : '0',
-                boxShadow
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <Image
-                    src={collection.image}
-                    alt={collection.displayName}
-                    width={36}
-                    height={36}
-                    style={{
-                      borderRadius: '6px',
-                      objectFit: 'cover',
-                      border: `1px solid ${borderColor}`
-                    }}
-                  />
-                  <div>
-                    <div style={{
-                      fontSize: '15px',
-                      fontWeight: '600',
-                      color: textColor,
-                      marginBottom: '2px'
-                    }}>
-                      {collection.displayName}
-                    </div>
-                    <div style={{
-                      fontSize: '12px',
-                      color: subTextColor
-                    }}>
-                      {collection.count} NFT{collection.count > 1 ? 's' : ''}
-                    </div>
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    color: textColor
-                  }}>
-                    {collection.points.toLocaleString()}
-                  </div>
-                  <div style={{
-                    fontSize: '11px',
-                    color: subTextColor
-                  }}>
-                    points
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Total */}
-        <div
-          style={{
-            background: cardBg,
-            padding: '15px',
-            borderRadius: '10px',
-            marginBottom: '20px',
-            border: `1px solid ${borderColor}`,
-            boxShadow
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <strong>Total RabbitPoints:</strong>
-            </div>
-            <div style={{
-              fontSize: '20px',
-              fontWeight: '600',
-              color: textColor
-            }}>
-              {pointsData.claimablePoints.toLocaleString()}
-            </div>
-          </div>
-        </div>
-
-        {/* Claim Button */}
-        <button
-          onClick={onClaim}
-          disabled={isClaiming || pointsData.claimablePoints === 0}
-          style={{
-            width: '100%',
-            background: pointsData.claimablePoints === 0
-              ? (isNight ? '#444' : '#ddd')
-              : (isNight ? '#4f46e5' : '#6366f1'),
-            color: 'white',
-            border: 'none',
-            padding: '12px 20px',
-            borderRadius: '8px',
-            fontSize: '14px',
-            fontWeight: '600',
-            cursor: (isClaiming || pointsData.claimablePoints === 0) ? 'not-allowed' : 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            opacity: (isClaiming || pointsData.claimablePoints === 0) ? 0.6 : 1,
-            transition: 'opacity 0.2s ease'
-          }}
-        >
-          {isClaiming ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              Claiming...
-            </>
-          ) : pointsData.claimablePoints === 0 ? (
-            'No Points Available'
-          ) : (
-            <>
-              Claim Points
-            </>
-          )}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function CheckAndClaimPointsButton({ isNight, user, embeddedWallet, isGameStarted }) {
-  const { wallets } = useWallets();
-  const { walletClient } = useWalletClient(embeddedWallet);
-  const [isChecking, setIsChecking] = useState(false);
-  const [isClaiming, setIsClaiming] = useState(false);
-  const [pointsData, setPointsData] = useState(null);
-  const [error, setError] = useState(null);
-  const [claimSuccess, setClaimSuccess] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-
-  const handleCheckPoints = async () => {
-    if (!user?.linkedAccounts) return;
-    setPointsData(null);
-    setIsChecking(true);
-    setError(null);
-    setClaimSuccess(false);
-
-    try {
-      const response = await fetch('/api/users/claim', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setPointsData(data);
-
-      if (data.claimablePoints > 0) {
-        setShowModal(true);
-      }
-    } catch (err) {
-      console.error('Error checking points:', err);
-      setError('Failed to check points');
-    } finally {
-      setIsChecking(false);
-    }
-  };
-
-  const handleClaimPoints = async () => {
-    if (!pointsData || !embeddedWallet || pointsData.claimablePoints === 0) return;
-    if (!walletClient) {
-      setError('Wallet client not initialized yet')
-      return
-    }
-
-    setIsClaiming(true);
-    setError(null);
-
-    try {
-      if (!embeddedWallet) {
-        throw new Error('Embedded wallet not found');
-      }
-
-      const claimResponse = await fetch('/api/users/claim', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (!claimResponse.ok) {
-        throw new Error(`HTTP error! status: ${claimResponse.status}`);
-      }
-
-      const claimData = await claimResponse.json();
-
-      if (!claimData.success || !claimData.signature) {
-        throw new Error('Failed to get claim signature');
-      }
-
-      const hash = await walletClient.writeContract({
-        account: embeddedWallet.address,
-        address: DIGIT_RABBITS_ADDRESS,
-        abi: DIGIT_RABBITS_ABI,
-        functionName: 'claimPoints',
-        args: [
-          BigInt(claimData.claimablePoints),
-          BigInt(claimData.nonce),
-          claimData.signature
-        ],
-        gas: 30000000n
-      });
-
-      console.log('Transaction hash:', hash);
-      setClaimSuccess(true);
-      setPointsData(null);
-
-    } catch (err) {
-      console.error('Error claiming points:', err);
-      if (err.shortMessage?.toLowerCase().includes("exceeds the balance of the account")) {
-        setError("Please fund your wallet with testnet tokens. Go to the Settings section, copy your wallet address and paste it into the faucet.");
-      } else {
-        setError(`Failed to claim points: ${err.shortMessage}`);
-      }
-    } finally {
-      setIsClaiming(false);
-      setShowModal(false);
-    }
-  };
-
-  const buttonStyle = {
-    background: isNight
-      ? 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)'
-      : 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
-    color: 'white',
-    border: 'none',
-    padding: '8px 16px',
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontWeight: '500',
-    cursor: (isChecking || isClaiming) ? 'not-allowed' : 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    transition: 'all 0.2s ease',
-    boxShadow: isNight
-      ? '0 2px 6px rgba(79, 70, 229, 0.3)'
-      : '0 2px 6px rgba(79, 70, 229, 0.3)',
-    opacity: (isChecking || isClaiming) ? 0.7 : 1,
-  };
-
-  return (
-    <>
-      <div className="flex flex-col items-center gap-3">
-        <button
-          onClick={handleCheckPoints}
-          disabled={isChecking || isClaiming || isGameStarted}
-          style={buttonStyle}
-          onMouseOver={(e) => {
-            if (!isChecking && !isClaiming) {
-              e.target.style.transform = 'translateY(-1px)';
-              e.target.style.boxShadow = isNight
-                ? '0 3px 8px rgba(79, 70, 229, 0.4)'
-                : '0 3px 8px rgba(79, 70, 229, 0.4)';
-            }
-          }}
-          onMouseOut={(e) => {
-            if (!isChecking && !isClaiming) {
-              e.target.style.transform = 'translateY(0)';
-              e.target.style.boxShadow = isNight
-                ? '0 2px 6px rgba(79, 70, 229, 0.3)'
-                : '0 2px 6px rgba(79, 70, 229, 0.3)';
-            }
-          }}
-        >
-          {isChecking ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Gift className="w-4 h-4" />
-          )}
-          {isChecking ? 'Checking...' : 'Check Points'}
-        </button>
-
-        {pointsData && !isChecking && pointsData.claimablePoints === 0 && (
-          <div className={`text-sm ${isNight ? 'text-gray-400' : 'text-gray-600'} text-center`}>
-            No points to claim
-          </div>
-        )}
-
-        {claimSuccess && (
-          <div className={`text-sm ${isNight ? 'text-green-400' : 'text-green-600'} text-center`}>
-            ✅ Points claimed successfully!
-          </div>
-        )}
-
-        {error && (
-          <div className={`text-sm ${isNight ? 'text-red-400' : 'text-red-600'} text-center max-w-xs`}>
-            {error}
-          </div>
-        )}
-      </div>
-
-      <PointsModal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        pointsData={pointsData}
-        onClaim={handleClaimPoints}
-        isClaiming={isClaiming}
-        isNight={isNight}
-      />
-    </>
-  );
-}
-
-export default function Profile({ playerData, isGameStarted }) {
+export default function Profile({ playerData }) {
   const { user } = usePrivy();
   const { themeMode } = useTheme();
   const isNight = themeMode === 'dark';
@@ -516,18 +109,23 @@ export default function Profile({ playerData, isGameStarted }) {
   const borderColor = isNight ? '#444' : '#ddd'
   const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)'
 
+
   const { embeddedWallet, validationError, isValidating } = useGame()
 
-  const { rabbitPoints, playerItems, totalClicks, sessionEndsAt, boost, streak, hasClaimedPoints, maxClicks } = playerData
+
+  const { rabbitPoints, playerItems, totalClicks, sessionEndsAt, boost, streak, hasClaimedPoints, maxClicks, dailyMessages, weeklyMessages, gamePlayed } = playerData
+
 
   const { data: balance, refetch: refetchBalance } = useBalance({
     address: embeddedWallet?.address,
   });
 
+
   const rawStats = {
     totalClicks: Number(totalClicks),
     streak: Number(streak),
-    maxClicks: Number(maxClicks)
+    maxClicks: Number(maxClicks),
+    gamePlayed: Number(gamePlayed),
   }
 
   const blockchainStats = [
@@ -542,16 +140,37 @@ export default function Profile({ playerData, isGameStarted }) {
       real: `${rawStats.streak ?? 0} days`
     },
     {
+      stat: 'Game played',
+      value: Math.min((rawStats.gamePlayed ?? 0) / 60, 1),
+      real: `${rawStats.gamePlayed ?? 0}`
+    },
+    {
       stat: 'Max clicks',
       value: Math.min((rawStats.maxClicks ?? 0) / 359, 1),
       real: `${rawStats.maxClicks ?? 0} (${Math.floor(1000 / (rawStats.maxClicks / 60))} ms/click)`
     }
   ];
 
+
+  // ✅ NEW: Prepare messaging data for chart
+  const messageChartData = [
+    { day: 'Today', messages: dailyMessages },
+    { day: '-1d', messages: Number(weeklyMessages[1]) ?? 0 },
+    { day: '-2d', messages: Number(weeklyMessages[2]) ?? 0 },
+    { day: '-3d', messages: Number(weeklyMessages[3]) ?? 0 },
+    { day: '-4d', messages: Number(weeklyMessages[4]) ?? 0 },
+    { day: '-5d', messages: Number(weeklyMessages[5]) ?? 0 },
+    { day: '-6d', messages: Number(weeklyMessages[6]) ?? 0 },
+  ];
+
+  const totalWeeklyMessages = weeklyMessages.reduce((sum, count) => sum + Number(count), 0);
+
+
   const renderVerticalLabels = ({ payload, x, y }) => {
     const angle = payload.coordinate?.angle ?? 0
     const label = payload.value
     const isLeft = angle > 90 && angle < 270
+
 
     return (
       <text
@@ -565,6 +184,7 @@ export default function Profile({ playerData, isGameStarted }) {
       </text>
     )
   }
+
 
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
@@ -587,6 +207,29 @@ export default function Profile({ playerData, isGameStarted }) {
     }
     return null
   }
+
+  // ✅ NEW: Message chart tooltip
+  const MessageTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div
+          style={{
+            backgroundColor: isNight ? '#333' : '#fff',
+            border: `1px solid ${borderColor}`,
+            padding: '8px',
+            borderRadius: 4,
+            color: isNight ? '#eee' : '#333',
+          }}
+        >
+          <p style={{ margin: 0 }}>
+            <strong>{payload[0].payload.day}</strong>: {payload[0].value} messages
+          </p>
+        </div>
+      )
+    }
+    return null
+  }
+
 
   function RadarStatsChart() {
     return (
@@ -614,8 +257,38 @@ export default function Profile({ playerData, isGameStarted }) {
     )
   }
 
+
+  function MessageChart() {
+    return (
+      <div className="w-full md:w-64 h-64">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={messageChartData}>
+            <XAxis
+              dataKey="day"
+              stroke={isNight ? '#555' : '#000000ff'}
+              style={{ fontSize: 12 }}
+            />
+            <YAxis
+              stroke={isNight ? '#555' : '#000000ff'}
+              style={{ fontSize: 12 }}
+            />
+            <Tooltip content={<MessageTooltip />} />
+            <Bar
+              dataKey="messages"
+              stroke="#4f46e5"
+              fill="#4f46e5"
+              radius={[8, 8, 0, 0]}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    )
+  }
+
+
   function CopyWalletButton({ address }) {
     const [isCopied, setIsCopied] = useState(false);
+
 
     const handleCopy = async () => {
       try {
@@ -626,6 +299,7 @@ export default function Profile({ playerData, isGameStarted }) {
         console.error('Failed to copy address:', err);
       }
     };
+
 
     return (
       <button
@@ -643,6 +317,7 @@ export default function Profile({ playerData, isGameStarted }) {
       </button>
     );
   }
+
 
   // Error and loading states
   if (isValidating) {
@@ -668,6 +343,7 @@ export default function Profile({ playerData, isGameStarted }) {
     )
   }
 
+
   if (validationError) {
     return (
       <Wrapper>
@@ -690,15 +366,18 @@ export default function Profile({ playerData, isGameStarted }) {
     )
   }
 
+
   const userAddress =
     embeddedWallet?.address || '0x0000000000000000000000000000000000000000'
   const displayAddress = userAddress.slice(0, 4) + '...' + userAddress.slice(-4)
+
 
   // Formater la balance à 5 décimales maximum
   const formatBalance = (value) => {
     const num = parseFloat(value) / 10 ** 18; // Convertir de wei à ether
     return num.toFixed(5).replace(/\.?0+$/, '');
   };
+
 
   return (embeddedWallet ?
     <Wrapper>
@@ -721,8 +400,10 @@ export default function Profile({ playerData, isGameStarted }) {
                   canvas.width = 512;
                   canvas.height = 512;
 
+
                   ctx.imageSmoothingEnabled = true;
                   ctx.imageSmoothingQuality = 'high';
+
 
                   const loadImage = (src) => {
                     return new Promise((resolve, reject) => {
@@ -734,6 +415,7 @@ export default function Profile({ playerData, isGameStarted }) {
                     });
                   };
 
+
                   const layerOrder = [
                     { folder: 'backgrounds', index: 1 },
                     { folder: 'rabbit_color', index: 0 },
@@ -742,9 +424,11 @@ export default function Profile({ playerData, isGameStarted }) {
                     { folder: 'hat', index: 4 }
                   ];
 
+
                   for (const layer of layerOrder) {
                     const itemLevel = playerItems[layer.index] || 0;
                     const imagePath = `/img/shop/${layer.folder}/${itemLevel}.webp`;
+
 
                     try {
                       const img = await loadImage(imagePath);
@@ -753,6 +437,7 @@ export default function Profile({ playerData, isGameStarted }) {
                       console.warn(`Failed to load image: ${imagePath}`, error);
                     }
                   }
+
 
                   const link = document.createElement('a');
                   link.download = 'my-digital-rabbit.png';
@@ -772,6 +457,7 @@ export default function Profile({ playerData, isGameStarted }) {
             </button>
           </div>
         </div>
+
 
         {/* Infos */}
         <div style={{ flex: 1, color: textColor }}>
@@ -830,130 +516,81 @@ export default function Profile({ playerData, isGameStarted }) {
         </div>
       </div>
 
+
       <XProfileDisplay />
 
-      {/* Reward Section */}
-      <div
-        style={{
-          background: isNight
-            ? 'linear-gradient(135deg, #1e293b 0%, #334155 100%)'
-            : 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-          padding: '20px',
-          borderRadius: '12px',
-          border: `1px solid ${isNight ? '#4f46e5' : '#6366f1'}`,
-          boxShadow: isNight
-            ? '0 4px 12px rgba(79, 70, 229, 0.1)'
-            : '0 4px 12px rgba(99, 102, 241, 0.1)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-        className='mt-4 mb-4'
-      >
-        {/* Title */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            marginBottom: '16px',
-          }}
-        >
-          <Gift className={`w-5 h-5 ${isNight ? 'text-indigo-400' : 'text-indigo-600'}`} />
-          <h3
+
+      {/* ✅ NEW: Messages Section */}
+      <div className="flex-1 flex flex-col md:flex-row gap-8 items-stretch mt-4">
+        <div className="w-full md:w-1/2 flex flex-col justify-center" style={{ color: textColor }}>
+          <div
             style={{
-              fontSize: '18px',
-              fontWeight: '600',
-              margin: 0,
-              color: isNight ? '#e2e8f0' : '#334155',
+              background: cardBg,
+              padding: '10px 15px',
+              borderRadius: '10px',
+              border: `1px solid ${borderColor}`,
+              boxShadow,
+              flex: 0,  // ✅ Remplit tout l'espace vertical
+              display: 'flex',
+              flexDirection: 'column',
             }}
           >
-            Rewards
-          </h3>
+            <h3
+              style={{
+                fontSize: '18px',
+                fontWeight: '600',
+                margin: 0,
+                marginBottom: 15,
+                color: isNight ? '#e2e8f0' : '#334155',
+              }}
+              className='text-center'
+            >
+              Messages This Week
+            </h3>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '15px',
+              marginBottom: '15px'
+            }}>
+              <div style={{
+                background: isNight ? '#1a1a1a' : '#e9efeaff',
+                padding: '12px',
+                borderRadius: '8px',
+                textAlign: 'center'
+              }}>
+                <p style={{ margin: 0, fontSize: '14px', color: isNight ? '#888' : '#666' }}>Today</p>
+                <p style={{ margin: '8px 0 0 0', fontSize: '24px', fontWeight: 'bold' }}>
+                  {dailyMessages}
+                </p>
+              </div>
+              <div style={{
+                background: isNight ? '#1a1a1a' : '#e9efeaff',
+                padding: '12px',
+                borderRadius: '8px',
+                textAlign: 'center'
+              }}>
+                <p style={{ margin: 0, fontSize: '14px', color: isNight ? '#888' : '#666' }}>Total Week</p>
+                <p style={{ margin: '8px 0 0 0', fontSize: '24px', fontWeight: 'bold' }}>
+                  {totalWeeklyMessages}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
-
-        {/* Content */}
-        <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
-          {!hasClaimedPoints ? (
-            <div className="flex flex-col items-center gap-3">
-              <div
-                style={{
-                  background: isNight
-                    ? 'rgba(239, 68, 68, 0.1)'
-                    : 'rgba(239, 68, 68, 0.05)',
-                  color: isNight ? '#fca5a5' : '#dc2626',
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  border: `1px solid ${isNight ? '#dc2626' : '#fca5a5'}`,
-                }}
-              >
-                <span>•</span>
-                Rewards available to claim
-              </div>
-              <CheckAndClaimPointsButton
-                isNight={isNight}
-                user={user}
-                embeddedWallet={embeddedWallet}
-                isGameStarted={isGameStarted}
-              />
-            </div>
-          ) : (
-            <div className="flex flex-col items-center gap-3">
-              <div
-                style={{
-                  background: isNight
-                    ? 'rgba(16, 185, 129, 0.1)'
-                    : 'rgba(16, 185, 129, 0.05)',
-                  color: isNight ? '#6ee7b7' : '#059669',
-                  padding: '12px 20px',
-                  borderRadius: '10px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  border: `1px solid ${isNight ? '#10b981' : '#6ee7b7'}`,
-                  maxWidth: '320px',
-                  textAlign: 'center',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                }}
-              >
-                <Trophy className="w-4 h-4" />
-                <div>
-                  <div style={{ fontWeight: '600', marginBottom: '2px' }}>
-                    Rewards Claimed Successfully
-                  </div>
-                  <div style={{ fontSize: '12px', opacity: '0.8' }}>
-                    Thanks for your support!
-                  </div>
-                </div>
-              </div>
-
-              <div
-                style={{
-                  background: isNight ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.03)',
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  border: `1px solid ${isNight ? '#374151' : '#d1d5db'}`,
-                  fontSize: '12px',
-                  color: isNight ? '#9ca3af' : '#6b7280',
-                  textAlign: 'center',
-                }}
-              >
-                Keep collecting RabbitPoints for future rewards!
-              </div>
-            </div>
-          )}
+        {/* RIGHT - Chart */}
+        <div className="w-full md:w-1/2 flex flex-col">
+          <div className="w-full md:w-1/2 -ml-8 mt-4">
+            <MessageChart />
+          </div>
         </div>
       </div>
 
+
       {/* Stats Section */}
-      <div className="flex-1 flex flex-col md:flex-row gap-8 items-start mt-4">
-        <div className="w-full md:w-1/2" style={{ color: textColor }}>
+      <div className="flex-1 flex flex-col md:flex-row gap-8 items-stretch mt-4">
+        {/* LEFT - Table */}
+        <div className="w-full md:w-1/2 flex flex-col" style={{ color: textColor }}>
           <div
             style={{
               background: cardBg,
@@ -962,6 +599,9 @@ export default function Profile({ playerData, isGameStarted }) {
               borderRadius: '10px',
               border: `1px solid ${borderColor}`,
               boxShadow,
+              flex: 1,  // ✅ Remplit tout l'espace vertical
+              display: 'flex',
+              flexDirection: 'column',
             }}
           >
             <h3
@@ -1035,6 +675,35 @@ export default function Profile({ playerData, isGameStarted }) {
                     <strong style={{ fontFamily: 'inherit' }}>{rawStats.streak} days</strong>
                   </td>
                 </tr>
+                <tr style={{ borderBottom: `1px solid ${isNight ? '#475569' : '#e2e8f0'}`, background: 'transparent' }}>
+                  <td
+                    style={{
+                      color: textColor,
+                      paddingTop: '12px',
+                      paddingBottom: '12px',
+                      fontSize: '16px',
+                      fontWeight: '500',
+                      background: 'transparent',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    Game played
+                  </td>
+                  <td
+                    style={{
+                      color: textColor,
+                      paddingTop: '12px',
+                      paddingBottom: '12px',
+                      textAlign: 'right',
+                      fontSize: '16px',
+                      fontWeight: '500',
+                      background: 'transparent',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    <strong style={{ fontFamily: 'inherit' }}>{rawStats.gamePlayed} games</strong>
+                  </td>
+                </tr>
                 <tr style={{ background: 'transparent' }}>
                   <td
                     style={{
@@ -1067,8 +736,11 @@ export default function Profile({ playerData, isGameStarted }) {
             </table>
           </div>
         </div>
-        <div className="w-full md:w-1/2">
-          <RadarStatsChart />
+        {/* RIGHT - Radar Chart */}
+        <div className="w-full md:w-1/2 flex flex-col">
+          <div style={{ flex: 1, display: 'flex' }}>
+            <RadarStatsChart />
+          </div>
         </div>
       </div>
     </Wrapper>

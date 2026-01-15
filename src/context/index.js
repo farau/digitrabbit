@@ -12,6 +12,7 @@ import { WagmiProvider } from '@privy-io/wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { wagmiConfig } from '@/wagmi-config';
 import { useWallets, usePrivy, getEmbeddedConnectedWallet } from '@privy-io/react-auth';
+import { WebSocketProvider } from './WebSocketProvider';
 
 if (!appId) throw new Error('App ID is not defined');
 
@@ -223,7 +224,9 @@ export function ContextProvider({ children }) {
           <QueryClientProvider client={queryClient}>
             <WagmiProvider config={wagmiConfig}>
               <GameProvider>
-                {children}
+                <WebSocketProvider>
+                  {children}
+                </WebSocketProvider>
               </GameProvider>
             </WagmiProvider>
           </QueryClientProvider>

@@ -130,9 +130,43 @@ async function signMessageChat(userAddress, content, score, nonce) {
   }
 }
 
+// Sign message chat function
+async function signMessageQuests(playerAddress, questId, periodKey, periodTypeNum, rewardAmount, nonce) {
+  const { walletClient } = getBackendWallet();
+
+  // Create message to sign (same as Solidity createMessageHash)
+  const messageHash = keccak256(
+    encodePacked(
+      ['address', 'string', 'string', 'uint8', 'uint256', 'uint256'],
+      [
+        playerAddress,
+        questId,
+        periodKey,
+        periodTypeNum,
+        rewardAmount,
+        nonce
+      ]
+    )
+  );
+
+  try {
+    // Sign the raw hash - viem will automatically apply the Ethereum signed message prefix
+    const signature = await walletClient.signMessage({
+      message: { raw: messageHash }, // Sign the raw hash, not the packed data
+    });
+
+    return signature;
+  } catch (error) {
+    console.error('Error signing chat message:', error);
+    throw new Error('Failed to sign chat message');
+  }
+}
+
+
 export {
   initializeBackendWallet,
   getBackendWallet,
   signMessage,
-  signMessageChat
+  signMessageChat,
+  signMessageQuests
 };

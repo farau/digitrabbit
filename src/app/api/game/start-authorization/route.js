@@ -34,28 +34,22 @@ async function checkNFTOwnership(user) {
         console.log(`Checking NFT ownership for user ${user.id}`);
         console.log(`Addresses to check: ${allAddresses.join(', ')}`);
 
-        for (const address of allAddresses) {
-            try {
-                const balance = await publicClientEth.readContract({
-                    address: process.env.ERC721_DIGIT_RABBITS_CONTRACT_ADDRESS,
-                    abi: erc721Abi,
-                    functionName: 'balanceOf',
-                    args: [address]
-                });
+        const balances = await publicClientEth.multicall({
+            contracts: allLinkedWallets.map(address => ({
+                address: NFT_ADDRESS,
+                abi: erc721Abi,
+                functionName: 'balanceOf',
+                args: [address],
+            })),
+        });
 
-                console.log(`Address ${address}: ${balance} NFTs`);
-
-                if (balance > 0n) {
-                    console.log(`✅ NFT found on address ${address}`);
-                    return true;
-                }
-            } catch (error) {
-                console.error(`Error checking address ${address}:`, error);
-            }
+        if (balances > 0n) {
+            return true;
+        }
+        else {
+            return false;
         }
 
-        console.log('❌ No NFT found on any wallet');
-        return false;
     } catch (error) {
         console.error('Error checking NFT ownership:', error);
         return false;
@@ -81,8 +75,25 @@ export async function POST(request) {
         // Extraire le userId de Privy
         const user = await verifyAndGetUser(idToken);
 
+        // Vérifier que l'adresse correspond à l'utilisateur connecté
+        const embeddedWallet = user.linkedAccounts.find(
+            (account) => account.type === 'wallet' && account.walletClientType === 'privy'
+        );
+        const address = embeddedWallet.address;
+
+        const normalizedPlayerAddress = embeddedWalletAddress.toLowerCase();
+        // On autorise que si l'adresse playerAddress est bien celle de l'embeddedwallet
+        const isAuthorized = address.toLowerCase() === normalizedPlayerAddress;
+
+        if (!isAuthorized) {
+            return NextResponse.json({
+                success: false,
+                error: 'Address does not belong to authenticated user'
+            }, { status: 403 });
+        }
+
         // 2. Vérifier la possession du NFT sur tous les wallets
-        /*const hasNFT = await checkNFTOwnership(user);
+        const hasNFT = await checkNFTOwnership(user);
 
         if (!hasNFT) {
             return NextResponse.json(
@@ -93,7 +104,7 @@ export async function POST(request) {
                 },
                 { status: 403 }
             );
-        }*/
+        }
 
         // 3. Générer un nonce unique
         const nonce = Date.now() + Math.floor(Math.random() * 1000000);

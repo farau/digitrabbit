@@ -21,9 +21,10 @@ import Assets from "./Assets";
 import FAQ from "./FAQ";
 import Roadmap from "./Roadmap";
 import MobileBackground from "./MobileBackground";
-import { useWebSocket } from "../hooks/useWebSocket";
+import Quests from "./Quests";
+import { useChatMessages } from "../hooks/useChatMessages";
 
-import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, publicClient, NUM_SLOTS } from '@/utils/chainConfig'
+import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, DIGIT_RABBITS_CHAT_ADDRESS, DIGIT_RABBITS_CHAT_ABI, publicClient, NUM_SLOTS } from '@/utils/chainConfig'
 import { usePreSignedPool } from "../hooks/usePreSignedPool";
 
 // Dynamic import pour le BackgroundEffect
@@ -66,7 +67,12 @@ export default function MainPage() {
     streak: 0,
     hasClaimedPoints: false,
     maxClicks: 0,
-    totalClicksGame: 0
+    totalClicksGame: 0,
+    gamePlayed: 0,
+    // Chat stats
+    dailyMessages: 0,
+    weeklyMessages: 0,
+
   })
 
   // On récupère l'embedded wallet ici puis on propage ensuite
@@ -88,12 +94,7 @@ export default function MainPage() {
   } = usePreSignedPool({ embeddedWallet })
 
   // ✅ Hook WebSocket
-  const {
-    messages,
-    isConnected,
-    isSubscribed,
-    resyncMessages
-  } = useWebSocket({ embeddedWallet, seasonId })
+  const { messages, isConnected, isSyncing, resync, registerCallbacks } = useChatMessages()
 
   // Récupération de la liste des assets et des memes
   useEffect(() => {
@@ -158,7 +159,11 @@ export default function MainPage() {
         streak: 0,
         hasClaimedPoints: false,
         maxClicks: 0,
-        totalClicksGame: totalClicksGame
+        totalClicksGame: totalClicksGame,
+        gamePlayed: 0,
+        // Chat stats
+        dailyMessages: 0,
+        weeklyMessages: 0,
       }
       setPlayerData(data)
     } catch (error) {
@@ -186,8 +191,15 @@ export default function MainPage() {
         args: [],
       });
 
+      const messages7days = await publicClient.readContract({
+        address: DIGIT_RABBITS_CHAT_ADDRESS,
+        abi: DIGIT_RABBITS_CHAT_ABI,
+        functionName: 'getUserMessageCountPerDay',
+        args: [embeddedWallet.address, 7],
+      });
+
       const rabbitPoints = result[0] !== undefined ? Number(result[0]) / 1_000_000 : -1;
-      const [totalClicks, gameClicks, sessionEndsAt, streak, hasClaimedPoints, maxClicks] = result.slice(1);
+      const [totalClicks, gameClicks, sessionEndsAt, streak, hasClaimedPoints, maxClicks, gamePlayed] = result.slice(1);
 
       setPlayerData({
         rabbitPoints,
@@ -198,12 +210,16 @@ export default function MainPage() {
         streak: Number(streak),
         hasClaimedPoints,
         maxClicks: Number(maxClicks),
-        totalClicksGame: Number(totalClicksGame)
+        gamePlayed: Number(gamePlayed),
+        totalClicksGame: Number(totalClicksGame),
+        dailyMessages: Number(messages7days[0]),
+        weeklyMessages: messages7days,
       });
     } catch (error) {
       console.error("Error fetching player data:", error);
     }
   }, [embeddedWallet?.address, seasonId]);
+
 
   // Chargement initial
   useEffect(() => {
@@ -214,19 +230,22 @@ export default function MainPage() {
     fetchPlayerData();
   }, [embeddedWallet?.address, seasonId]);
 
-  // ✅ Écouter les événements WebSocket
+  // Enregistrement des callbacks pour les événements du contrat
   useEffect(() => {
-    const handleContractEvent = () => {
-      // console.log('🔄 Contract event detected, refresh...');
-      fetchPlayerData();
-    };
-
-    window.addEventListener('contractEvent', handleContractEvent);
-
-    return () => {
-      window.removeEventListener('contractEvent', handleContractEvent);
-    };
-  }, [fetchPlayerData]);
+    registerCallbacks({
+      onPointsClaimed: (log) => {
+        console.log('💰 Points claimed, refreshing player data...')
+        fetchPlayerData()
+      },
+      onUserRoleChanged: (log) => {
+        console.log('👤 Role changed, refreshing player data...')
+        fetchPlayerData()
+      },
+      onUserMuted: (log) => {
+        console.log('🔇 User muted')
+      },
+    })
+  }, [fetchPlayerData, registerCallbacks])
 
   // Fonction pour recharger uniquement les clics totaux (pour le bouton reload)
   const reloadTotalClicks = async () => {
@@ -359,8 +378,12 @@ export default function MainPage() {
           playerData={playerData}
           messages={messages}
           isConnected={isConnected}
-          isSubscribed={isSubscribed}
-          resyncMessages={resyncMessages}
+          resyncMessages={resync}
+        />;
+      case "Quests":
+        return <Quests
+          playerData={playerData}
+          embeddedWallet={embeddedWallet}
         />;
       case "Leaderboard":
         return <Leaderboard />;
@@ -418,6 +441,13 @@ export default function MainPage() {
         src="/img/icons/memes.png"
         label="Memes"
         onClick={() => restoreApp("Memes")}
+        position={{ x: "1%", y: "2%" }}
+      />
+      <Icon
+        name="Quests"
+        src="/img/icons/quests.png"
+        label="Quests"
+        onClick={() => restoreApp("Quests")}
         position={{ x: "1%", y: "2%" }}
       />
       <Icon
@@ -502,39 +532,90 @@ export default function MainPage() {
       />
 
       {/* Affichage des memes plein écran*/}
-      {selectedMemeIndex !== null && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100vw",
-            height: "100vh",
-            backgroundColor: "rgba(0, 0, 0, 0.8)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-          }}
-          onClick={() => setSelectedMemeIndex(null)}
-        >
-          <button onClick={(e) => { e.stopPropagation(); setSelectedMemeIndex((prev) => (prev > 0 ? prev - 1 : memeList.length - 1)); }} style={navButtonStyle}>◀</button>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}>
-            <Image
-              src={`/img/memes/${encodeURIComponent(memeList[selectedMemeIndex])}`}
-              alt="Full meme"
-              width={600}
-              height={450}
-              style={{
-                maxHeight: "70vh", // Limite à 70% de la hauteur de l'écran
-                maxWidth: "70vw",   // Limite à 80% de la largeur de l'écran
-                borderRadius: "10px",
-                boxShadow: "0 0 20px black",
-                objectFit: "contain"
-              }}
-            />
+      {
+        selectedMemeIndex !== null && (
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              width: "100vw",
+              height: "100vh",
+              backgroundColor: "rgba(0, 0, 0, 0.8)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 1000,
+            }}
+            onClick={() => setSelectedMemeIndex(null)}
+          >
+            <button onClick={(e) => { e.stopPropagation(); setSelectedMemeIndex((prev) => (prev > 0 ? prev - 1 : memeList.length - 1)); }} style={navButtonStyle}>◀</button>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}>
+              <Image
+                src={`/img/memes/${encodeURIComponent(memeList[selectedMemeIndex])}`}
+                alt="Full meme"
+                width={600}
+                height={450}
+                style={{
+                  maxHeight: "70vh", // Limite à 70% de la hauteur de l'écran
+                  maxWidth: "70vw",   // Limite à 80% de la largeur de l'écran
+                  borderRadius: "10px",
+                  boxShadow: "0 0 20px black",
+                  objectFit: "contain"
+                }}
+              />
+              <a
+                href={`img/memes/${encodeURIComponent(memeList[selectedMemeIndex])}`}
+                download
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  background: "#fff",
+                  padding: "10px 20px",
+                  borderRadius: "8px",
+                  textDecoration: "none",
+                  color: "#000",
+                  fontWeight: "bold",
+                  boxShadow: "0 0 10px rgba(0,0,0,0.5)",
+                  position: "absolute",
+                  bottom: "8%",
+                }}
+              >
+                Download
+              </a>
+            </div>
+            <button onClick={(e) => { e.stopPropagation(); setSelectedMemeIndex((prev) => (prev + 1) % memeList.length); }} style={navButtonStyle}>▶</button>
+          </div>
+        )
+      }
+
+      {/* Background dans le cas où on est sur mobile */}
+      <MobileBackground
+        restoreApp={restoreApp}
+        themeMode={themeMode}
+      />
+
+      {/* Affichage des assets plein écran*/}
+      {
+        selectedAssetsIndex !== null && (
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              width: "100vw",
+              height: "100vh",
+              backgroundColor: "rgba(0, 0, 0, 0.8)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 1000,
+            }}
+            onClick={() => setSelectedAssetsIndex(null)}
+          >
+            <button onClick={(e) => { e.stopPropagation(); setSelectedAssetsIndex((prev) => (prev > 0 ? prev - 1 : assetsList.length - 1)); }} style={navButtonStyle}>◀</button>
+            <img src={`img/assets/${encodeURIComponent(assetsList[selectedAssetsIndex])}`} alt="Full asset" style={{ maxHeight: "70%", maxWidth: "70%", borderRadius: "10px", boxShadow: "0 0 20px black" }} />
             <a
-              href={`img/memes/${encodeURIComponent(memeList[selectedMemeIndex])}`}
+              href={`img/assets/${encodeURIComponent(assetsList[selectedAssetsIndex])}`}
               download
               onClick={(e) => e.stopPropagation()}
               style={{
@@ -546,86 +627,43 @@ export default function MainPage() {
                 fontWeight: "bold",
                 boxShadow: "0 0 10px rgba(0,0,0,0.5)",
                 position: "absolute",
-                bottom: "8%",
+                bottom: "60px",
               }}
             >
               Download
             </a>
+            <button onClick={(e) => { e.stopPropagation(); setSelectedAssetsIndex((prev) => (prev + 1) % assetsList.length); }} style={navButtonStyle}>▶</button>
           </div>
-          <button onClick={(e) => { e.stopPropagation(); setSelectedMemeIndex((prev) => (prev + 1) % memeList.length); }} style={navButtonStyle}>▶</button>
-        </div>
-      )}
+        )
+      }
 
-      {/* Background dans le cas où on est sur mobile */}
-      <MobileBackground
-        restoreApp={restoreApp}
-        themeMode={themeMode}
-      />
 
-      {/* Affichage des assets plein écran*/}
-      {selectedAssetsIndex !== null && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100vw",
-            height: "100vh",
-            backgroundColor: "rgba(0, 0, 0, 0.8)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-          }}
-          onClick={() => setSelectedAssetsIndex(null)}
-        >
-          <button onClick={(e) => { e.stopPropagation(); setSelectedAssetsIndex((prev) => (prev > 0 ? prev - 1 : assetsList.length - 1)); }} style={navButtonStyle}>◀</button>
-          <img src={`img/assets/${encodeURIComponent(assetsList[selectedAssetsIndex])}`} alt="Full asset" style={{ maxHeight: "70%", maxWidth: "70%", borderRadius: "10px", boxShadow: "0 0 20px black" }} />
-          <a
-            href={`img/assets/${encodeURIComponent(assetsList[selectedAssetsIndex])}`}
-            download
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: "#fff",
-              padding: "10px 20px",
-              borderRadius: "8px",
-              textDecoration: "none",
-              color: "#000",
-              fontWeight: "bold",
-              boxShadow: "0 0 10px rgba(0,0,0,0.5)",
-              position: "absolute",
-              bottom: "60px",
-            }}
+      {
+        visibleApps.map((appName) => (
+          <DraggableWindow
+            key={appName}
+            title={appName}
+            onClose={() => handleClose(appName)}
+            zIndex={appZIndices[appName] || 1}  // <-- ici !
+            onFocus={() => bringToFront(appName)}
+            theme={themeMode}
+            visibleApps={visibleApps}
+            littleWindow={appName === 'Chill' ? true : false}
+            onMinimize={() => setMinimizedApps(prev => [...prev, appName])}
+            isMinimized={Array.isArray(minimizedApps) && minimizedApps.includes(appName)}
           >
-            Download
-          </a>
-          <button onClick={(e) => { e.stopPropagation(); setSelectedAssetsIndex((prev) => (prev + 1) % assetsList.length); }} style={navButtonStyle}>▶</button>
-        </div>
-      )}
+            {renderAppContent(appName)}
+          </DraggableWindow>
+        ))
+      }
 
-
-      {visibleApps.map((appName) => (
-        <DraggableWindow
-          key={appName}
-          title={appName}
-          onClose={() => handleClose(appName)}
-          zIndex={appZIndices[appName] || 1}  // <-- ici !
-          onFocus={() => bringToFront(appName)}
-          theme={themeMode}
-          visibleApps={visibleApps}
-          littleWindow={appName === 'Chill' ? true : false}
-          onMinimize={() => setMinimizedApps(prev => [...prev, appName])}
-          isMinimized={Array.isArray(minimizedApps) && minimizedApps.includes(appName)}
-        >
-          {renderAppContent(appName)}
-        </DraggableWindow>
-      ))}
-
-      {show3DEffects && !isMobile && (
-        <Suspense fallback={null}>
-          {themeMode === 'light' ? <BackgroundEffect /> : <BackgroundEffect mode="moon" />}
-        </Suspense>
-      )}
+      {
+        show3DEffects && !isMobile && (
+          <Suspense fallback={null}>
+            {themeMode === 'light' ? <BackgroundEffect /> : <BackgroundEffect mode="moon" />}
+          </Suspense>
+        )
+      }
 
       <Footer visibleApps={visibleApps}
         setVisibleApps={setVisibleApps}
@@ -633,6 +671,6 @@ export default function MainPage() {
         setAppZIndices={setAppZIndices}
         openApp={restoreApp}
         volumePlayer={volumePlayer} />
-    </div>
+    </div >
   );
 }

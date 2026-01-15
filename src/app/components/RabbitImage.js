@@ -59,7 +59,7 @@ export default function RabbitImage({ isClicked }) {
 
         // Initialize image source once
         const index = Math.round(Math.random() * 10) % 4 + 1;
-        setImageSrc(`/img/game/meth.webp`);
+        setImageSrc(`/img/game/head${index}_.webp`);
     }, []);
 
     return (

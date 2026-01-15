@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
-import { Loader2, AlertCircle, Shield, UserCheck, UserMinus, Ban, VolumeX, Copy, Check, Reply, X } from 'lucide-react'
-import { useGame } from '@/context'
+import { Loader2, AlertCircle, Shield, UserCheck, UserMinus, Ban, VolumeX, Copy, Check, Reply, X, Gift, Trophy } from 'lucide-react'
+import { useGame, useTheme } from '@/context'
 import Wrapper from '@/app/components/Wrapper'
 import { useWalletClient } from '../hooks/useWalletClient'
+import WalletButton from './WalletButton'
 import * as Sentry from '@sentry/nextjs'
 import Image from 'next/image'
 import { customMegaethTestnet } from '@/utils/chainConfig'
@@ -17,15 +18,17 @@ import {
     DIGIT_RABBITS_ABI,
     ROLE_COLORS,
 } from '@/utils/chainConfig'
-import { color } from 'framer-motion'
 
-// Composant MessageBubble simplifié
+import { XLogo } from '@/utils/constants'
+
+// Composant MessageBubble avec thème amélioré
 function MessageBubble({ message, messages, isNight, user, onReply }) {
     const [copiedAddress, setCopiedAddress] = useState(false)
 
-    const cardBg = isNight ? '#222' : '#f3f3f3'
-    const borderColor = isNight ? '#444' : '#ddd'
+    const cardBg = isNight ? '#1a1a1a' : '#f3f3f3'
+    const borderColor = isNight ? '#333' : '#ddd'
     const textColor = isNight ? '#eee' : '#333'
+    const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)'
 
     const handleCopyAddress = async () => {
         try {
@@ -49,7 +52,7 @@ function MessageBubble({ message, messages, isNight, user, onReply }) {
 
     return (
         <div>
-            {/* Si c'est une réponse, afficher le message original */}
+            {/* Message répondu */}
             {repliedMessage && (
                 <div style={{
                     display: 'flex',
@@ -59,7 +62,6 @@ function MessageBubble({ message, messages, isNight, user, onReply }) {
                     paddingLeft: '12px',
                     position: 'relative'
                 }}>
-                    {/* Coin arrondi */}
                     <div style={{
                         position: 'absolute',
                         left: '30px',
@@ -71,7 +73,6 @@ function MessageBubble({ message, messages, isNight, user, onReply }) {
                         borderTopLeftRadius: '12px'
                     }} />
 
-                    {/* Avatar miniature du message répondu */}
                     <div style={{
                         flexShrink: 0,
                         marginLeft: '40px',
@@ -140,21 +141,26 @@ function MessageBubble({ message, messages, isNight, user, onReply }) {
                     </div>
                 </div>
             )}
+
+            {/* Message principal */}
             <div
                 style={{
                     background: cardBg,
                     padding: '12px',
-                    borderRadius: '8px',
+                    borderRadius: '10px',
                     marginBottom: '12px',
                     border: `1px solid ${borderColor}`,
+                    boxShadow,
                     transition: 'all 0.2s ease',
                     position: 'relative'
                 }}
                 onMouseOver={(e) => {
                     e.currentTarget.style.background = isNight ? '#2a2a2a' : '#f8f8f8'
+                    e.currentTarget.style.boxShadow = isNight ? '0 0 12px rgba(255,255,255,0.08)' : '0 4px 8px rgba(0,0,0,0.12)'
                 }}
                 onMouseOut={(e) => {
                     e.currentTarget.style.background = cardBg
+                    e.currentTarget.style.boxShadow = boxShadow
                 }}
             >
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
@@ -245,7 +251,7 @@ function MessageBubble({ message, messages, isNight, user, onReply }) {
     )
 }
 
-// Modales de confirmation
+// Modales de confirmation avec thème amélioré
 function ModerationModal({ isOpen, onClose, onConfirm, isNight, type, targetAddress }) {
     const [loading, setLoading] = useState(false)
     const [duration, setDuration] = useState('3600')
@@ -254,8 +260,9 @@ function ModerationModal({ isOpen, onClose, onConfirm, isNight, type, targetAddr
     if (!isOpen) return null
 
     const textColor = isNight ? '#eee' : '#333'
-    const cardBg = isNight ? '#2a2a2a' : '#fff'
+    const cardBg = isNight ? '#222' : '#fff'
     const borderColor = isNight ? '#444' : '#ddd'
+    const boxShadow = isNight ? '0 20px 60px rgba(0,0,0,0.5)' : '0 20px 60px rgba(0,0,0,0.3)'
 
     const config = {
         mute: {
@@ -306,12 +313,12 @@ function ModerationModal({ isOpen, onClose, onConfirm, isNight, type, targetAddr
                 left: 0,
                 right: 0,
                 bottom: 0,
-                background: 'rgba(0,0,0,0.6)',
+                background: 'rgba(0,0,0,0.7)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 zIndex: 2000,
-                backdropFilter: 'blur(4px)'
+                backdropFilter: 'blur(8px)'
             }}
             onClick={onClose}
         >
@@ -319,11 +326,11 @@ function ModerationModal({ isOpen, onClose, onConfirm, isNight, type, targetAddr
                 style={{
                     background: cardBg,
                     padding: '28px',
-                    borderRadius: '16px',
+                    borderRadius: '12px',
                     border: `1px solid ${borderColor}`,
                     maxWidth: '450px',
                     width: '90%',
-                    boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+                    boxShadow
                 }}
                 onClick={(e) => e.stopPropagation()}
             >
@@ -350,15 +357,13 @@ function ModerationModal({ isOpen, onClose, onConfirm, isNight, type, targetAddr
                             onChange={(e) => setDuration(e.target.value)}
                             style={{
                                 width: '100%',
+                                padding: '10px 12px',
                                 backgroundColor: isNight ? '#1a1a1a' : '#f5f5f5',
-                                color: isNight ? '#ffffff' : '#000000',
+                                color: textColor,
                                 border: `1px solid ${borderColor}`,
                                 borderRadius: '8px',
-                                fontSize: '12px',
-                                cursor: 'pointer',
-                                appearance: 'auto',
-                                WebkitAppearance: 'auto',
-                                MozAppearance: 'auto',
+                                fontSize: '14px',
+                                cursor: 'pointer'
                             }}
                         >
                             <option value="3600">1 hour</option>
@@ -429,16 +434,6 @@ function ModerationModal({ isOpen, onClose, onConfirm, isNight, type, targetAddr
                             opacity: (loading || (type === 'mute' && duration === 'custom' && !customDuration)) ? 0.5 : 1,
                             transition: 'all 0.2s'
                         }}
-                        onMouseOver={(e) => {
-                            if (!loading && !(type === 'mute' && duration === 'custom' && !customDuration)) {
-                                e.currentTarget.style.opacity = '0.9'
-                            }
-                        }}
-                        onMouseOut={(e) => {
-                            if (!loading) {
-                                e.currentTarget.style.opacity = '1'
-                            }
-                        }}
                     >
                         {loading && <Loader2 size={16} className="animate-spin" />}
                         {modalConfig.buttonText}
@@ -464,13 +459,21 @@ function SuccessNotification({ message, isVisible, onClose, isNight }) {
 
     return (
         <div style={{
-            background: isNight ? '#16a34a' : '#22c55e',
-            color: 'white',
-            padding: '8px 12px',
-            borderRadius: '6px',
-            fontSize: '13px',
+            background: isNight
+                ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.08) 100%)'
+                : 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%)',
+            color: isNight ? '#6ee7b7' : '#059669',
+            padding: '12px 16px',
+            borderRadius: '8px',
+            fontSize: '14px',
             marginBottom: '12px',
-            textAlign: 'center'
+            textAlign: 'center',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            border: `1px solid ${isNight ? '#10b981' : '#6ee7b7'}`,
+            fontWeight: '500'
         }}>
             <Check size={18} />
             <span>{message}</span>
@@ -479,9 +482,10 @@ function SuccessNotification({ message, isVisible, onClose, isNight }) {
 }
 
 // Composant principal
-export default function RabbitChat({ playerData, messages, isConnected, isSubscribed }) {
+export default function RabbitChat({ playerData, messages, isConnected, resyncMessages }) {
     const { user } = usePrivy()
-    const { themeMode, embeddedWallet } = useGame()
+    const { embeddedWallet, isValidating, validationError } = useGame()
+    const { themeMode } = useTheme()
     const { walletClient } = useWalletClient(embeddedWallet)
 
     const [inputMessage, setInputMessage] = useState('')
@@ -490,8 +494,6 @@ export default function RabbitChat({ playerData, messages, isConnected, isSubscr
     const [userData, setUserData] = useState(null)
     const [cooldownRemaining, setCooldownRemaining] = useState(0)
     const [replyingTo, setReplyingTo] = useState(null)
-
-    // Modération states
     const [moderationModal, setModerationModal] = useState({ isOpen: false, type: null, targetAddress: null })
     const [notification, setNotification] = useState({ isVisible: false, message: '' })
     const [targetAddress, setTargetAddress] = useState('')
@@ -501,20 +503,34 @@ export default function RabbitChat({ playerData, messages, isConnected, isSubscr
 
     const isModerator = userData?.roleIndex === 2
 
-    //Graphic infos
-    const isNight = themeMode === 'dark';
+    const isNight = themeMode === 'dark'
     const textColor = isNight ? '#eee' : '#333'
-    const cardBg = isNight ? '#222' : '#f3f3f3'
-    const labelColor = isNight ? '#ccc' : '#333'
-    const tooltipBg = isNight ? '#333' : '#fff'
-    const tooltipColor = isNight ? '#eee' : '#333'
-    const borderColor = isNight ? '#444' : '#ddd'
+    const cardBg = isNight ? '#1a1a1a' : '#f3f3f3'
+    const borderColor = isNight ? '#333' : '#ddd'
     const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)'
-
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }, [messages])
+
+    useEffect(() => {
+        if (cooldownRemaining == 0) {
+            setCooldownRemaining(0)
+            return
+        }
+
+        const updateCooldown = () => {
+            setCooldownRemaining(prev => {
+                if (prev <= 1) {
+                    return 0
+                }
+                return prev - 1
+            })
+        }
+
+        const interval = setInterval(updateCooldown, 1000)
+        return () => clearInterval(interval)
+    }, [cooldownRemaining])
 
     useEffect(() => {
         if (embeddedWallet?.address) {
@@ -665,6 +681,7 @@ export default function RabbitChat({ playerData, messages, isConnected, isSubscr
             console.log('✅ Message sent:', txHash)
             setInputMessage('')
             setReplyingTo(null)
+            setCooldownRemaining(15)
             await loadUserData()
 
         } catch (err) {
@@ -678,8 +695,65 @@ export default function RabbitChat({ playerData, messages, isConnected, isSubscr
     if (!embeddedWallet) {
         return (
             <Wrapper>
-                <div style={{ background: cardBg, padding: '20px', borderRadius: '10px', border: `1px solid ${borderColor}`, textAlign: 'center' }}>
-                    <p style={{ color: textColor }}>Please connect your wallet to access the chat.</p>
+                <div
+                    style={{
+                        background: cardBg,
+                        padding: '20px',
+                        borderRadius: '10px',
+                        border: `1px solid ${borderColor}`,
+                        boxShadow,
+                        textAlign: 'center',
+                        margin: '20px'
+                    }}
+                >
+                    <p style={{ color: textColor, margin: 0, marginBottom: '12px' }}>Please login your <XLogo size={16} className={isNight ? 'text-white' : 'text-black'} /> account to access the RabbitChat.</p>
+                    <WalletButton />
+                </div>
+            </Wrapper>
+        )
+    }
+
+    // Error and loading states
+    if (isValidating) {
+        return (
+            <Wrapper>
+                <div style={{
+                    background: cardBg,
+                    padding: '20px',
+                    borderRadius: '10px',
+                    border: `1px solid ${borderColor}`,
+                    boxShadow,
+                    textAlign: 'center',
+                    margin: '20px'
+                }}>
+                    <div className="flex items-center justify-center gap-3">
+                        <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                        <p className="break-all">
+                            Validating your wallet... Please wait.
+                        </p>
+                    </div>
+                </div>
+            </Wrapper>
+        )
+    }
+
+    if (validationError) {
+        return (
+            <Wrapper>
+                <div style={{
+                    background: cardBg,
+                    padding: '20px',
+                    borderRadius: '10px',
+                    border: `1px solid ${borderColor}`,
+                    boxShadow,
+                    textAlign: 'center',
+                    margin: '20px'
+                }}>
+                    <div className="flex items-center justify-center gap-3 text-red-700">
+                        <p className="break-all">
+                            {validationError}
+                        </p>
+                    </div>
                 </div>
             </Wrapper>
         )
@@ -687,127 +761,6 @@ export default function RabbitChat({ playerData, messages, isConnected, isSubscr
 
     return (
         <Wrapper>
-
-            {/* Card */}
-            <div style={{
-                background: cardBg,
-                padding: '24px',
-                borderRadius: '12px',
-                border: `1px solid ${borderColor}`,
-                boxShadow,
-                marginLeft: 'auto',
-                marginRight: 'auto',
-                marginBottom: '15px',
-                maxWidth: '500px',
-            }}>
-                {/* Network */}
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    marginBottom: '18px',
-                    paddingBottom: '18px',
-                    borderBottom: `1px solid ${borderColor}`
-                }}>
-                    <div style={{
-                        background: isNight ? '#4f46e5' : '#6366f1',
-                        color: 'white',
-                        width: '24px',
-                        height: '24px',
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        marginRight: '16px',
-                        flexShrink: 0
-                    }}>
-                        <Image src="/img/icons/megaeth.ico" alt="MegaETH Logo" width={14} height={14} />
-                    </div>
-                    <div>
-                        <p style={{
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            color: labelColor,
-                            margin: '0 0 4px 0'
-                        }}>
-                            Tied to the MegaETH blockchain
-                        </p>
-                        <p style={{
-                            fontSize: '14px',
-                            color: textColor,
-                            lineHeight: '1.5',
-                            margin: 0,
-                            fontWeight: '400',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}>
-                            Every message is registered into the blockchain. Let's chat here to accumulate RabbitPoints! <Image src="/img/rabbitpoint.png" alt="RB" width={20} height={20} style={{ display: 'inline-block', alignItems: 'center', justifyContent: 'center', marginBottom: '4px' }} />
-                        </p>
-                    </div>
-                </div>
-
-                {/* Rules */}
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'flex-start'
-                }}>
-                    <div style={{
-                        background: isNight ? '#4f46e5' : '#6366f1',
-                        color: 'white',
-                        width: '24px',
-                        height: '24px',
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        marginRight: '16px',
-                        flexShrink: 0
-                    }}>
-                        🛡️
-                    </div>
-                    <div>
-                        <p style={{
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            color: labelColor,
-                            margin: '0 0 4px 0'
-                        }}>
-                            Follow the rules
-                        </p>
-                        <p style={{
-                            fontSize: '14px',
-                            color: textColor,
-                            lineHeight: '1.5',
-                            margin: 0,
-                            fontWeight: '400',
-                        }}>
-                            - Moderators are watching and can mute or demote users who violate the chat rules.
-                        </p>
-                        <p style={{
-                            fontSize: '14px',
-                            color: textColor,
-                            lineHeight: '1.5',
-                            margin: 0,
-                            fontWeight: '400',
-                        }}>
-                            - Be consistent and respectful to earn your place as a <b style={{ color: 'green' }}>Confirmed Rabbit</b>! 🐇
-                        </p>
-                        <p style={{
-                            fontSize: '14px',
-                            color: textColor,
-                            lineHeight: '1.5',
-                            margin: 0,
-                            fontWeight: '400',
-                        }}>
-                            - Or buy it directly from the Rabbit Shop to receive a x2 bonus on the RabbitPoints earned in the chat.
-                        </p>
-                    </div>
-                </div>
-            </div>
-
             <ModerationModal
                 isOpen={moderationModal.isOpen}
                 onClose={() => setModerationModal({ isOpen: false, type: null, targetAddress: null })}
@@ -826,7 +779,6 @@ export default function RabbitChat({ playerData, messages, isConnected, isSubscr
                 <div style={{
                     flex: 1,
                     overflowY: 'auto',
-                    // afficher slider toujours
                     scrollbarGutter: 'stable',
                     scrollbarWidth: 'thin',
                     scrollbarColor: isNight ? '#555 #1a1a1a' : '#ccc #f5f5f5',
@@ -957,10 +909,14 @@ export default function RabbitChat({ playerData, messages, isConnected, isSubscr
                             type="text"
                             value={inputMessage}
                             onChange={(e) => setInputMessage(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && !sending && handleSendMessage()}
+                            onKeyPress={(e) => {
+                                if (e.key === 'Enter' && !sending && cooldownRemaining === 0 && inputMessage.trim()) {
+                                    handleSendMessage()
+                                }
+                            }}
                             placeholder={replyingTo ? `Reply to ${replyingTo.twitterUsername || 'Anonymous'}...` : "Type your message..."}
                             maxLength={200}
-                            disabled={sending}
+                            disabled={sending || cooldownRemaining > 0}
                             style={{
                                 flex: 1,
                                 background: isNight ? '#2a2a2a' : '#fff',
@@ -976,9 +932,9 @@ export default function RabbitChat({ playerData, messages, isConnected, isSubscr
 
                         <button
                             onClick={handleSendMessage}
-                            disabled={sending || !inputMessage.trim()}
+                            disabled={sending || !inputMessage.trim() || cooldownRemaining > 0}
                             style={{
-                                background: (sending || !inputMessage.trim())
+                                background: (sending || !inputMessage.trim() || cooldownRemaining > 0)
                                     ? (isNight ? '#374151' : '#d1d5db')
                                     : (isNight ? '#4f46e5' : '#6366f1'),
                                 color: 'white',
@@ -987,7 +943,7 @@ export default function RabbitChat({ playerData, messages, isConnected, isSubscr
                                 borderRadius: '8px',
                                 fontSize: '14px',
                                 fontWeight: '600',
-                                cursor: (sending || !inputMessage.trim()) ? 'not-allowed' : 'pointer',
+                                cursor: (sending || !inputMessage.trim() || cooldownRemaining > 0) ? 'not-allowed' : 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '8px',
@@ -1180,6 +1136,6 @@ export default function RabbitChat({ playerData, messages, isConnected, isSubscr
                     </div>
                 )}
             </div>
-        </Wrapper >
+        </Wrapper>
     )
 }
