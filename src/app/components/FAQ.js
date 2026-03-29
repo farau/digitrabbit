@@ -213,7 +213,6 @@ export default function FAQ() {
                                     <span style={{ color: 'green', fontWeight: 600 }}>Confirmed Rabbit</span> status
                                     {' '}by being consistent and respectful
                                 </li>
-                                <li>Or buy it from the Rabbit Shop for instant x2 RabbitPoints multiplier</li>
                             </ul>
                         </div>
                     </div>
@@ -455,13 +454,9 @@ export default function FAQ() {
                         What are RabbitPoints for?
                     </h5>
                     <p className={`text-xs leading-relaxed text-center ${subTextColor}`}>
-                        With your RabbitPoints, you can buy items in the store that will give you a boost.
+                        RabbitsPoints are the in-game currency you earn by playing the game and chatting in RabbitChat. They are used to determine your position on the leaderboard and can be redeemed for rewards at the end of each season.
                     </p>
-                    <p className={`text-xs leading-relaxed text-center ${subTextColor} mt-3`}>
-                        Your items bring your digital rabbit to life! Every item you buy is automatically fitted
-                        to your character in your profile, creating a unique digital identity. Upload your
-                        creation and share it on social networks to showcase your achievements and style!
-                    </p>
+
                     <p className={`text-xs leading-relaxed text-center ${subTextColor} mt-3`}>
                         Try to top the leaderboard to receive benefits.
                     </p>

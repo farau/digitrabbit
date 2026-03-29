@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
 import { Loader2, AlertCircle, Shield, UserCheck, UserMinus, Ban, VolumeX, Copy, Check, Reply, X, Gift, Trophy } from 'lucide-react'
 import { useGame, useTheme } from '@/context'
@@ -500,6 +500,8 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
 
     const messagesEndRef = useRef(null)
     const inputRef = useRef(null)
+    const loadUserDataPromiseRef = useRef(null)
+    const delayedUserDataRefreshRef = useRef(null)
 
     const isModerator = userData?.roleIndex === 2
 
@@ -532,23 +534,58 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
         return () => clearInterval(interval)
     }, [cooldownRemaining])
 
-    useEffect(() => {
-        if (embeddedWallet?.address) {
-            loadUserData()
+    const loadUserData = useCallback(async () => {
+        if (!embeddedWallet?.address) return
+        if (loadUserDataPromiseRef.current) return loadUserDataPromiseRef.current
+
+        const requestPromise = (async () => {
+            try {
+                const response = await fetch(`/api/chat/stats?address=${embeddedWallet.address}`)
+                if (response.ok) {
+                    const data = await response.json()
+                    setUserData(data)
+                    return data
+                }
+            } catch (error) {
+                console.error('Error loading user data:', error)
+            }
+
+            return null
+        })()
+
+        loadUserDataPromiseRef.current = requestPromise
+
+        try {
+            return await requestPromise
+        } finally {
+            loadUserDataPromiseRef.current = null
         }
     }, [embeddedWallet?.address])
 
-    const loadUserData = async () => {
-        if (!embeddedWallet?.address) return
-        try {
-            const response = await fetch(`/api/chat/stats?address=${embeddedWallet.address}`)
-            if (response.ok) {
-                const data = await response.json()
-                setUserData(data)
-            }
-        } catch (error) {
-            console.error('Error loading user data:', error)
+    useEffect(() => {
+        if (embeddedWallet?.address) {
+            void loadUserData()
         }
+    }, [embeddedWallet?.address, loadUserData])
+
+    useEffect(() => {
+        return () => {
+            if (delayedUserDataRefreshRef.current) {
+                clearTimeout(delayedUserDataRefreshRef.current)
+                delayedUserDataRefreshRef.current = null
+            }
+        }
+    }, [])
+
+    const refreshUserDataInBackground = (delayMs = 1300) => {
+        if (delayedUserDataRefreshRef.current) {
+            clearTimeout(delayedUserDataRefreshRef.current)
+        }
+
+        delayedUserDataRefreshRef.current = setTimeout(() => {
+            delayedUserDataRefreshRef.current = null
+            void loadUserData()
+        }, delayMs)
     }
 
     const showNotification = (message) => {
@@ -653,12 +690,13 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
         try {
             setSending(true)
             setError(null)
+            const contentToSend = inputMessage.trim()
 
             const response = await fetch('/api/chat/send', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    content: inputMessage,
+                    content: contentToSend,
                     userAddress: embeddedWallet.address,
                 })
             })
@@ -673,16 +711,49 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
                 address: DIGIT_RABBITS_ADDRESS,
                 abi: DIGIT_RABBITS_ABI,
                 functionName: 'sendChatMessage',
-                args: [inputMessage, score, nonce, twitterUsername, twitterProfilePictureUrl, signature, replyingTo ? BigInt(replyingTo.messageId) : BigInt(0)],
+                args: [contentToSend, score, nonce, twitterUsername, twitterProfilePictureUrl, signature, replyingTo ? BigInt(replyingTo.messageId) : BigInt(0)],
                 chain: customMegaethTestnet,
                 gas: 30000000n
             })
 
+            // Régler le problème de transaction révertée pour fournir un meilleur feedback à l'utilisateur
+            const receipt = await walletClient.waitForTransactionReceipt({ hash: txHash });
+
+            if (receipt.status === 'reverted') {
+                const tx = await walletClient.getTransaction({ hash: txHash });
+                console.log({ tx });
+
+                try {
+                    await walletClient.call({
+                        to: tx.to,
+                        data: tx.input,
+                        from: tx.from,
+                    });
+                } catch (error) {
+                    const revertReason =
+                        error?.details || error?.message || 'Transaction reverted';
+
+                    throw new Error(`Transaction reverted: ${revertReason}`);
+                }
+            }
+
             console.log('✅ Message sent:', txHash)
+
             setInputMessage('')
             setReplyingTo(null)
             setCooldownRemaining(15)
-            await loadUserData()
+            setUserData((previous) => {
+                if (!previous) return previous
+
+                return {
+                    ...previous,
+                    messageCount: Number(previous.messageCount || 0) + 1,
+                    totalScore: Number(previous.totalScore || 0) + Number(score || 0),
+                    lastMessageTimestamp: Math.floor(Date.now() / 1000),
+                    canSendMessage: false
+                }
+            })
+            refreshUserDataInBackground()
 
         } catch (err) {
             console.error('Error sending message:', err)

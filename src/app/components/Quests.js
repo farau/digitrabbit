@@ -11,6 +11,7 @@ import { useWalletClient } from '../hooks/useWalletClient';
 function QuestCard({ quest, progress, streak, isNight, claimed, onClaim, isClaimingQuest, cooldowns, formatRemainingTime }) {
     const cardBg = isNight ? '#1a1a1a' : '#f8f8f8';
     const textColor = isNight ? '#eee' : '#333';
+    const subTextColor = isNight ? '#aaa' : '#666';
     const accentColor = quest.type === 'streak' ? '#f59e0b' : '#10b981';
     const progressPercent = Math.min((progress / quest.targetBase) * 100, 100);
 
@@ -29,7 +30,13 @@ function QuestCard({ quest, progress, streak, isNight, claimed, onClaim, isClaim
     };
 
     const isCompleted = progressPercent >= 100;
-    const canClaim = isCompleted && !claimed;
+    // Calcul du cooldown en fonction du type de quête
+    const cooldownKey = quest.id;
+
+    const remainingCooldown = cooldowns?.[cooldownKey];
+    const cooldownElapsed = !remainingCooldown || remainingCooldown <= 0;
+    const canClaim = isCompleted && !claimed && cooldownElapsed;
+
     const isClaiming = isClaimingQuest === quest.id;
 
     return (
@@ -81,7 +88,7 @@ function QuestCard({ quest, progress, streak, isNight, claimed, onClaim, isClaim
                             <p style={{
                                 margin: '4px 0 0 0',
                                 fontSize: '12px',
-                                color: isNight ? '#888' : '#666'
+                                color: subTextColor
                             }}>
                                 {quest.description}
                             </p>
@@ -101,7 +108,7 @@ function QuestCard({ quest, progress, streak, isNight, claimed, onClaim, isClaim
                         </div>
                         <div style={{
                             fontSize: '11px',
-                            color: isNight ? '#888' : '#666'
+                            color: subTextColor
                         }}>
                             Reward
                         </div>
@@ -119,7 +126,7 @@ function QuestCard({ quest, progress, streak, isNight, claimed, onClaim, isClaim
                         }}>
                             <span style={{
                                 fontSize: '12px',
-                                color: isNight ? '#888' : '#666'
+                                color: subTextColor
                             }}>
                                 Progress
                             </span>
@@ -157,7 +164,7 @@ function QuestCard({ quest, progress, streak, isNight, claimed, onClaim, isClaim
                         justifyContent: 'space-between',
                         alignItems: 'center',
                         fontSize: '12px',
-                        color: isNight ? '#888' : '#666'
+                        color: subTextColor
                     }}>
                         <span>Progress: {getProgressValue()}/{getTargetValue()}</span>
 
@@ -169,7 +176,7 @@ function QuestCard({ quest, progress, streak, isNight, claimed, onClaim, isClaim
                                     padding: '6px 16px',
                                     borderRadius: '20px',
                                     background: isClaiming ? (isNight ? '#555' : '#e0e0e0') : '#3b82f6',
-                                    color: isClaiming ? (isNight ? '#888' : '#666') : 'white',
+                                    color: isClaiming ? (isNight ? '#aaa' : '#666') : 'white',
                                     fontWeight: '600',
                                     fontSize: '11px',
                                     border: 'none',
@@ -185,13 +192,17 @@ function QuestCard({ quest, progress, streak, isNight, claimed, onClaim, isClaim
                                 padding: '4px 12px',
                                 borderRadius: '20px',
                                 background: claimed
-                                    ? (isNight ? 'rgba(16, 185, 129, 0.1)' : 'rgba(16, 185, 129, 0.1)')
-                                    : (isNight ? '#444' : '#f0f0f0'),
+                                    ? (isNight ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)')
+                                    : (isNight ? '#333' : '#f0f0f0'),
                                 color: claimed ? '#10b981' : textColor,
                                 fontWeight: '500',
                                 fontSize: '11px'
                             }}>
-                                {claimed ? `✓ Claimed, remaining time for the next quest: ${quest.type === 'messages' ? formatRemainingTime(cooldowns?.daily_messages) || 0 : quest.type === 'streak' ? formatRemainingTime(cooldowns?.daily_streak) || 0 : formatRemainingTime(cooldowns?.daily_hold) || 0}s` : 'In Progress'}
+                                {claimed
+                                    ? `✓ Claimed`
+                                    : !cooldownElapsed
+                                        ? `⏳ Next quest in: ${formatRemainingTime(cooldowns?.[cooldownKey])}`
+                                        : 'In Progress'}
                             </span>
                         )}
                     </div>
@@ -201,7 +212,7 @@ function QuestCard({ quest, progress, streak, isNight, claimed, onClaim, isClaim
                         justifyContent: 'flex-end',
                         alignItems: 'center',
                         fontSize: '12px',
-                        color: isNight ? '#888' : '#666'
+                        color: subTextColor
                     }}>
                         {canClaim ? (
                             <button
@@ -211,7 +222,7 @@ function QuestCard({ quest, progress, streak, isNight, claimed, onClaim, isClaim
                                     padding: '6px 16px',
                                     borderRadius: '20px',
                                     background: isClaiming ? (isNight ? '#555' : '#e0e0e0') : '#f59e0b',
-                                    color: isClaiming ? (isNight ? '#888' : '#666') : 'white',
+                                    color: isClaiming ? (isNight ? '#aaa' : '#666') : 'white',
                                     fontWeight: '600',
                                     fontSize: '11px',
                                     border: 'none',
@@ -227,14 +238,17 @@ function QuestCard({ quest, progress, streak, isNight, claimed, onClaim, isClaim
                                 padding: '4px 12px',
                                 borderRadius: '20px',
                                 background: claimed
-                                    ? (isNight ? 'rgba(16, 185, 129, 0.1)' : 'rgba(16, 185, 129, 0.1)')
-                                    : (isNight ? '#444' : '#f0f0f0'),
+                                    ? (isNight ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)')
+                                    : (isNight ? '#333' : '#f0f0f0'),
                                 color: claimed ? '#10b981' : textColor,
                                 fontWeight: '500',
                                 fontSize: '11px'
                             }}>
-                                {claimed ? `✓ Claimed, remaining time for the next quest: ${quest.type === 'messages' ? formatRemainingTime(cooldowns?.daily_messages) || 0 : quest.type === 'streak' ? formatRemainingTime(cooldowns?.daily_streak) || 0 : formatRemainingTime(cooldowns?.daily_hold) || 0}s` : 'In Progress'}
-                            </span>
+                                {claimed
+                                    ? `✓ Claimed`
+                                    : !cooldownElapsed
+                                        ? `⏳ Next quest in: ${formatRemainingTime(cooldowns?.[cooldownKey])}`
+                                        : '✅ Ready to Claim'}                            </span>
                         )}
                     </div>
                 )}
@@ -244,8 +258,9 @@ function QuestCard({ quest, progress, streak, isNight, claimed, onClaim, isClaim
 }
 
 export default function Quests({ playerData, embeddedWallet }) {
-    const { theme } = useTheme();
-    const isNight = theme === 'dark';
+    // ✅ Utilise themeMode comme dans Settings.js
+    const { themeMode } = useTheme();
+    const isNight = themeMode === 'dark';
     const [claimingQuestId, setClaimingQuestId] = useState(null);
     const { walletClient } = useWalletClient(embeddedWallet)
 
@@ -255,6 +270,88 @@ export default function Quests({ playerData, embeddedWallet }) {
     const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)';
 
     const { streak, dailyMessages, weeklyMessages, gamePlayed } = playerData;
+
+    // ✅ State pour synchroniser les données
+    const [questProgress, setQuestProgress] = useState({
+        daily_messages: dailyMessages || 0,
+        daily_streak: streak || 0,
+        daily_hold: 0,
+        weekly_messages: 0,
+        weekly_games: gamePlayed || 0,
+    });
+
+    // Get all quest IDs for daily quests
+    const dailyQuestIds = ['daily_messages', 'daily_streak', 'daily_hold'];
+    const weeklyQuestIds = ['weekly_messages', 'weekly_games'];
+    const allQuestIds = [...dailyQuestIds, ...weeklyQuestIds];
+
+    // Fetch quest status from smart contract for all quests in one request
+    const {
+        claimStatus: allClaimStatus,
+        cooldowns: allCooldowns,
+        isLoading: isQuestsLoading,
+        error: questsError,
+        refetch: refetchAll,
+        formatRemainingTime,
+        holdings
+    } = useQuestsStatus(embeddedWallet?.address, allQuestIds, 'all');
+
+    const dailyClaimStatus = dailyQuestIds.reduce((acc, questId) => {
+        acc[questId] = allClaimStatus[questId] === true;
+        return acc;
+    }, {});
+
+    const weeklyClaimStatus = weeklyQuestIds.reduce((acc, questId) => {
+        acc[questId] = allClaimStatus[questId] === true;
+        return acc;
+    }, {});
+
+    const dailyCooldowns = dailyQuestIds.reduce((acc, questId) => {
+        acc[questId] = allCooldowns[questId] || 0;
+        return acc;
+    }, {});
+
+    const weeklyCooldowns = weeklyQuestIds.reduce((acc, questId) => {
+        acc[questId] = allCooldowns[questId] || 0;
+        return acc;
+    }, {});
+
+    // ✅ useEffect pour mettre à jour quand les données changent
+    useEffect(() => {
+        setQuestProgress({
+            daily_messages: dailyMessages || 0,
+            daily_streak: streak || 0,
+            daily_hold: holdings,
+            weekly_messages: Array.isArray(weeklyMessages)
+                ? weeklyMessages.reduce((sum, count) => sum + Number(count), 0)
+                : Number(weeklyMessages) || 0,
+            weekly_games: gamePlayed || 0,
+        });
+    }, [holdings]);
+
+
+    if (!embeddedWallet) {
+        return (
+            <Wrapper>
+                <div
+                    style={{
+                        background: cardBg,
+                        padding: '20px',
+                        borderRadius: '10px',
+                        border: `1px solid ${borderColor}`,
+                        boxShadow,
+                        textAlign: 'center',
+                        margin: '20px'
+                    }}
+                >
+                    <p style={{ color: textColor, margin: 0, marginBottom: '12px' }}>
+                        Please login your <XLogo size={16} className={isNight ? 'text-white' : 'text-black'} /> account to access your profile.
+                    </p>
+                    <WalletButton />
+                </div>
+            </Wrapper>
+        );
+    }
 
     if (streak === 0 || !streak) {
         return (
@@ -276,14 +373,6 @@ export default function Quests({ playerData, embeddedWallet }) {
         );
     }
 
-    // ✅ State pour synchroniser les données
-    const [questProgress, setQuestProgress] = useState({
-        daily_messages: dailyMessages || 0,
-        daily_streak: streak || 0,
-        daily_hold: 0,
-        weekly_messages: 0,
-        weekly_games: gamePlayed || 0,
-    });
 
     // Quest Configuration
     const DAILY_QUESTS = [
@@ -312,7 +401,7 @@ export default function Quests({ playerData, embeddedWallet }) {
         {
             id: 'daily_hold',
             title: 'NFT Enthusiast',
-            description: `Hold ${streak} Digit Rabbit NFTs to earn extra rewards`,
+            description: `Hold ${streak} Digit Rabbit NFT(s) to earn extra rewards`,
             type: 'NFTs',
             icon: '🎨',
             targetBase: streak,
@@ -346,33 +435,6 @@ export default function Quests({ playerData, embeddedWallet }) {
             period: 'weekly'
         }
     ];
-
-    // Get all quest IDs for daily quests
-    const dailyQuestIds = DAILY_QUESTS.map(q => q.id);
-    const weeklyQuestIds = WEEKLY_QUESTS.map(q => q.id);
-
-    // Fetch quest status from smart contract for daily quests
-    const {
-        claimStatus: dailyClaimStatus,
-        cooldowns: dailyCooldowns,
-        isLoading: isDailyLoading,
-        error: dailyError,
-        refetch: refetchDaily,
-        formatRemainingTime,
-        holdings
-    } = useQuestsStatus(embeddedWallet?.address, dailyQuestIds, 'daily');
-
-    // Fetch quest status from smart contract for weekly quests
-    const {
-        claimStatus: weeklyClaimStatus,
-        cooldowns: weeklyCooldowns,
-        isLoading: isWeeklyLoading,
-        error: weeklyError,
-        refetch: refetchWeekly,
-    } = useQuestsStatus(embeddedWallet?.address, weeklyQuestIds, 'weekly');
-
-    // Combine claim statuses
-    const allClaimStatus = { ...dailyClaimStatus, ...weeklyClaimStatus };
 
     // Handle quest claim
     const handleClaimQuest = async (quest) => {
@@ -427,12 +489,8 @@ export default function Quests({ playerData, embeddedWallet }) {
 
             console.log('✅ Quest claimed successfully! TX:', txHash);
 
-            // 4. Refetch quest status
-            if (quest.period === 'daily') {
-                await refetchDaily();
-            } else {
-                await refetchWeekly();
-            }
+            // 4. Refetch unified quest status
+            await refetchAll();
 
         } catch (error) {
             console.error('Error claiming quest:', error);
@@ -441,41 +499,6 @@ export default function Quests({ playerData, embeddedWallet }) {
             setClaimingQuestId(null);
         }
     };
-
-    // ✅ useEffect pour mettre à jour quand les données changent
-    useEffect(() => {
-        setQuestProgress({
-            daily_messages: dailyMessages || 0,
-            daily_streak: streak || 0,
-            daily_hold: holdings, // ✅ Update quand holdings change
-            weekly_messages: weeklyMessages?.reduce((sum, count) => sum + Number(count), 0) || 0,
-            weekly_games: gamePlayed || 0,
-        });
-    }, [holdings]);
-
-
-    if (!embeddedWallet) {
-        return (
-            <Wrapper>
-                <div
-                    style={{
-                        background: cardBg,
-                        padding: '20px',
-                        borderRadius: '10px',
-                        border: `1px solid ${borderColor}`,
-                        boxShadow,
-                        textAlign: 'center',
-                        margin: '20px'
-                    }}
-                >
-                    <p style={{ color: textColor, margin: 0, marginBottom: '12px' }}>
-                        Please login your <XLogo size={16} className={isNight ? 'text-white' : 'text-black'} /> account to access your profile.
-                    </p>
-                    <WalletButton />
-                </div>
-            </Wrapper>
-        );
-    }
 
     return (
         <Wrapper>
@@ -509,13 +532,13 @@ export default function Quests({ playerData, embeddedWallet }) {
                     padding: '16px',
                     boxShadow
                 }}>
-                    {isDailyLoading ? (
+                    {isQuestsLoading ? (
                         <div style={{ textAlign: 'center', padding: '20px', color: textColor }}>
                             Loading daily quests...
                         </div>
-                    ) : dailyError ? (
+                    ) : questsError ? (
                         <div style={{ textAlign: 'center', padding: '20px', color: '#ef4444' }}>
-                            Error loading daily quests: {dailyError}
+                            Error loading daily quests: {questsError}
                         </div>
                     ) : (
                         DAILY_QUESTS.map(quest => (
@@ -566,13 +589,13 @@ export default function Quests({ playerData, embeddedWallet }) {
                     padding: '16px',
                     boxShadow
                 }}>
-                    {isWeeklyLoading ? (
+                    {isQuestsLoading ? (
                         <div style={{ textAlign: 'center', padding: '20px', color: textColor }}>
                             Loading weekly quests...
                         </div>
-                    ) : weeklyError ? (
+                    ) : questsError ? (
                         <div style={{ textAlign: 'center', padding: '20px', color: '#ef4444' }}>
-                            Error loading weekly quests: {weeklyError}
+                            Error loading weekly quests: {questsError}
                         </div>
                     ) : (
                         WEEKLY_QUESTS.map(quest => (

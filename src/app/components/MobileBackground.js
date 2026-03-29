@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import styles from './MobileBackground.module.css';
 
-export default function MobileBackground({ restoreApp, themeMode }) {
+export default function MobileBackground({ restoreApp, themeMode, showRabbit = true }) {
     const [isVisible, setIsVisible] = useState(false);
     const [isWiggling, setIsWiggling] = useState(false);
     const [showMusicNote, setShowMusicNote] = useState(false);
@@ -47,32 +47,32 @@ export default function MobileBackground({ restoreApp, themeMode }) {
 
     const socialLinks = [
         {
-            name: "About",
-            app: "About",
-            src: "/img/icons/about.png",
+            name: "Quests",
+            app: "Quests",
+            src: "/img/icons/quests.png",
             color: "#5865f2",
-            position: { top: "25%", left: "10%" }
+            position: { top: "10%", left: "60%" }
         },
         {
             name: "Profile",
             app: "Profile",
             src: "/img/icons/profile.png",
             color: "#1da1f2",
-            position: { top: "35%", right: "10%" }
+            position: { top: "35%", right: "30%" }
         },
         {
             name: "Game",
             app: "Game",
             src: "/img/icons/game.png",
             color: "#ff6b6b",
-            position: { top: "35%", left: "5%" }
+            position: { top: "35%", left: "25%" }
         },
         {
             name: "Leaderboard",
             app: "Leaderboard",
             src: "/img/icons/leaderboard.png",
             color: "#ffe66d",
-            position: { bottom: "35%", left: "5%" }
+            position: { bottom: "40%", left: "10%" }
         },
         {
             name: "Settings",
@@ -82,19 +82,19 @@ export default function MobileBackground({ restoreApp, themeMode }) {
             position: { bottom: "40%", right: "5%" }
         },
         {
-            name: "Memes",
-            app: "Memes",
-            src: "/img/icons/memes.png",
+            name: "Chat",
+            app: "RabbitChat",
+            src: "/img/icons/rabbitchat.png",
             color: "#ff9f43",
             label: "t",
-            position: { bottom: "25%", left: "10%" }
+            position: { bottom: "35%", left: "50%" }
         },
         {
             name: "FAQ",
             app: "FAQ",
             src: "/img/icons/faq.png",
             color: "#00b894",
-            position: { bottom: "20%", right: "10%" }
+            position: { bottom: "20%", right: "20%" }
         },
     ];
 
@@ -436,28 +436,30 @@ export default function MobileBackground({ restoreApp, themeMode }) {
             ))}
 
             {/* Lapin flottant au centre */}
-            <div
-                className={`${styles.floatingRabbit} ${styles[themeMode]} ${isWiggling ? styles.wiggling : ''} noSelect`}
-                onClick={handleRabbitClick}
-                onTouchStart={handleRabbitTouchStart}
-                onTouchEnd={handleRabbitTouchEnd}
-                style={{ cursor: 'pointer' }}
-            >
-                <Image
-                    src={themeMode === 'light' ? "/img/rabbit_angel.webp" : "/img/rabbit_angel_sleeping.webp"}
-                    alt="Rabbit angel"
-                    width={themeMode === 'light' ? 300 : 250}
-                    height={themeMode === 'light' ? 300 : 250}
-                    draggable={false}
-                />
+            {showRabbit && (
+                <div
+                    className={`${styles.floatingRabbit} ${styles[themeMode]} ${isWiggling ? styles.wiggling : ''} noSelect`}
+                    onClick={handleRabbitClick}
+                    onTouchStart={handleRabbitTouchStart}
+                    onTouchEnd={handleRabbitTouchEnd}
+                    style={{ cursor: 'pointer' }}
+                >
+                    <Image
+                        src={themeMode === 'light' ? "/img/rabbit_angel.webp" : "/img/rabbit_angel_sleeping.webp"}
+                        alt="Rabbit angel"
+                        width={themeMode === 'light' ? 300 : 250}
+                        height={themeMode === 'light' ? 300 : 250}
+                        draggable={false}
+                    />
 
-                {/* Note de musique */}
-                {showMusicNote && (
-                    <div className={`${styles.musicNote} ${styles[themeMode]}`}>
-                        ♫
-                    </div>
-                )}
-            </div>
+                    {/* Note de musique */}
+                    {showMusicNote && (
+                        <div className={`${styles.musicNote} ${styles[themeMode]}`}>
+                            ♫
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

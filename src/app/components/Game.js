@@ -11,10 +11,8 @@ import Wrapper from './Wrapper'
 import RabbitImage from './RabbitImage'
 import Image from 'next/image'
 import TransactionStack from './TransactionStack'
-import BlockchainHealthIndicator from './BlockchainHealthIndicator'
 import { useTheme, useGame } from '@/context'
 import { useWalletClient } from '../hooks/useWalletClient'
-import { useBlockchainHealth } from '../hooks/useBlockchainHealth'
 import * as Sentry from '@sentry/nextjs'
 import WalletButton from './WalletButton'
 
@@ -207,15 +205,6 @@ export default function Game({ playerData, preSignedPool, isInitializing, error,
   const [isPaused, setIsPaused] = useState(false)
   const [isCheckingPause, setIsCheckingPause] = useState(true)
 
-  // Hook pour la vérification de la blockchain
-  const {
-    healthStatus,
-    isCheckingHealth,
-    healthError,
-    checkBlockchainHealth,
-    getStatusInfo,
-    canPlay
-  } = useBlockchainHealth();
 
   // Design
   const isNight = themeMode === 'dark';
@@ -311,18 +300,9 @@ export default function Game({ playerData, preSignedPool, isInitializing, error,
     }
   }, [showTwitterShare, playerData?.gameClicks, setFinalScore])
 
-  // Démarrage du jeu avec vérification de la blockchain
+  // Démarrage du jeu 
   const handleStartGame = async () => {
     try {
-
-      // 0. Vérification de l'état de la blockchain avant de commencer
-      if (!canPlay) {
-        if (healthStatus?.status === 'down') {
-          setErrorStartGame('Blockchain is currently down. Please try again later.');
-        } else if (healthStatus?.status === 'degraded') {
-          setErrorStartGame('Blockchain performance is degraded. Game may not work optimally.');
-        }
-      }
 
       // 1. Vérification du wallet
       if (!walletClient || !embeddedWallet || !embeddedWallet.address) {
@@ -404,7 +384,6 @@ export default function Game({ playerData, preSignedPool, isInitializing, error,
             extra: {
               walletAddress: embeddedWallet?.address,
               availableTransactions: getAvailableTransactions(),
-              blockchainHealth: healthStatus?.status,
               poolStats: preSignedPool ? {
                 totalTransactions: preSignedPool.transactions?.length || 0,
                 currentIndex: preSignedPool.currentIndex || 0,
@@ -430,7 +409,6 @@ export default function Game({ playerData, preSignedPool, isInitializing, error,
           walletAddress: embeddedWallet.address,
           gasUsed: receipt.gasUsed?.toString(),
           availableTransactions: getAvailableTransactions(),
-          blockchainHealth: healthStatus?.status,
           poolStats: preSignedPool ? {
             totalTransactions: preSignedPool.transactions?.length || 0,
             currentIndex: preSignedPool.currentIndex || 0,
@@ -456,7 +434,6 @@ export default function Game({ playerData, preSignedPool, isInitializing, error,
         extra: {
           walletAddress: embeddedWallet?.address,
           availableTransactions: getAvailableTransactions(),
-          blockchainHealth: healthStatus?.status,
           poolStats: preSignedPool ? {
             totalTransactions: preSignedPool.transactions?.length || 0,
             currentIndex: preSignedPool.currentIndex || 0,
@@ -520,7 +497,6 @@ export default function Game({ playerData, preSignedPool, isInitializing, error,
         extra: {
           walletAddress: embeddedWallet?.address,
           availableTransactions: getAvailableTransactions(),
-          blockchainHealth: healthStatus?.status,
           poolStats: preSignedPool ? {
             totalTransactions: preSignedPool.transactions?.length || 0,
             currentIndex: preSignedPool.currentIndex || 0,
@@ -542,10 +518,6 @@ export default function Game({ playerData, preSignedPool, isInitializing, error,
     }
   }
 
-  // Fonction pour rafraîchir l'état de la blockchain
-  const handleRefreshBlockchainHealth = () => {
-    checkBlockchainHealth(true); // Force refresh
-  }
 
   // Fonction simplifiée pour l'état du bouton
   const getButtonText = () => {
@@ -570,11 +542,6 @@ export default function Game({ playerData, preSignedPool, isInitializing, error,
       return
     }
 
-    // Vérifier l'état de la blockchain avant d'exécuter
-    if (healthStatus?.status === 'down') {
-      console.warn('Blockchain is down, skipping transaction execution');
-      return;
-    }
 
     const currentTxId = `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
@@ -601,7 +568,6 @@ export default function Game({ playerData, preSignedPool, isInitializing, error,
           currentTxId,
           availableTransactions: getAvailableTransactions(),
           walletAddress: embeddedWallet?.address,
-          blockchainHealth: healthStatus?.status,
           poolStats: preSignedPool ? {
             totalTransactions: preSignedPool.transactions?.length || 0,
             currentIndex: preSignedPool.currentIndex || 0,
@@ -768,7 +734,7 @@ export default function Game({ playerData, preSignedPool, isInitializing, error,
           <div className="z-50 relative cursor-pointer">
             <RabbitImage
               isClicked={() => {
-                if (isGameStarted && !isExecuting && !isInitializing && preSignedPool && getAvailableTransactions() > 0 && canPlay) {
+                if (isGameStarted && !isExecuting && !isInitializing && preSignedPool && getAvailableTransactions() > 0) {
                   handleExecuteTransaction();
                 }
               }}
@@ -794,26 +760,6 @@ export default function Game({ playerData, preSignedPool, isInitializing, error,
           />
         )}
 
-        {/* Blockchain Warning */}
-        {healthStatus && !canPlay && (
-          <div
-            className="mb-6 p-4 rounded-lg flex items-center gap-3"
-            style={{
-              background: isNight ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-              border: `1px solid ${isNight ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
-              boxShadow,
-              color: isNight ? '#ef4444' : '#dc2626'
-            }}
-          >
-            <span>⚠️</span>
-            <span className="text-sm">
-              {healthStatus.status === 'down'
-                ? 'RPC/connectivity issue. Game may be unavailable.'
-                : 'Blockchain performance is degraded. Game may not work optimally.'
-              }
-            </span>
-          </div>
-        )}
 
         {/* Initialization Status */}
         {isInitializing ? (
@@ -875,17 +821,6 @@ export default function Game({ playerData, preSignedPool, isInitializing, error,
             <p className="text-red-700 dark:text-red-300 break-all whitespace-pre-line">{errorStartGame}</p>
           </div>
         )}
-      </div>
-      {/* Blockchain Health Status */}
-      <div className="w-full flex justify-center">
-        <div className="w-fit max-w-md">
-          <BlockchainHealthIndicator
-            healthStatus={healthStatus}
-            isCheckingHealth={isCheckingHealth}
-            onRefresh={handleRefreshBlockchainHealth}
-            getStatusInfo={getStatusInfo}
-          />
-        </div>
       </div>
 
     </Wrapper>

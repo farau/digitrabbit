@@ -171,8 +171,8 @@ export default function BackgroundEffect({ mode = 'sun' }) {
       ref={containerRef}
       style={{
         position: 'fixed',
-        top: 0,
-        left: -500,
+        top: '29%',
+        left: -210,
         width: '100vw',
         height: '100vh',
         pointerEvents: 'none',

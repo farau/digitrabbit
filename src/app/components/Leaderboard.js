@@ -316,7 +316,7 @@ export default function Leaderboard({ }) {
           <div className="flex flex-col items-center gap-4">
             <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-2 border-transparent border-t-blue-500"></div>
             <p className="text-sm sm:text-base" style={{ color: textColor, margin: 0 }}>
-              Loading METH leaderboard...
+              Loading leaderboard...
             </p>
             <p className="text-xs" style={{ color: subTextColor, margin: 0 }}>
               This may take a few moments...
@@ -629,7 +629,7 @@ export default function Leaderboard({ }) {
     setCurrentPage(1);
   };
 
-  // Statistiques pour GAME METH
+  // Statistiques pour GAME
   const streakStats = {
     highestStreak: Math.max(...leaderboard.map(p => p.streak || 0), 0),
     avgStreak: leaderboard.length > 0 ?
@@ -667,7 +667,7 @@ export default function Leaderboard({ }) {
               margin: 0,
               color: textColor
             }} className="sm:text-2xl">
-              METH Leaderboard
+              Leaderboard
             </h2>
           </div>
 
@@ -675,7 +675,7 @@ export default function Leaderboard({ }) {
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-xs sm:text-sm" style={{ color: subTextColor }}>
               <div className="flex items-center gap-1 sm:gap-2">
                 <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span>Season METH</span>
+                <span>Season 1</span>
               </div>
               <div className="flex items-center gap-1 sm:gap-2">
                 <Users className="w-3 h-3 sm:w-4 sm:h-4" />

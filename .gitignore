@@ -42,3 +42,13 @@ next-env.d.ts
 
 # local certificates
 /certificates
+
+# NFT metadata
+other/ipfs_metadata
+other/ipfs_metadata.zip
+
+# Javascript scripts files
+other/batchSend.js
+other/ipfs_metadata.js
+other/holders.csv
+other/*

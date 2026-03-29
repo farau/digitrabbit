@@ -2,6 +2,9 @@ const { withSentryConfig } = require("@sentry/nextjs");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+    turbopack: {
+        root: __dirname,
+    },
     images: {
         unoptimized: true,            // 🔥 Désactive l'optimisation cassée
         disableStaticImages: true,    // 🔥 Bypass le bug dans <Image>
@@ -45,7 +48,6 @@ const nextConfig = {
     },
     async headers() {
         const isDev = process.env.NODE_ENV === 'development';
-        console.log('NODE_ENV:', process.env.NODE_ENV, 'isDev:', isDev);
 
         // Sources de base avec support Sentry, Vercel et Alchemy CDN
         const baseSources = {
@@ -60,8 +62,6 @@ const nextConfig = {
             // 🚀 Ajout des domaines Alchemy CDN et IPFS pour les NFTs
             imgSrc: "'self' data: blob: https://pbs.twimg.com https://i.ibb.co https://explorer-api.walletconnect.com https://*.alchemy.com https://*.alchemyapi.io https://ipfs.io https://gateway.ipfs.io https://*.ipfs.nftstorage.link https://*.ipfs.dweb.link https://cloudflare-ipfs.com https://nftstorage.link"
         };
-
-        console.log('Script sources:', baseSources.scriptSrc);
 
         // CSP pour le développement
         const cspValueDev = [
@@ -135,14 +135,16 @@ const sentryWebpackPluginOptions = {
     // side errors will fail.
     tunnelRoute: "/monitoring",
 
-    // Automatically tree-shake Sentry logger statements to reduce bundle size
-    disableLogger: true,
+    webpack: {
+        treeshake: {
+            // Automatically tree-shake Sentry logger statements to reduce bundle size
+            removeDebugLogging: true,
+        },
 
-    // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
-    // See the following for more information:
-    // https://docs.sentry.io/product/crons/
-    // https://vercel.com/docs/cron-jobs
-    automaticVercelMonitors: true,
+        // Enables automatic instrumentation of Vercel Cron Monitors.
+        // See https://docs.sentry.io/product/crons/
+        automaticVercelMonitors: true,
+    },
 };
 
 // Export avec Sentry

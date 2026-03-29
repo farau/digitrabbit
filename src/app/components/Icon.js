@@ -224,25 +224,48 @@ export default function Icon({ name, src, label, onClick, position, sound, show3
               onPointerUp={handlePointerUp}
             />
           </Canvas>
-
         </div>
-      )
-      }
-
-      {!show3DEffects && !is3D && (
-        <Image src={src} alt={name} width={50} height={50} />
       )}
 
-      <p style={{
-        margin: 0,
-        fontSize: 8,
-        color: themeMode === 'dark' ? 'white' : 'black',
-        textShadow: themeMode === 'dark'
-          ? '-1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black'
-          : '-1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white'
-      }}>
-        {label}
-      </p>
-    </div >
+      {!show3DEffects && !is3D && (
+        /* Sticker wrapper — contour blanc autour de l'icône + label */
+        <div style={{
+          display: "inline-flex",
+          flexDirection: "column",
+          alignItems: "center",
+          /* Contour blanc arrondi façon sticker */
+          filter: `
+          drop-shadow( 1px  0px 0 white)
+          drop-shadow(-1px  0px 0 white)
+          drop-shadow( 0px  1px 0 white)
+          drop-shadow( 0px -1px 0 white)
+          drop-shadow(0 0 4px rgba(255,255,255,0.6))
+        `,
+        }}>
+          {/* Image de l'icône — sans fond */}
+          <Image src={src} alt={name} width={name !== "Quests" ? 50 : 40} height={name !== "Quests" ? 50 : 40} />
+
+          { /*Label style sticker — fond blanc, texte noir, même effet*/}
+          <div style={{
+            marginTop: "3px",
+            background: "white",
+            borderRadius: "6px",
+            padding: "1px 6px",
+            display: "inline-block",
+          }}>
+            <p style={{
+              margin: 0,
+              fontSize: 9,
+              fontWeight: "700",
+              color: "black",
+              letterSpacing: "0.02em",
+              whiteSpace: "nowrap",
+            }}>
+              {label}
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

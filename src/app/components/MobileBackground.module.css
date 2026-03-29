@@ -4,7 +4,7 @@
   left: 0;
   width: 100vw;
   height: 100vh;
-  z-index: 0;
+  z-index: 1;
   opacity: 0;
   transition: opacity 0.8s ease-in-out;
   /* Masquer par défaut sur desktop */

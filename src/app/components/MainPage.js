@@ -15,7 +15,6 @@ import { useTheme, useGame } from "@/context";
 import DraggableWindow from "./DraggableWindow";
 import Game from "./Game";
 import Chill from "./Chill";
-import Wardrobe from "./Wardrobe";
 import RabbitChat from '@/app/components/RabbitChat'
 import Assets from "./Assets";
 import FAQ from "./FAQ";
@@ -29,8 +28,7 @@ import { usePreSignedPool } from "../hooks/usePreSignedPool";
 
 // Dynamic import pour le BackgroundEffect
 import dynamic from 'next/dynamic';
-import { Suspense } from 'react';
-
+import { userData } from "three/src/nodes/accessors/UserDataNode";
 
 export default function MainPage() {
 
@@ -198,6 +196,14 @@ export default function MainPage() {
         args: [embeddedWallet.address, 7],
       });
 
+      // returns (role, messageCount, totalScore, lastMessageTimestamp, canSendMessage, isMuted, muteExpiresAt)
+      const userDataChat = await publicClient.readContract({
+        address: DIGIT_RABBITS_CHAT_ADDRESS,
+        abi: DIGIT_RABBITS_CHAT_ABI,
+        functionName: 'getUserData',
+        args: [embeddedWallet.address],
+      });
+
       const rabbitPoints = result[0] !== undefined ? Number(result[0]) / 1_000_000 : -1;
       const [totalClicks, gameClicks, sessionEndsAt, streak, hasClaimedPoints, maxClicks, gamePlayed] = result.slice(1);
 
@@ -214,6 +220,7 @@ export default function MainPage() {
         totalClicksGame: Number(totalClicksGame),
         dailyMessages: Number(messages7days[0]),
         weeklyMessages: messages7days,
+        totalMessages: Number(userDataChat[1]),
       });
     } catch (error) {
       console.error("Error fetching player data:", error);
@@ -232,12 +239,30 @@ export default function MainPage() {
 
   // Enregistrement des callbacks pour les événements du contrat
   useEffect(() => {
+    const currentAddress = embeddedWallet?.address?.toLowerCase()
+    const isCurrentPlayerEvent = (log) => {
+      const eventAddress = (log?.args?.player || log?.args?.user)?.toLowerCase?.()
+      return Boolean(currentAddress && eventAddress && eventAddress === currentAddress)
+    }
+
     registerCallbacks({
       onPointsClaimed: (log) => {
+        if (!isCurrentPlayerEvent(log)) return
         console.log('💰 Points claimed, refreshing player data...')
         fetchPlayerData()
       },
+      onGamePlayed: (log) => {
+        if (!isCurrentPlayerEvent(log)) return
+        console.log('🎮 Game played, refreshing player data...')
+        fetchPlayerData()
+      },
+      onQuestRewardCredited: (log) => {
+        if (!isCurrentPlayerEvent(log)) return
+        console.log('💰 Quest reward credited, refreshing player data...')
+        fetchPlayerData()
+      },
       onUserRoleChanged: (log) => {
+        if (!isCurrentPlayerEvent(log)) return
         console.log('👤 Role changed, refreshing player data...')
         fetchPlayerData()
       },
@@ -245,7 +270,7 @@ export default function MainPage() {
         console.log('🔇 User muted')
       },
     })
-  }, [fetchPlayerData, registerCallbacks])
+  }, [embeddedWallet?.address, fetchPlayerData, registerCallbacks])
 
   // Fonction pour recharger uniquement les clics totaux (pour le bouton reload)
   const reloadTotalClicks = async () => {
@@ -368,11 +393,6 @@ export default function MainPage() {
           onGameEnd={onGameEnd}
           getAvailableTransactions={getAvailableTransactions}
         />;
-      case "Wardrobe":
-        return <Wardrobe
-          playerData={playerData}
-          isGameStarted={isGameStarted}
-        />;
       case "RabbitChat":
         return <RabbitChat
           playerData={playerData}
@@ -478,13 +498,6 @@ export default function MainPage() {
         onClick={() => restoreApp("Chill")}
         position={{ x: 30, y: "75%" }}
       />
-      {/*<Icon
-        name="Wardrobe"
-        src="/img/icons/wardrobe.png"
-        label="Wardrobe"
-        onClick={() => restoreApp("Wardrobe")}
-        position={{ x: -100, y: "50%" }}
-      />*/}
       <Icon
         name="RabbitChat"
         src="/img/icons/rabbitchat.png"
@@ -497,7 +510,7 @@ export default function MainPage() {
         src="/3d/head"
         sound={sound}
         themeMode={themeMode}
-        position={{ x: `${width - 690}px`, y: "1%" }}
+        position={{ x: `${width - 790}px`, y: "1%" }}
         show3DEffects={show3DEffects}
         volume={volume}
       />
@@ -589,10 +602,7 @@ export default function MainPage() {
       }
 
       {/* Background dans le cas où on est sur mobile */}
-      <MobileBackground
-        restoreApp={restoreApp}
-        themeMode={themeMode}
-      />
+      <MobileBackground restoreApp={restoreApp} themeMode={themeMode} showRabbit={false} />
 
       {/* Affichage des assets plein écran*/}
       {
@@ -657,13 +667,13 @@ export default function MainPage() {
         ))
       }
 
-      {
+      {/* 
         show3DEffects && !isMobile && (
           <Suspense fallback={null}>
             {themeMode === 'light' ? <BackgroundEffect /> : <BackgroundEffect mode="moon" />}
           </Suspense>
         )
-      }
+      */}
 
       <Footer visibleApps={visibleApps}
         setVisibleApps={setVisibleApps}

@@ -38,19 +38,77 @@
   transition: background-color 0.3s, color 0.3s, border-color 0.3s;
 }
   
-/* Background jour */
+/* =============================================
+   RABBITS OVERLAY — floating animation
+   ============================================= */
+
 .bgDay {
   position: relative;
   width: 100vw;
   height: 100vh;
-  background: url('/img/light.jpg') no-repeat center center fixed;
-  background-size: cover;
-  background-attachment: fixed; /* Fait en sorte que l'image reste fixe lors du défilement */
   display: flex;
   flex-wrap: wrap;
   color: white;
-  --windows-background: #f0f0f0; /* clair */
-  --windows-text: #000000;       /* sombre */
+
+  --windows-background: #f0f0f0;
+  --windows-text: #000000;
+}
+
+.bgDay::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+
+  background: url('/img/light.jpg') no-repeat center center fixed;
+  background-size: cover;
+
+  filter: blur(2px);
+  transform: scale(1.05);
+
+  z-index: -1;
+}
+
+/* Overlay rabbits image — par dessus le background, sous le contenu */
+.bgDay::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+
+  background: url('/img/overlay.png') no-repeat center center;
+  background-size: cover;
+
+  /* L'image a un fond transparent, seuls les lapins sont visibles */
+  pointer-events: none;
+
+  z-index: 0;
+
+  animation: rabbitsFloat 8s ease-in-out infinite;
+  transform-origin: center center;
+}
+
+/* S'assurer que le contenu passe par-dessus l'overlay */
+.bgDay > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Animation de flottement doux — légère dérive + respiration subtile */
+@keyframes rabbitsFloat {
+  0% {
+    transform: translateY(0px) translateX(0px) scale(1);
+  }
+  20% {
+    transform: translateY(-6px) translateX(3px) scale(1.005);
+  }
+  45% {
+    transform: translateY(-10px) translateX(-2px) scale(1.008);
+  }
+  70% {
+    transform: translateY(-4px) translateX(4px) scale(1.003);
+  }
+  100% {
+    transform: translateY(0px) translateX(0px) scale(1);
+  }
 }
 
 /* Background nuit */
@@ -58,17 +116,52 @@
   position: relative;
   width: 100vw;
   height: 100vh;
-  background: url('/img/night.jpg') no-repeat center center fixed;
-  background-size: cover;
-  background-attachment: fixed; /* Fait en sorte que l'image reste fixe lors du défilement */
   display: flex;
   flex-wrap: wrap;
   color: white;
 }
 
+.bgNight::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+
+  background: url('/img/night.jpg') no-repeat center center fixed;
+  background-size: cover;
+
+  filter: blur(2px);
+  transform: scale(1.05);
+
+  z-index: -1;
+}
+
+/* Overlay rabbits image — par dessus le background, sous le contenu */
+.bgNight::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+
+  background: url('/img/overlay.png') no-repeat center center;
+  background-size: cover;
+
+  /* L'image a un fond transparent, seuls les lapins sont visibles */
+  pointer-events: none;
+
+  z-index: 0;
+
+  animation: rabbitsFloat 8s ease-in-out infinite;
+  transform-origin: center center;
+}
+
+/* S'assurer que le contenu passe par-dessus l'overlay */
+.bgNight > * {
+  position: relative;
+  z-index: 1;
+}
+
 /* Media queries pour très petits écrans (smartphones en portrait) */
 @media screen and (max-width: 480px) {
-  .bgDay {
+  /*.bgDay {
     background: url('/img/phone_bg_light.jpg') no-repeat center center;
     background-size: cover;
     background-attachment: scroll;
@@ -78,7 +171,7 @@
     background: url('/img/phone_bg_night.jpg') no-repeat center center;
     background-size: cover;
     background-attachment: scroll;
-  }
+  }*/
   
   /* Ajustements pour les modales sur très petits écrans */
   .lightMode,

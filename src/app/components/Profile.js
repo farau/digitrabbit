@@ -1,12 +1,10 @@
 'use client'
 
 
-import { Download, Gift, Loader2, Trophy } from 'lucide-react'
 import Image from 'next/image'
 import { XLogo } from '@/utils/constants'
 import Wrapper from '@/app/components/Wrapper'
 import { useTheme, useGame } from '@/context'
-import DynamicAvatar from '@/app/components/DynamicAvatar'
 import { useState } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
 import WalletButton from './WalletButton'
@@ -25,81 +23,6 @@ import {
   YAxis,
 } from 'recharts'
 
-
-function XProfileDisplay() {
-  const { user } = usePrivy();
-  const { themeMode } = useTheme();
-
-
-  // Find the X/Twitter account from the user's linked accounts
-  const twitterAccount = user?.linkedAccounts.find(
-    (account) => account.type === 'twitter_oauth'
-  );
-
-
-  const isNight = themeMode === 'dark';
-  const cardBg = isNight ? '#222' : '#f3f3f3';
-  const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)';
-  const borderColor = isNight ? '#444' : '#ddd';
-  const textColor = isNight ? 'text-white' : 'text-black';
-  const subTextColor = isNight ? 'text-zinc-400' : 'text-gray-600';
-
-
-  // If the user has no linked Twitter account, don't render anything
-  if (!twitterAccount) {
-    return null;
-  }
-
-
-  const { name, username, profilePictureUrl } = twitterAccount;
-
-
-  return (
-    <div
-      style={{
-        background: cardBg,
-        marginBottom: 30,
-        padding: '15px',
-        borderRadius: '10px',
-        marginTop: 12,
-        boxShadow,
-        border: `1px solid ${borderColor}`,
-      }}
-    >
-      {/* Header with profile info and connection status */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          {profilePictureUrl && (
-            <Image
-              src={profilePictureUrl}
-              alt={name || 'X profile picture'}
-              width={50}
-              height={50}
-              style={{ borderRadius: '50%' }}
-            />
-          )}
-          <div>
-            <p className={`text-lg font-bold ${textColor}`}>{name}</p>
-            {username && <p className={`text-sm ${subTextColor}`}>@{username}</p>}
-          </div>
-        </div>
-
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <XLogo className={`${isNight ? 'text-white' : 'text-black'}`} size={20} />
-          <span className={`text-sm ${subTextColor}`}>Connected</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-
 export default function Profile({ playerData }) {
   const { user } = usePrivy();
   const { themeMode } = useTheme();
@@ -111,12 +34,17 @@ export default function Profile({ playerData }) {
 
 
   const { embeddedWallet, validationError, isValidating } = useGame()
+  const twitterAccount = user?.linkedAccounts?.find(
+    (account) => account.type === 'twitter_oauth'
+  )
+  const twitterProfilePictureUrl = twitterAccount?.profilePictureUrl || '/img/default-avatar.jpg'
+  const twitterDisplayName = twitterAccount?.name || twitterAccount?.username || 'Rabbit'
 
 
-  const { rabbitPoints, playerItems, totalClicks, sessionEndsAt, boost, streak, hasClaimedPoints, maxClicks, dailyMessages, weeklyMessages, gamePlayed } = playerData
+  const { rabbitPoints, totalClicks, streak, maxClicks, dailyMessages, weeklyMessages, gamePlayed, totalMessages } = playerData
 
 
-  const { data: balance, refetch: refetchBalance } = useBalance({
+  const { data: balance } = useBalance({
     address: embeddedWallet?.address,
   });
 
@@ -152,8 +80,11 @@ export default function Profile({ playerData }) {
   ];
 
 
-  // ✅ NEW: Prepare messaging data for chart
-  const messageChartData = [
+  // Prepare messaging data for chart
+  const isWeeklyReady = Array.isArray(weeklyMessages)
+
+
+  const messageChartData = isWeeklyReady ? [
     { day: 'Today', messages: dailyMessages },
     { day: '-1d', messages: Number(weeklyMessages[1]) ?? 0 },
     { day: '-2d', messages: Number(weeklyMessages[2]) ?? 0 },
@@ -161,10 +92,20 @@ export default function Profile({ playerData }) {
     { day: '-4d', messages: Number(weeklyMessages[4]) ?? 0 },
     { day: '-5d', messages: Number(weeklyMessages[5]) ?? 0 },
     { day: '-6d', messages: Number(weeklyMessages[6]) ?? 0 },
-  ];
+  ] : [];
 
-  const totalWeeklyMessages = weeklyMessages.reduce((sum, count) => sum + Number(count), 0);
+  const totalWeeklyMessages = isWeeklyReady
+    ? weeklyMessages.reduce((sum, count) => sum + Number(count), 0)
+    : 0
+  const totalMessagesCount = Number(totalMessages)
+  const hasTotalMessages = Number.isFinite(totalMessagesCount)
 
+  const formatCompactCount = (value) => (
+    new Intl.NumberFormat('en-US', {
+      notation: 'compact',
+      maximumFractionDigits: 1
+    }).format(value)
+  )
 
   const renderVerticalLabels = ({ payload, x, y }) => {
     const angle = payload.coordinate?.angle ?? 0
@@ -260,9 +201,12 @@ export default function Profile({ playerData }) {
 
   function MessageChart() {
     return (
-      <div className="w-full md:w-64 h-64">
+      <div className="w-full max-w-sm h-64 mx-auto">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={messageChartData}>
+          <BarChart
+            data={messageChartData}
+            margin={{ top: 8, right: 16, left: 16, bottom: 0 }}
+          >
             <XAxis
               dataKey="day"
               stroke={isNight ? '#555' : '#000000ff'}
@@ -271,6 +215,7 @@ export default function Profile({ playerData }) {
             <YAxis
               stroke={isNight ? '#555' : '#000000ff'}
               style={{ fontSize: 12 }}
+              width={32}
             />
             <Tooltip content={<MessageTooltip />} />
             <Bar
@@ -382,80 +327,25 @@ export default function Profile({ playerData }) {
   return (embeddedWallet ?
     <Wrapper>
       <div className="flex flex-col md:flex-row md:items-start gap-5">
-        {/* Avatar Dynamique */}
+        {/* Avatar X/Twitter */}
         <div className="flex flex-col items-center">
-          <DynamicAvatar
-            playerItems={playerItems}
-            size="w-30 h-30"
-            showBorder={true}
+          <Image
+            src={twitterProfilePictureUrl}
+            alt={`${twitterDisplayName} profile picture`}
             width={96}
             height={96}
+            style={{
+              borderRadius: '50%',
+              border: `1px solid ${borderColor}`,
+              boxShadow,
+              objectFit: 'cover'
+            }}
           />
-          <div className="flex flex-col items-center gap-2 mt-2">
-            <button
-              onClick={async () => {
-                try {
-                  const canvas = document.createElement('canvas');
-                  const ctx = canvas.getContext('2d');
-                  canvas.width = 512;
-                  canvas.height = 512;
-
-
-                  ctx.imageSmoothingEnabled = true;
-                  ctx.imageSmoothingQuality = 'high';
-
-
-                  const loadImage = (src) => {
-                    return new Promise((resolve, reject) => {
-                      const img = document.createElement('img');
-                      img.crossOrigin = 'anonymous';
-                      img.onload = () => resolve(img);
-                      img.onerror = reject;
-                      img.src = src;
-                    });
-                  };
-
-
-                  const layerOrder = [
-                    { folder: 'backgrounds', index: 1 },
-                    { folder: 'rabbit_color', index: 0 },
-                    { folder: 'clothes', index: 2 },
-                    { folder: 'glasses', index: 3 },
-                    { folder: 'hat', index: 4 }
-                  ];
-
-
-                  for (const layer of layerOrder) {
-                    const itemLevel = playerItems[layer.index] || 0;
-                    const imagePath = `/img/shop/${layer.folder}/${itemLevel}.webp`;
-
-
-                    try {
-                      const img = await loadImage(imagePath);
-                      ctx.drawImage(img, 0, 0, 512, 512);
-                    } catch (error) {
-                      console.warn(`Failed to load image: ${imagePath}`, error);
-                    }
-                  }
-
-
-                  const link = document.createElement('a');
-                  link.download = 'my-digital-rabbit.png';
-                  link.href = canvas.toDataURL('image/png', 1.0);
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                } catch (error) {
-                  console.error('Error creating avatar image:', error);
-                }
-              }}
-              className="text-xs hover:underline flex items-center gap-1"
-              style={{ color: '#333', border: 'none', cursor: 'pointer' }}
-            >
-              <Download className="w-3 h-3" />
-              Download Rabbit
-            </button>
-          </div>
+          {twitterAccount?.username && (
+            <p className="text-xs mt-2" style={{ color: textColor }}>
+              @{twitterAccount.username}
+            </p>
+          )}
         </div>
 
 
@@ -516,10 +406,6 @@ export default function Profile({ playerData }) {
         </div>
       </div>
 
-
-      <XProfileDisplay />
-
-
       {/* ✅ NEW: Messages Section */}
       <div className="flex-1 flex flex-col md:flex-row gap-8 items-stretch mt-4">
         <div className="w-full md:w-1/2 flex flex-col justify-center" style={{ color: textColor }}>
@@ -545,11 +431,11 @@ export default function Profile({ playerData }) {
               }}
               className='text-center'
             >
-              Messages This Week
+              Messages
             </h3>
             <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
+              display: 'flex',
+              flexWrap: 'wrap',
               gap: '15px',
               marginBottom: '15px'
             }}>
@@ -557,32 +443,59 @@ export default function Profile({ playerData }) {
                 background: isNight ? '#1a1a1a' : '#e9efeaff',
                 padding: '12px',
                 borderRadius: '8px',
-                textAlign: 'center'
+                textAlign: 'center',
+                flex: '1 1 120px'
               }}>
                 <p style={{ margin: 0, fontSize: '14px', color: isNight ? '#888' : '#666' }}>Today</p>
                 <p style={{ margin: '8px 0 0 0', fontSize: '24px', fontWeight: 'bold' }}>
-                  {dailyMessages}
+                  {isWeeklyReady ? dailyMessages : '...'}
                 </p>
               </div>
               <div style={{
                 background: isNight ? '#1a1a1a' : '#e9efeaff',
                 padding: '12px',
                 borderRadius: '8px',
-                textAlign: 'center'
+                textAlign: 'center',
+                flex: '1 1 120px'
               }}>
                 <p style={{ margin: 0, fontSize: '14px', color: isNight ? '#888' : '#666' }}>Total Week</p>
                 <p style={{ margin: '8px 0 0 0', fontSize: '24px', fontWeight: 'bold' }}>
-                  {totalWeeklyMessages}
+                  {isWeeklyReady ? totalWeeklyMessages : '...'}
+                </p>
+              </div>
+              <div style={{
+                background: isNight ? '#1a1a1a' : '#e9efeaff',
+                padding: '12px',
+                borderRadius: '8px',
+                textAlign: 'center',
+                flex: '1 1 120px'
+              }}>
+                <p style={{ margin: 0, fontSize: '14px', color: isNight ? '#888' : '#666' }}>Total</p>
+                <p
+                  title={hasTotalMessages ? totalMessagesCount.toLocaleString('en-US') : undefined}
+                  style={{
+                    margin: '8px 0 0 0',
+                    fontSize: 'clamp(18px, 4vw, 24px)',
+                    fontWeight: 'bold',
+                    lineHeight: 1.15,
+                    wordBreak: 'break-word'
+                  }}
+                >
+                  {hasTotalMessages ? formatCompactCount(totalMessagesCount) : '...'}
                 </p>
               </div>
             </div>
           </div>
         </div>
         {/* RIGHT - Chart */}
-        <div className="w-full md:w-1/2 flex flex-col">
-          <div className="w-full md:w-1/2 -ml-8 mt-4">
+        <div className="w-full md:w-1/2 flex items-center justify-center">
+          {!isWeeklyReady ? (
+            <div className="flex items-center justify-center h-64 w-full">
+              <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : (
             <MessageChart />
-          </div>
+          )}
         </div>
       </div>
 

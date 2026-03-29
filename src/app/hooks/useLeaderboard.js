@@ -40,8 +40,18 @@ export function useLeaderboard(limit = null, user = null, complete = true) {
             if (queryString) url += `?${queryString}`;
 
             console.log(`Fetching leaderboard: ${url}`);
+            const isDevelopment = process.env.NODE_ENV === 'development';
 
             const response = await fetch(url, {
+                ...(isDevelopment
+                    ? {
+                        cache: 'no-store',
+                        headers: {
+                            'Cache-Control': 'no-cache',
+                            Pragma: 'no-cache',
+                        },
+                    }
+                    : {}),
             });
 
             setLoading(true);

@@ -2,9 +2,10 @@
 
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { unstable_cache } from 'next/cache';
 import { parseAbi, keccak256, encodePacked } from 'viem';
 import { verifyAndGetUser } from '@/lib/privyClient';
-import { publicClient, publicClientEth } from '@/utils/chainConfig';
+import { publicClient, publicClientMegaMainnet } from '@/utils/chainConfig';
 import { signMessageQuests } from '@/lib/walletBackend';
 import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, DIGIT_RABBITS_CHAT_ABI, DIGIT_RABBITS_CHAT_ADDRESS } from '@/utils/chainConfig';
 
@@ -14,6 +15,8 @@ const erc721Abi = parseAbi([
 ]);
 
 const NFT_ADDRESS = process.env.ERC721_DIGIT_RABBITS_CONTRACT_ADDRESS;
+const AUTH_CACHE_TTL_SECONDS = 60;
+const HOLDINGS_CACHE_TTL_SECONDS = 60;
 
 /**
  * ✅ Configuration centralisée des quêtes
@@ -79,7 +82,7 @@ function getWeekNumber(date) {
  */
 async function checkNFTBalance(allLinkedWallets) {
     try {
-        const balances = await publicClientEth.multicall({
+        const balances = await publicClientMegaMainnet.multicall({
             contracts: allLinkedWallets.map(address => ({
                 address: NFT_ADDRESS,
                 abi: erc721Abi,
@@ -94,6 +97,42 @@ async function checkNFTBalance(allLinkedWallets) {
         console.error('Error checking NFT balance:', error);
         return 0;
     }
+}
+
+function getHoldingsCacheKey(wallets) {
+    return wallets
+        .filter(Boolean)
+        .map(address => address.toLowerCase())
+        .sort()
+        .join(',');
+}
+
+const getCachedUserFromToken = unstable_cache(
+    async (idToken) => verifyAndGetUser(idToken),
+    ['quests-auth-user'],
+    {
+        tags: ['quests-auth-user'],
+        revalidate: AUTH_CACHE_TTL_SECONDS,
+    }
+);
+
+const getCachedNFTBalanceByWalletKey = unstable_cache(
+    async (walletsKey) => {
+        if (!walletsKey) return 0;
+        const wallets = walletsKey.split(',').filter(Boolean);
+        return checkNFTBalance(wallets);
+    },
+    ['quests-holdings'],
+    {
+        tags: ['quests-holdings'],
+        revalidate: HOLDINGS_CACHE_TTL_SECONDS,
+    }
+);
+
+async function getCachedNFTBalance(allLinkedWallets) {
+    const walletsKey = getHoldingsCacheKey(allLinkedWallets);
+    if (!walletsKey) return 0;
+    return getCachedNFTBalanceByWalletKey(walletsKey);
 }
 
 /**
@@ -164,7 +203,7 @@ async function validateQuestCompletion(
             }
 
             case 'daily_hold': {
-                const nftBalance = await checkNFTBalance(allLinkedWallets);
+                const nftBalance = await getCachedNFTBalance(allLinkedWallets);
 
                 if (nftBalance < target) {
                     return {
@@ -251,7 +290,7 @@ export async function POST(request) {
             }, { status: 401 });
         }
 
-        const user = await verifyAndGetUser(idToken);
+        const user = await getCachedUserFromToken(idToken);
 
         const allLinkedWallets = user.linkedAccounts.filter(
             (account) => account.type === 'wallet'
@@ -368,16 +407,110 @@ export async function POST(request) {
     }
 }
 
+async function getQuestStatusForPeriod({
+    playerAddress,
+    questIds,
+    period,
+    user
+}) {
+    const periodKey = getCurrentPeriodKey(period);
+    let claimedQuestsArray = [];
+    let cooldowns = {};
+
+    try {
+        claimedQuestsArray = await publicClient.readContract({
+            address: DIGIT_RABBITS_ADDRESS,
+            abi: DIGIT_RABBITS_ABI,
+            functionName: 'getClaimedQuests',
+            args: [playerAddress, questIds, periodKey]
+        });
+
+        const now = Math.floor(Date.now() / 1000);
+        const cooldownDuration = period === 'daily' ? 24 * 60 * 60 : 7 * 24 * 60 * 60;
+
+        const cooldownResults = await publicClient.multicall({
+            contracts: questIds.map((questId) => ({
+                address: DIGIT_RABBITS_ADDRESS,
+                abi: DIGIT_RABBITS_ABI,
+                functionName: 'getLastQuestClaimTime',
+                args: [playerAddress, questId]
+            })),
+            allowFailure: true
+        });
+
+        cooldowns = questIds.reduce((acc, questId, index) => {
+            const result = cooldownResults[index];
+            const lastClaimTimeNum = result?.status === 'success' ? Number(result.result) : 0;
+
+            if (lastClaimTimeNum > 0) {
+                const nextClaimTime = lastClaimTimeNum + cooldownDuration;
+                acc[questId] = Math.max(0, nextClaimTime - now);
+            } else {
+                acc[questId] = 0;
+            }
+
+            return acc;
+        }, {});
+    } catch (contractError) {
+        console.warn('SC call failed, returning all unclaimed:', contractError.message);
+        claimedQuestsArray = new Array(questIds.length).fill(false);
+        cooldowns = questIds.reduce((acc, questId) => {
+            acc[questId] = 0;
+            return acc;
+        }, {});
+    }
+
+    const claimStatus = questIds.reduce((acc, questId, index) => {
+        acc[questId] = claimedQuestsArray[index] === true;
+        return acc;
+    }, {});
+
+    const claimedQuests = Object.entries(claimStatus)
+        .filter(([_, isClaimed]) => isClaimed)
+        .map(([questId, _]) => questId);
+
+    const shouldCheckHoldings = period === 'daily' && questIds.includes('daily_hold');
+    let balance = 0;
+
+    if (shouldCheckHoldings) {
+        const allLinkedWallets = user?.linkedAccounts
+            ?.filter(acc => acc.chainType === 'ethereum')
+            .map(acc => acc.address)
+            || [];
+        balance = await getCachedNFTBalance(allLinkedWallets);
+    }
+
+    return {
+        playerAddress,
+        period,
+        periodKey,
+        questIds,
+        claimedQuests,
+        claimStatus,
+        cooldowns,
+        holdings: balance,
+        totalQuestCount: questIds.length,
+        claimedCount: claimedQuests.length
+    };
+}
+
 /**
  * GET /api/quests/claim?playerAddress=0x...&questIds=daily_messages,daily_streak&period=daily
  * Récupérer les quêtes déjà claim pour un joueur + les cooldowns restants
  */
 export async function GET(request) {
+    const perfStart = Date.now();
+    const perf = {};
+    const mark = (label) => {
+        perf[label] = Date.now() - perfStart;
+    };
+
     try {
         const { searchParams } = new URL(request.url);
         const playerAddress = searchParams.get('playerAddress');
         const questIdsParam = searchParams.get('questIds');
         const period = searchParams.get('period') || 'daily';
+        mark('parsed_params');
 
         // 2️⃣ Vérifier l'authentification via Privy
         const cookieStore = await cookies();
@@ -390,7 +523,8 @@ export async function GET(request) {
             }, { status: 401 });
         }
 
-        const user = await verifyAndGetUser(idToken);
+        const user = await getCachedUserFromToken(idToken);
+        mark('auth_user_loaded');
 
         if (!playerAddress || !questIdsParam) {
             return NextResponse.json({
@@ -399,95 +533,107 @@ export async function GET(request) {
             }, { status: 400 });
         }
 
-        const questIds = questIdsParam.split(',').map(id => id.trim());
-        const periodKey = getCurrentPeriodKey(period);
+        const questIds = questIdsParam.split(',').map(id => id.trim()).filter(Boolean);
+        mark('quest_ids_parsed');
 
-        let claimedQuestsArray = [];
-        let cooldowns = {};
+        if (period === 'all') {
+            const dailyQuestIds = questIds.filter((id) => QUEST_CONFIG[id]?.type === 'daily');
+            const weeklyQuestIds = questIds.filter((id) => QUEST_CONFIG[id]?.type === 'weekly');
+            mark('all_period_partitioned');
 
-        try {
-            // ✅ Interroger directement le smart contract pour les claims
-            claimedQuestsArray = await publicClient.readContract({
-                address: DIGIT_RABBITS_ADDRESS,
-                abi: DIGIT_RABBITS_ABI,
-                functionName: 'getClaimedQuests',
-                args: [playerAddress, questIds, periodKey]
+            const [dailyData, weeklyData] = await Promise.all([
+                getQuestStatusForPeriod({
+                    playerAddress,
+                    questIds: dailyQuestIds,
+                    period: 'daily',
+                    user
+                }),
+                getQuestStatusForPeriod({
+                    playerAddress,
+                    questIds: weeklyQuestIds,
+                    period: 'weekly',
+                    user
+                })
+            ]);
+            mark('all_period_status_computed');
+
+            const claimStatus = {
+                ...dailyData.claimStatus,
+                ...weeklyData.claimStatus
+            };
+            const cooldowns = {
+                ...dailyData.cooldowns,
+                ...weeklyData.cooldowns
+            };
+            const claimedQuests = [
+                ...dailyData.claimedQuests,
+                ...weeklyData.claimedQuests
+            ];
+
+            const response = NextResponse.json({
+                success: true,
+                data: {
+                    playerAddress,
+                    period: 'all',
+                    questIds,
+                    claimStatus,
+                    cooldowns,
+                    claimedQuests,
+                    holdings: dailyData.holdings || 0,
+                    totalQuestCount: questIds.length,
+                    claimedCount: claimedQuests.length,
+                    daily: dailyData,
+                    weekly: weeklyData
+                }
+            });
+            mark('response_built');
+
+            console.log('[quests/claim][perf]', {
+                mode: 'all',
+                playerAddress,
+                questCount: questIds.length,
+                dailyQuestCount: dailyQuestIds.length,
+                weeklyQuestCount: weeklyQuestIds.length,
+                timingsMs: perf,
+                totalMs: Date.now() - perfStart
             });
 
-            // ✅ Récupérer les cooldowns pour chaque quête
-            const now = Math.floor(Date.now() / 1000);
-            const cooldownDuration = period === 'daily' ? 24 * 60 * 60 : 7 * 24 * 60 * 60;
-
-            for (const questId of questIds) {
-                try {
-                    const lastClaimTime = await publicClient.readContract({
-                        address: DIGIT_RABBITS_ADDRESS,
-                        abi: DIGIT_RABBITS_ABI,
-                        functionName: 'getLastQuestClaimTime',
-                        args: [playerAddress, questId]
-                    });
-
-                    const lastClaimTimeNum = Number(lastClaimTime);
-
-                    if (lastClaimTimeNum > 0) {
-                        const nextClaimTime = lastClaimTimeNum + cooldownDuration;
-                        const remaining = Math.max(0, nextClaimTime - now);
-                        cooldowns[questId] = remaining;
-                    } else {
-                        cooldowns[questId] = 0;
-                    }
-                } catch (error) {
-                    console.warn(`Failed to get cooldown for ${questId}:`, error.message);
-                    cooldowns[questId] = 0;
-                }
-            }
-
-        } catch (contractError) {
-            console.warn('SC call failed, returning all unclaimed:', contractError.message);
-            // Si l'appel SC échoue, retourner tous les quêtes comme non-claim avec cooldown 0
-            claimedQuestsArray = new Array(questIds.length).fill(false);
-            cooldowns = questIds.reduce((acc, questId) => {
-                acc[questId] = 0;
-                return acc;
-            }, {});
+            return response;
         }
 
-        // ✅ Construire la réponse avec tous les quêtes, claim ou non
-        const claimStatus = questIds.reduce((acc, questId, index) => {
-            acc[questId] = claimedQuestsArray[index] === true;
-            return acc;
-        }, {});
+        const filteredQuestIds = questIds.filter((id) => QUEST_CONFIG[id]?.type === period);
+        mark('single_period_filtered');
+        const periodData = await getQuestStatusForPeriod({
+            playerAddress,
+            questIds: filteredQuestIds,
+            period,
+            user
+        });
+        mark('single_period_status_computed');
 
-        const claimedQuests = Object.entries(claimStatus)
-            .filter(([_, isClaimed]) => isClaimed)
-            .map(([questId, _]) => questId);
-
-
-        const allLinkedWallets = user?.linkedAccounts
-            ?.filter(acc => acc.chainType === 'ethereum')
-            .map(acc => acc.address) // ← Extraire les adresses
-            || [];
-
-        // Récupérer le nombre de NFTs détenus par le joueur par la requête GET
-        const balance = await checkNFTBalance(allLinkedWallets);
-
-        return NextResponse.json({
+        const response = NextResponse.json({
             success: true,
-            data: {
-                playerAddress,
-                period,
-                periodKey,
-                questIds,          // ✅ Toutes les quêtes demandées
-                claimedQuests,      // ✅ Seulement celles qui sont claim
-                claimStatus,        // ✅ Map complète de chaque quête
-                cooldowns,          // ✅ NOUVEAU: Map des cooldowns en secondes
-                holdings: balance,
-                totalQuestCount: questIds.length,
-                claimedCount: claimedQuests.length
-            }
+            data: periodData
+        });
+        mark('response_built');
+
+        console.log('[quests/claim][perf]', {
+            mode: period,
+            playerAddress,
+            questCount: filteredQuestIds.length,
+            timingsMs: perf,
+            totalMs: Date.now() - perfStart
         });
 
+        return response;
+
     } catch (error) {
+        mark('error');
+        console.warn('[quests/claim][perf][error]', {
+            timingsMs: perf,
+            totalMs: Date.now() - perfStart,
+            error: error?.message || String(error)
+        });
         console.error('Error fetching claimed quests:', error);
         return NextResponse.json({
             success: false,

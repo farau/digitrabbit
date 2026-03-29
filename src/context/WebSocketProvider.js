@@ -337,14 +337,82 @@ export function WebSocketProvider({ children }) {
         console.log('🌐 WebSocketProvider mounted')
         isMountedRef.current = true
 
+        let intervalId = null
+        let socketRpcClient = null
+
+        const heartbeat = async () => {
+            console.log('⏰ ping ->')
+            wsPublicClient.request({ method: 'eth_chainId' })
+                .then(() => console.log('⏰ <- pong'))
+                .catch((e) => console.error('⚠️ Heartbeat failed:', e))
+        }
+
+        const setupSocketListeners = async () => {
+            try {
+                socketRpcClient = await wsPublicClient.transport.getRpcClient()
+
+                const onClose = async () => {
+                    console.warn('⚠️ WebSocket closed, reconnecting...')
+
+                    // Cleanup listeners
+                    socketRpcClient.socket.removeEventListener('close', onClose)
+                    socketRpcClient.socket.removeEventListener('error', onError)
+
+                    // IMPORTANT : invalide le cache viem pour forcer une nouvelle connexion
+                    // Viem peut déjà avoir fermé le socket, on ignore l'erreur
+                    try {
+                        socketRpcClient.close()
+                    } catch (e) {
+                        console.log('ℹ️ Socket already closed by viem')
+                    }
+
+                    clearInterval(intervalId)
+
+                    if (!isMountedRef.current) return
+
+                    // Reconnexion
+                    await resync()
+                    setupChatWebSocket()
+                    setupRabbitsWebSocket()
+
+                    // Re-établit les listeners sur le nouveau socket
+                    setupSocketListeners()
+
+                    // Relance le heartbeat
+                    intervalId = setInterval(heartbeat, 5 * 60 * 1000)
+                }
+
+                const onError = (ev) => {
+                    console.error('❌ Socket error:', ev)
+                }
+
+                socketRpcClient.socket.addEventListener('close', onClose)
+                socketRpcClient.socket.addEventListener('error', onError)
+
+            } catch (e) {
+                console.error('❌ Failed to setup socket listeners:', e)
+            }
+        }
+
+        intervalId = setInterval(heartbeat, 5 * 60 * 1000)
+
         resync().then(() => {
             setupChatWebSocket()
             setupRabbitsWebSocket()
+            setupSocketListeners()
         })
+
+        heartbeat()
 
         return () => {
             console.log('❌ WebSocketProvider unmounting')
             isMountedRef.current = false
+
+            clearInterval(intervalId)
+
+            if (socketRpcClient) {
+                socketRpcClient.close()
+            }
 
             if (unwatchChatRef.current) {
                 unwatchChatRef.current()

@@ -1,5 +1,5 @@
 import { createPublicClient, http, webSocket, parseAbi } from "viem"
-import { megaethTestnet, mainnet, berachain } from "viem/chains"
+import { megaethTestnet, megaeth } from "viem/chains"
 // Configuration customisée du Megaeth Testnet avec une URL RPC spécifique
 export const customMegaethTestnet = {
   ...megaethTestnet,
@@ -31,21 +31,15 @@ export const wsPublicClient = createPublicClient({
   ),
 })
 
-export const publicClientEth = createPublicClient({
-  chain: mainnet,
+export const publicClientMegaMainnet = createPublicClient({
+  chain: megaeth,
   transport: http(), // Utilise l’URL par défaut ou ajoute une RPC custom ici
 })
-
-export const publicClientBera = createPublicClient({
-  chain: berachain,
-  transport: http(), // Utilise l’URL par défaut ou ajoute une RPC custom ici
-})
-
 
 export const defineGasPrice = async (walletClient) => {
   try {
     let estimatedGas = await walletClient.estimateContractGas({
-      account: embeddedWallet.address,
+      account: walletClient.address,
       address: DIGIT_RABBITS_ADDRESS,
       abi: DIGIT_RABBITS_ABI,
       functionName: 'play',

@@ -1,20 +1,18 @@
 // app/api/chat/send/route.js
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { parseAbi } from 'viem';
+import { unstable_cache } from 'next/cache';
 import { signMessageChat } from '@/lib/walletBackend';
-import { publicClientEth } from '@/utils/chainConfig';
 import { verifyAndGetUser } from '@/lib/privyClient';
 
-// ERC721 ABI
-const erc721Abi = parseAbi([
-    'function balanceOf(address owner) view returns (uint256)'
-]);
+const CHAT_AUTH_CACHE_TTL_SECONDS = 30;
+const ETH_ADDRESS_REGEX = /^0x[a-fA-F0-9]{40}$/;
+const CHAT_SEND_PERF_LOG_ENABLED = process.env.NODE_ENV !== 'production' || process.env.DEBUG_CHAT_PERF === '1';
 
 /**
  * Calculer le score d'un message (0-5)
  */
-async function calculateMessageScore(content, userAddress, privyUserId) {
+function calculateMessageScore(content) {
     // 1. Score de base selon la longueur (0-2 points)
     const length = content.length;
     let lengthBonus = 0;
@@ -80,61 +78,54 @@ async function calculateMessageScore(content, userAddress, privyUserId) {
     };
 }
 
-/**
- * Compter les NFTs de l'utilisateur
- */
-async function countUserNFTs(privyUserId) {
-    try {
-        const user = await verifyAndGetUser(privyUserId);
-        const allAddresses = [];
+function isAddressLinkedToUser(user, userAddressLower) {
+    const linkedAccounts = user?.linkedAccounts;
 
-        if (user.wallet?.address) {
-            allAddresses.push(user.wallet.address);
-        }
-
-        if (user.linkedAccounts) {
-            user.linkedAccounts.forEach(account => {
-                if (account.type === 'wallet' && account.address) {
-                    allAddresses.push(account.address);
-                }
-            });
-        }
-
-        let totalNFTs = 0;
-
-        for (const address of allAddresses) {
-            try {
-                const balance = await publicClientEth.readContract({
-                    address: process.env.ERC721_DIGIT_RABBITS_CONTRACT_ADDRESS,
-                    abi: erc721Abi,
-                    functionName: 'balanceOf',
-                    args: [address]
-                });
-
-                totalNFTs += Number(balance);
-            } catch (error) {
-                console.error(`Error checking NFTs for ${address}:`, error);
-            }
-        }
-
-        return totalNFTs;
-    } catch (error) {
-        console.error('Error counting NFTs:', error);
-        return 0;
+    if (!Array.isArray(linkedAccounts)) {
+        return false;
     }
+
+    for (const account of linkedAccounts) {
+        if (account?.type === 'wallet' && account?.address?.toLowerCase() === userAddressLower) {
+            return true;
+        }
+    }
+
+    return false;
 }
+
+const getCachedChatUser = unstable_cache(
+    async (idToken) => verifyAndGetUser(idToken),
+    ['chat-auth-user'],
+    {
+        tags: ['chat-auth-user'],
+        revalidate: CHAT_AUTH_CACHE_TTL_SECONDS
+    }
+);
 
 
 /**
  * POST /api/chat/send
  */
 export async function POST(request) {
+    const startedAt = Date.now();
+    const timingsMs = {};
+    const mark = (step) => {
+        timingsMs[step] = Date.now() - startedAt;
+    };
+
     try {
-        const { content, userAddress } = await request.json();
+        const payload = await request.json();
+        const rawContent = typeof payload?.content === 'string' ? payload.content : '';
+        const content = rawContent.trim();
+        const userAddress = typeof payload?.userAddress === 'string' ? payload.userAddress : '';
+        const normalizedAddress = userAddress.toLowerCase();
+        mark('parsed_payload');
 
         // 1. Get identity token from cookie
         const cookieStore = await cookies();
         const idToken = cookieStore.get('privy-id-token')?.value;
+        mark('id_token_loaded');
 
         if (!idToken) {
             return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
@@ -149,33 +140,45 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Message too long' }, { status: 400 });
         }
 
-        if (!/^0x[a-fA-F0-9]{40}$/.test(userAddress)) {
+        if (!ETH_ADDRESS_REGEX.test(userAddress)) {
             return NextResponse.json({ error: 'Invalid address format' }, { status: 400 });
         }
 
-        console.log('Scoring message from', userAddress);
-        // 3. Calculer le score
-        const scoreFactors = await calculateMessageScore(content, userAddress, idToken);
+        // 3. Calculer le score (pure function)
+        const scoreFactors = calculateMessageScore(content);
+        mark('message_scored');
+
+        // 4. Auth user (cached) + vérification ownership adresse
+        const user = await getCachedChatUser(idToken);
+        mark('auth_user_loaded');
+
+        const isAddressLinked = isAddressLinkedToUser(user, normalizedAddress);
+
+        if (!isAddressLinked) {
+            return NextResponse.json({ error: 'Address does not belong to authenticated user' }, { status: 403 });
+        }
 
         // Extraire les infos Twitter de l'utilisateur Privy
-        const user = await verifyAndGetUser(idToken);
         const twitterAccount = user?.twitter;
 
         const twitterUsername = twitterAccount ? twitterAccount.username : '';
         const twitterProfilePictureUrl = twitterAccount ? twitterAccount.profilePictureUrl : '';
+        mark('twitter_extracted');
 
-        // 4. Générer un nonce unique
+        // 5. Générer un nonce unique
         const nonce = Date.now() + Math.floor(Math.random() * 1000000);
+        mark('nonce_generated');
 
-        // 5. Signer le message
+        // 6. Signer le message
         const signature = await signMessageChat(
             userAddress,
             content,
             scoreFactors.finalScore,
             nonce
         );
+        mark('message_signed');
 
-        return NextResponse.json({
+        const response = NextResponse.json({
             success: true,
             score: scoreFactors.finalScore,
             scoreBreakdown: scoreFactors,
@@ -185,6 +188,25 @@ export async function POST(request) {
             signature,
             message: 'Message scored and signed'
         });
+
+        mark('response_built');
+
+        const serverTiming = Object.entries(timingsMs)
+            .map(([name, duration]) => `${name};dur=${duration}`)
+            .join(', ');
+        response.headers.set('Server-Timing', serverTiming);
+
+        if (CHAT_SEND_PERF_LOG_ENABLED) {
+            console.log('[chat/send][perf]', {
+                userAddress,
+                contentLength: content.length,
+                score: scoreFactors.finalScore,
+                timingsMs,
+                totalMs: Date.now() - startedAt
+            });
+        }
+
+        return response;
 
     } catch (error) {
         console.error('Error in sendChatMessage:', error);

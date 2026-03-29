@@ -1,7 +1,18 @@
 import { PrivyClient } from '@privy-io/server-auth';
 
+function getPrivyClient() {
+    const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
+    const appSecret = process.env.PRIVY_APP_SECRET;
+
+    if (!appId || !appSecret) {
+        throw new Error('Privy environment variables are not configured');
+    }
+
+    return new PrivyClient(appId, appSecret);
+}
+
 // Initialiser l'API Privy pour vérifier les tokens
-export const privy = new PrivyClient(process.env.NEXT_PUBLIC_PRIVY_APP_ID, process.env.PRIVY_APP_SECRET);
+export const privy = getPrivyClient();
 
 export async function verifyAndGetUser(idToken) {
     try {

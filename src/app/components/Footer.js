@@ -54,12 +54,51 @@ export default function Footer({ visibleApps, setVisibleApps, appZIndices, setAp
       <div className={styles.taskbarLeft}>
         {/* Logo sur la gauche */}
         <button className={styles.startButton} onClick={() => setStartOpen(!startOpen)}>
-          <Image src={themeMode === 'light' ? "/img/logo.png" : "/img/logo_grey.png"} alt="Nav Logo" width={70} height={50} />
+          <Image
+            src={themeMode === 'light' ? "/img/logo.png" : "/img/logo_grey.png"}
+            alt="Nav Logo"
+            width={70}
+            height={50}
+            style={{ height: 'auto' }}
+          />
         </button>
 
         {/* Menu de navigation */}
         {startOpen && (
           <div className={styles.startMenu} ref={menuRef}>
+            <div className={styles.menuItem} onClick={() => { openApp("Game"); setStartOpen(false); }}>
+              <Image src="/img/icons/game.png" alt="Game icon" width={30} height={30} className={styles.menuIcon} />
+              Game
+            </div>
+            <div className={styles.menuItem} onClick={() => { openApp("RabbitChat"); setStartOpen(false); }}>
+              <Image src="/img/icons/rabbitchat.png" alt="RabbitChat icon" width={30} height={30} className={styles.menuIcon} />
+              RabbitChat
+            </div>
+            <div className={styles.menuItem} onClick={() => { openApp("Quests"); setStartOpen(false); }}>
+              <Image
+                src="/img/icons/quests.png"
+                alt="Quests icon"
+                width={30}
+                height={30}
+                className={styles.menuIcon}
+                style={{ height: 'auto' }}
+              />
+              Quests
+            </div>
+            <hr className={styles.menuDivider} />
+            <div className={styles.menuItem} onClick={() => { openApp("Profile"); setStartOpen(false); }}>
+              <Image src="/img/icons/profile.png" alt="Profile icon" width={30} height={30} className={styles.menuIcon} />
+              Profile
+            </div>
+            <div className={styles.menuItem} onClick={() => { openApp("Leaderboard"); setStartOpen(false); }}>
+              <Image src="/img/icons/leaderboard.png" alt="Leaderboard icon" width={30} height={30} className={styles.menuIcon} />
+              Leaderboard
+            </div>
+            <div className={styles.menuItem} onClick={() => { openApp("Settings"); setStartOpen(false); }}>
+              <Image src="/img/icons/settings.png" alt="Settings icon" width={30} height={30} className={styles.menuIcon} />
+              Settings
+            </div>
+            <hr className={styles.menuDivider} />
             <div className={styles.menuItem} onClick={() => { openApp("About"); setStartOpen(false); }}>
               <Image src="/img/icons/about.png" alt="About icon" width={30} height={30} className={styles.menuIcon} />
               About
@@ -81,28 +120,6 @@ export default function Footer({ visibleApps, setVisibleApps, appZIndices, setAp
               Chill
             </div>
             <hr className={styles.menuDivider} />
-            <div className={styles.menuItem} onClick={() => { openApp("Profile"); setStartOpen(false); }}>
-              <Image src="/img/icons/profile.png" alt="Profile icon" width={30} height={30} className={styles.menuIcon} />
-              Profile
-            </div>
-            <div className={styles.menuItem} onClick={() => { openApp("Game"); setStartOpen(false); }}>
-              <Image src="/img/icons/game.png" alt="Game icon" width={30} height={30} className={styles.menuIcon} />
-              Game
-            </div>
-            <div className={styles.menuItem} onClick={() => { openApp("Shop"); setStartOpen(false); }}>
-              <Image src="/img/icons/shop.png" alt="Shop icon" width={30} height={30} className={styles.menuIcon} />
-              Shop
-            </div>
-            <hr className={styles.menuDivider} />
-            <div className={styles.menuItem} onClick={() => { openApp("Leaderboard"); setStartOpen(false); }}>
-              <Image src="/img/icons/leaderboard.png" alt="Leaderboard icon" width={30} height={30} className={styles.menuIcon} />
-              Leaderboard
-            </div>
-            <hr className={styles.menuDivider} />
-            <div className={styles.menuItem} onClick={() => { openApp("Settings"); setStartOpen(false); }}>
-              <Image src="/img/icons/settings.png" alt="Settings icon" width={30} height={30} className={styles.menuIcon} />
-              Settings
-            </div>
           </div>
         )}
 

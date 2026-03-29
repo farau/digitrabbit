@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { parseAbi, keccak256, encodePacked } from 'viem';
 import { privy, verifyAndGetUser } from '@/lib/privyClient';
-import { publicClient, publicClientEth } from '@/utils/chainConfig';
+import { publicClient, publicClientMegaMainnet } from '@/utils/chainConfig';
 import { signMessage, signMessageStartGame } from '@/lib/walletBackend';
 
 // ERC721 ABI
@@ -34,8 +34,8 @@ async function checkNFTOwnership(user) {
         console.log(`Checking NFT ownership for user ${user.id}`);
         console.log(`Addresses to check: ${allAddresses.join(', ')}`);
 
-        const balances = await publicClientEth.multicall({
-            contracts: allLinkedWallets.map(address => ({
+        const balances = await publicClientMegaMainnet.multicall({
+            contracts: allAddresses.map(address => ({
                 address: NFT_ADDRESS,
                 abi: erc721Abi,
                 functionName: 'balanceOf',
@@ -95,7 +95,7 @@ export async function POST(request) {
         // 2. Vérifier la possession du NFT sur tous les wallets
         const hasNFT = await checkNFTOwnership(user);
 
-        if (!hasNFT) {
+        /*if (!hasNFT) {
             return NextResponse.json(
                 {
                     error: 'NFT_NOT_FOUND',
@@ -104,7 +104,7 @@ export async function POST(request) {
                 },
                 { status: 403 }
             );
-        }
+        }*/
 
         // 3. Générer un nonce unique
         const nonce = Date.now() + Math.floor(Math.random() * 1000000);

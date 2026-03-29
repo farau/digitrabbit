@@ -105,7 +105,7 @@ function hasValidBrowserHeaders(req) {
     return true;
 }
 
-export async function middleware(req) {
+export async function proxy(req) {
     const cookieStore = await cookies();
     const userAgent = req.headers.get('user-agent') || '';
 

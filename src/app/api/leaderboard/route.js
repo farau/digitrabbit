@@ -2,6 +2,34 @@
 import { getUserRank, getTopPlayers, getLeaderboard, getCompleteLeaderboardData } from "@/lib/leaderboard";
 import { NextResponse } from 'next/server';
 
+const devNoStoreHeaders = {
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+    Pragma: 'no-cache',
+    Expires: '0',
+};
+
+const prodCacheHeaders = {
+    'Cache-Control': 'public, max-age=900, s-maxage=900, stale-while-revalidate=300',
+};
+
+function jsonResponse(payload, init = {}) {
+    const headers =
+        process.env.NODE_ENV === 'development'
+            ? {
+                ...init.headers,
+                ...devNoStoreHeaders,
+            }
+            : {
+                ...prodCacheHeaders,
+                ...init.headers,
+            };
+
+    return NextResponse.json(payload, {
+        ...init,
+        headers,
+    });
+}
+
 export async function GET(request) {
     const startTime = Date.now();
 
@@ -16,7 +44,7 @@ export async function GET(request) {
             const userRank = await getUserRank(user);
             const processingTime = Date.now() - startTime;
 
-            return NextResponse.json({
+            return jsonResponse({
                 userRank,
                 metadata: {
                     processingTimeMs: processingTime,
@@ -31,7 +59,7 @@ export async function GET(request) {
             const completeData = await getCompleteLeaderboardData();
             const processingTime = Date.now() - startTime;
 
-            return NextResponse.json({
+            return jsonResponse({
                 ...completeData,
                 metadata: {
                     ...completeData.metadata,
@@ -44,7 +72,7 @@ export async function GET(request) {
         if (limit) {
             const limitNum = parseInt(limit, 10);
             if (isNaN(limitNum) || limitNum < 1 || limitNum > 100) {
-                return NextResponse.json(
+                return jsonResponse(
                     { error: "The 'limit' parameter must be a number between 1 and 100" },
                     { status: 400 }
                 );
@@ -53,7 +81,7 @@ export async function GET(request) {
             const topPlayersData = await getTopPlayers(limitNum);
             const processingTime = Date.now() - startTime;
 
-            return NextResponse.json({
+            return jsonResponse({
                 ...topPlayersData,
                 metadata: {
                     ...topPlayersData.metadata,
@@ -66,7 +94,7 @@ export async function GET(request) {
         const leaderboardData = await getLeaderboard();
         const processingTime = Date.now() - startTime;
 
-        return NextResponse.json({
+        return jsonResponse({
             ...leaderboardData,
             metadata: {
                 ...leaderboardData.metadata,
@@ -91,7 +119,7 @@ export async function GET(request) {
             errorMessage = 'Service temporarily unavailable';
         }
 
-        return NextResponse.json(
+        return jsonResponse(
             {
                 error: errorMessage,
                 details: process.env.NODE_ENV === 'development' ? error.message : undefined,
