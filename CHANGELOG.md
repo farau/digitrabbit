@@ -2,7 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+
+## Changelog
+
+### Fixes
+- Fixed missing overlay background on Vercel/Linux by normalizing asset filename case:
+  - Renamed `public/img/overlay.PNG` -> `public/img/overlay.png`.
+- Kept CSS references unchanged (`/img/overlay.png`), now matching the actual tracked file name.
+
+### Context
+- Root cause: macOS local dev tolerated filename case mismatch, while Vercel (Linux) is case-sensitive, causing `overlay.png` to return 404.
+
+
+## [29/03/2026]
 
 ### Infra / Tooling
 - Upgraded to `next@16.2.1`, `eslint-config-next@16.2.1`, `@sentry/nextjs@10.46.0`, and `viem@2.46.3`.
