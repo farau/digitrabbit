@@ -39,6 +39,7 @@ export function WebSocketProvider({ children }) {
     const onPointsClaimedCallbackRef = useRef(null)
     const onUserRoleChangedCallbackRef = useRef(null)
     const onUserMutedCallbackRef = useRef(null)
+    const onGameStartedCallbackRef = useRef(null)
     const onGamePlayedCallbackRef = useRef(null)
     const onQuestRewardCreditedCallbackRef = useRef(null)
 
@@ -52,6 +53,9 @@ export function WebSocketProvider({ children }) {
         }
         if (callbacks.onUserMuted) {
             onUserMutedCallbackRef.current = callbacks.onUserMuted
+        }
+        if (callbacks.onGameStarted) {
+            onGameStartedCallbackRef.current = callbacks.onGameStarted
         }
         if (callbacks.onGamePlayed) {
             onGamePlayedCallbackRef.current = callbacks.onGamePlayed
@@ -279,6 +283,11 @@ export function WebSocketProvider({ children }) {
                         console.log('🔇 UserMuted event detected')
                         if (onUserMutedCallbackRef.current) {
                             onUserMutedCallbackRef.current(log)
+                        }
+                    } else if (log.eventName === 'GameStarted') {
+                        console.log('🚀 GameStarted event detected')
+                        if (onGameStartedCallbackRef.current) {
+                            onGameStartedCallbackRef.current(log)
                         }
                     } else if (log.eventName === 'GamePlayed') {
                         console.log('🎮 GamePlayed event detected')

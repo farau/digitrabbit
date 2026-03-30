@@ -72,6 +72,7 @@ export const COOLDOWN_SECONDS = 12 * 60 * 60; // 12h cooldown
 
 export const DIGIT_RABBITS_ABI = parseAbi([
   // Season1 ABI - State variables
+  'function COOLDOWN() external view returns (uint256)',
   'function totalClicksGame() external view returns (uint256)',
   'function currentSeasonId() external view returns (uint256)',
 

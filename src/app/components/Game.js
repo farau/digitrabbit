@@ -4,7 +4,7 @@
 import styles from './Game.module.css'
 import { useState, useEffect, useRef } from 'react'
 import { Loader2 } from 'lucide-react'
-import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, COOLDOWN_SECONDS, customMegaethTestnet } from '@/utils/chainConfig'
+import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, COOLDOWN_SECONDS, customMegaethTestnet, publicClient } from '@/utils/chainConfig'
 import { XLogo } from '@/utils/constants'
 import React from 'react'
 import Wrapper from './Wrapper'
@@ -18,6 +18,7 @@ import WalletButton from './WalletButton'
 
 function PlayerData({ themeMode, seasonId, playerData, embeddedWallet }) {
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
+  const [cooldownSeconds, setCooldownSeconds] = useState(COOLDOWN_SECONDS);
   const [columns, setColumns] = useState(2);
 
   const isNight = themeMode === 'dark';
@@ -41,13 +42,39 @@ function PlayerData({ themeMode, seasonId, playerData, embeddedWallet }) {
   }, []);
 
   useEffect(() => {
+    let mounted = true;
+
+    const fetchCooldownFromContract = async () => {
+      try {
+        const cooldown = await publicClient.readContract({
+          address: DIGIT_RABBITS_ADDRESS,
+          abi: DIGIT_RABBITS_ABI,
+          functionName: 'COOLDOWN',
+        });
+
+        if (mounted) {
+          setCooldownSeconds(Number(cooldown));
+        }
+      } catch (error) {
+        console.error('Error fetching COOLDOWN from contract, fallback to local constant:', error);
+      }
+    };
+
+    fetchCooldownFromContract();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
     if (sessionEndsAt === null || sessionEndsAt === undefined) return;
     if (sessionEndsAt === 0n || sessionEndsAt === 0) {
       setCooldownRemaining(0);
       return;
     }
 
-    const cooldownEnd = Number(sessionEndsAt) + COOLDOWN_SECONDS;
+    const cooldownEnd = Number(sessionEndsAt) + cooldownSeconds;
 
     const updateTimer = () => {
       const now = Math.floor(Date.now() / 1000);
@@ -58,7 +85,7 @@ function PlayerData({ themeMode, seasonId, playerData, embeddedWallet }) {
     updateTimer();
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
-  }, [sessionEndsAt]);
+  }, [sessionEndsAt, cooldownSeconds]);
 
   if (!playerData) return <div style={{ color: textColor }}>Loading player data...</div>;
 
@@ -98,7 +125,7 @@ function PlayerData({ themeMode, seasonId, playerData, embeddedWallet }) {
 
         <div style={baseCardStyle}>
           <div style={labelStyle} className="text-base sm:text-sm md:text-xs">
-            {cooldownRemaining > COOLDOWN_SECONDS ? 'Clicks' : 'Last Clicks'}
+            {cooldownRemaining > cooldownSeconds ? 'Clicks' : 'Last Clicks'}
           </div>
           <div style={valueStyle} className="text-base sm:text-sm md:text-xs">{gameClicks}</div>
         </div>
@@ -113,11 +140,11 @@ function PlayerData({ themeMode, seasonId, playerData, embeddedWallet }) {
           })
         }}>
           <div style={labelStyle} className="text-base sm:text-sm md:text-xs">
-            {cooldownRemaining > COOLDOWN_SECONDS ? 'Time remaining' : 'Cooldown'}
+            {cooldownRemaining > cooldownSeconds ? 'Time remaining' : 'Cooldown'}
           </div>
           <div style={valueStyle} className="text-base sm:text-sm md:text-xs">
-            {cooldownRemaining > COOLDOWN_SECONDS
-              ? new Date((cooldownRemaining - COOLDOWN_SECONDS) * 1000)
+            {cooldownRemaining > cooldownSeconds
+              ? new Date((cooldownRemaining - cooldownSeconds) * 1000)
                 .toISOString()
                 .substr(11, 8)
               : cooldownRemaining > 0
@@ -351,7 +378,7 @@ export default function Game({ playerData, preSignedPool, isInitializing, error,
         }
       }
 
-      console.log(`Starting game on MegaETH Testnet...`);
+      console.log(`Starting game on MegaETH ...`);
 
       // 5. Démarrer le jeu (envoi réel)
       const txHash = await walletClient.writeContract({

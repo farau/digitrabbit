@@ -251,6 +251,11 @@ export default function MainPage() {
         console.log('💰 Points claimed, refreshing player data...')
         fetchPlayerData()
       },
+      onGameStarted: (log) => {
+        if (!isCurrentPlayerEvent(log)) return
+        console.log('🚀 Game started, refreshing player data...')
+        fetchPlayerData()
+      },
       onGamePlayed: (log) => {
         if (!isCurrentPlayerEvent(log)) return
         console.log('🎮 Game played, refreshing player data...')

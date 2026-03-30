@@ -28,6 +28,20 @@ All notable changes to this project will be documented in this file.
 - Deferred effect-driven window recenter/reclamp updates with `requestAnimationFrame` cleanup where needed.
 - Stabilized effect dependency usage around resize/reposition logic.
 
+### Game / Cooldown
+- Switched game cooldown source from local constant-only behavior to on-chain contract value:
+  - Added `COOLDOWN()` getter to `DIGIT_RABBITS_ABI`.
+  - `Game` now reads cooldown from contract and falls back to `COOLDOWN_SECONDS` if RPC read fails.
+- Improved Start Game UX responsiveness:
+  - Added immediate "transaction submitted / confirming" state after `txHash` is returned.
+  - Kept timer start strictly after `waitForTransactionReceipt` confirmation.
+  - Exposed pending start tx hash in UI while waiting for receipt.
+
+### WebSocket / Live Sync
+- Added `GameStarted` callback support in `WebSocketProvider`.
+- Registered `onGameStarted` in `MainPage` to refresh player data as soon as game starts.
+- Cooldown UI now updates at `GameStarted` event time (no need to wait for first `GamePlayed`).
+
 ### Fixes
 - Fixed missing overlay background on Vercel/Linux by normalizing asset filename case:
   - Renamed `public/img/overlay.PNG` -> `public/img/overlay.png`.
