@@ -21,6 +21,7 @@ import FAQ from "./FAQ";
 import Roadmap from "./Roadmap";
 import MobileBackground from "./MobileBackground";
 import Quests from "./Quests";
+import Linktree from "./Linktree";
 import { useChatMessages } from "../hooks/useChatMessages";
 
 import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, DIGIT_RABBITS_CHAT_ADDRESS, DIGIT_RABBITS_CHAT_ABI, publicClient, NUM_SLOTS } from '@/utils/chainConfig'
@@ -431,6 +432,8 @@ export default function MainPage() {
           playerData={playerData}
           onReloadClicks={reloadTotalClicks}
         />
+      case "Linktree":
+        return <Linktree />
       default:
         return null;
     }
@@ -547,6 +550,13 @@ export default function MainPage() {
         src="/img/icons/roadmap.png"
         onClick={() => restoreApp("Roadmap")}
         position={{ x: "12%", y: "26%" }}
+      />
+      <Icon
+        name="Linktree"
+        label={"Links"}
+        src="/img/icons/link.png"
+        onClick={() => restoreApp("Linktree")}
+        position={{ x: "22%", y: "6%" }}
       />
 
       {/* Affichage des memes plein écran*/}

@@ -82,8 +82,11 @@ function getWeekNumber(date) {
  */
 async function checkNFTBalance(allLinkedWallets) {
     try {
+        const normalizedWallets = normalizeWalletAddresses(allLinkedWallets);
+        if (normalizedWallets.length === 0) return 0;
+
         const balances = await publicClientMegaMainnet.multicall({
-            contracts: allLinkedWallets.map(address => ({
+            contracts: normalizedWallets.map(address => ({
                 address: NFT_ADDRESS,
                 abi: erc721Abi,
                 functionName: 'balanceOf',
@@ -91,7 +94,7 @@ async function checkNFTBalance(allLinkedWallets) {
             })),
         });
         const balance = balances.reduce((total, bal) => total + Number(bal.result), 0);
-
+        console.log(`Checked NFT balance for wallets [${normalizedWallets.join(', ')}]: ${balance}`);
         return Number(balance);
     } catch (error) {
         console.error('Error checking NFT balance:', error);
@@ -99,10 +102,21 @@ async function checkNFTBalance(allLinkedWallets) {
     }
 }
 
-function getHoldingsCacheKey(wallets) {
+function normalizeWalletAddresses(wallets) {
+    if (!Array.isArray(wallets)) return [];
+
     return wallets
-        .filter(Boolean)
-        .map(address => address.toLowerCase())
+        .map((wallet) => {
+            if (typeof wallet === 'string') return wallet;
+            if (wallet && typeof wallet === 'object') return wallet.address;
+            return null;
+        })
+        .filter((address) => typeof address === 'string' && address.length > 0)
+        .map((address) => address.toLowerCase());
+}
+
+function getHoldingsCacheKey(wallets) {
+    return Array.from(new Set(normalizeWalletAddresses(wallets)))
         .sort()
         .join(',');
 }
@@ -292,9 +306,9 @@ export async function POST(request) {
 
         const user = await getCachedUserFromToken(idToken);
 
-        const allLinkedWallets = user.linkedAccounts.filter(
-            (account) => account.type === 'wallet'
-        );
+        const allLinkedWallets = user.linkedAccounts
+            .filter((account) => account.type === 'wallet')
+            .map((account) => account.address);
 
         // Vérifier que l'adresse correspond à l'embedded wallet
         const embeddedWallet = user.linkedAccounts.find(

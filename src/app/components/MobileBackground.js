@@ -96,6 +96,13 @@ export default function MobileBackground({ restoreApp, themeMode, showRabbit = t
             color: "#00b894",
             position: { bottom: "20%", right: "20%" }
         },
+        {
+            name: "Links",
+            app: "Linktree",
+            src: "/img/icons/link.png",
+            color: "#8b5cf6",
+            position: { top: "20%", left: "15%" }
+        },
     ];
 
     // Fonction unifiée pour jouer le son

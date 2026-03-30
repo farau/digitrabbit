@@ -3,14 +3,16 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { parseAbi, keccak256, encodePacked } from 'viem';
-import { privy, verifyAndGetUser } from '@/lib/privyClient';
-import { publicClient, publicClientMegaMainnet } from '@/utils/chainConfig';
-import { signMessage, signMessageStartGame } from '@/lib/walletBackend';
+import { verifyAndGetUser } from '@/lib/privyClient';
+import { publicClientMegaMainnet } from '@/utils/chainConfig';
+import { signMessageStartGame } from '@/lib/walletBackend';
 
 // ERC721 ABI
 const erc721Abi = parseAbi([
     'function balanceOf(address owner) view returns (uint256)'
 ]);
+
+const NFT_ADDRESS = process.env.ERC721_DIGIT_RABBITS_CONTRACT_ADDRESS;
 
 /**
  * Vérifier si un utilisateur possède le NFT requis
@@ -42,8 +44,9 @@ async function checkNFTOwnership(user) {
                 args: [address],
             })),
         });
+        const totalBalance = balances.reduce((sum, b) => sum + BigInt(b.result), 0n);
 
-        if (balances > 0n) {
+        if (totalBalance > 0n) {
             return true;
         }
         else {
@@ -95,7 +98,7 @@ export async function POST(request) {
         // 2. Vérifier la possession du NFT sur tous les wallets
         const hasNFT = await checkNFTOwnership(user);
 
-        /*if (!hasNFT) {
+        if (!hasNFT) {
             return NextResponse.json(
                 {
                     error: 'NFT_NOT_FOUND',
@@ -104,7 +107,7 @@ export async function POST(request) {
                 },
                 { status: 403 }
             );
-        }*/
+        }
 
         // 3. Générer un nonce unique
         const nonce = Date.now() + Math.floor(Math.random() * 1000000);

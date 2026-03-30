@@ -42,6 +42,42 @@ All notable changes to this project will be documented in this file.
 - Registered `onGameStarted` in `MainPage` to refresh player data as soon as game starts.
 - Cooldown UI now updates at `GameStarted` event time (no need to wait for first `GamePlayed`).
 
+### Social / Navigation
+- Added a new `Linktree` app window with a Linktree-like layout and official social links:
+  - OpenSea collection link
+  - Discord link
+  - Twitter/X link
+- Integrated `Linktree` entry points across the UI:
+  - Desktop icon (`MainPage`)
+  - Start menu item (`Footer`)
+  - Mobile floating icon (`MobileBackground`)
+
+### Chat / Mobile UX
+- Improved RabbitChat composer behavior on mobile keyboard open:
+  - Added `visualViewport`-based keyboard inset handling.
+  - Kept input area sticky and visible with safe-area support.
+  - Added input focus auto-scroll to keep composer in view.
+- Updated message composer layout on mobile:
+  - `Send` button is now full-width under the input field.
+
+### Quests API
+- Fixed wallet normalization in `POST /api/quests/claim` to prevent `address.toLowerCase is not a function`:
+  - Added robust address normalization helper for mixed wallet shapes.
+  - Normalized holdings cache key generation and NFT balance checks.
+  - Mapped linked accounts to plain wallet address strings before validation.
+
+### Leaderboard
+- Reworked initial-load timeout handling to satisfy React lint/runtime constraints:
+  - Removed ref reads during render for timeout state.
+  - Avoided synchronous effect state updates by using async timeout-based state transitions.
+  - Kept timeout UI reset behavior consistent on refresh/retry.
+
+### Game / UX
+- Added clear UI requirement banner in `Game`:
+  - “You must own at least 1 Digit Rabbits NFT to play.”
+- Improved start-authorization error handling:
+  - Explicit user-facing message when backend returns `NFT_NOT_FOUND`.
+
 ### Fixes
 - Fixed missing overlay background on Vercel/Linux by normalizing asset filename case:
   - Renamed `public/img/overlay.PNG` -> `public/img/overlay.png`.

@@ -35,28 +35,20 @@ export default function Leaderboard({ }) {
 
   const { embeddedWallet } = useGame();
 
-  // ===== FIX: Timeout pour le chargement initial avec condition améliorée =====
+  // Timeout uniquement pendant un chargement actif, sans setState synchrone dans l'effet
   useEffect(() => {
-    // Si les données sont chargées (même vides), ne pas activer le timeout
-    if (!loading && stats.hasData) {
-      setInitialLoadTimeout(false);
-      return;
+    if (!loading || stats.hasData || error) {
+      const resetTimeout = setTimeout(() => {
+        setInitialLoadTimeout((prev) => (prev ? false : prev));
+      }, 0);
+      return () => clearTimeout(resetTimeout);
     }
 
-    // Si erreur, ne pas attendre le timeout
-    if (error) {
-      setInitialLoadTimeout(false);
-      return;
-    }
+    const timeout = setTimeout(() => {
+      setInitialLoadTimeout(true);
+    }, 120000); // 2 minutes
 
-    // Sinon, mettre un timeout de 2 minutes
-    if (!loading && !stats.hasData && !error) {
-      const timeout = setTimeout(() => {
-        setInitialLoadTimeout(true);
-      }, 120000); // 2 minutes
-
-      return () => clearTimeout(timeout);
-    }
+    return () => clearTimeout(timeout);
   }, [loading, stats.hasData, error]);
 
   const formatScore = (score) => {
@@ -288,11 +280,6 @@ export default function Leaderboard({ }) {
                 </span>
               )}
             </div>
-            {player.hasClaimedPoints && (
-              <div className="flex justify-end text-xs mt-1" style={{ color: '#a78bfa' }}>
-                ✓ Points claimed
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -449,7 +436,10 @@ export default function Leaderboard({ }) {
             <div className="flex gap-2 flex-wrap justify-center">
               {canRetry && (
                 <button
-                  onClick={retry}
+                  onClick={() => {
+                    setInitialLoadTimeout(false);
+                    retry();
+                  }}
                   style={{
                     background: isNight
                       ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'

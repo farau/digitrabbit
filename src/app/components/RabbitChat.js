@@ -497,6 +497,8 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
     const [moderationModal, setModerationModal] = useState({ isOpen: false, type: null, targetAddress: null })
     const [notification, setNotification] = useState({ isVisible: false, message: '' })
     const [targetAddress, setTargetAddress] = useState('')
+    const [isMobileLayout, setIsMobileLayout] = useState(false)
+    const [keyboardInset, setKeyboardInset] = useState(0)
 
     const messagesEndRef = useRef(null)
     const inputRef = useRef(null)
@@ -514,6 +516,39 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }, [messages])
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return
+
+        const updateViewportState = () => {
+            const isMobile = window.innerWidth < 768
+            setIsMobileLayout(isMobile)
+
+            const vv = window.visualViewport
+            if (!vv || !isMobile) {
+                setKeyboardInset(0)
+                return
+            }
+
+            // Hauteur potentiellement masquée par le clavier virtuel
+            const hiddenByKeyboard = Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
+            setKeyboardInset(hiddenByKeyboard)
+        }
+
+        updateViewportState()
+
+        window.addEventListener('resize', updateViewportState, { passive: true })
+        window.addEventListener('orientationchange', updateViewportState)
+        window.visualViewport?.addEventListener('resize', updateViewportState)
+        window.visualViewport?.addEventListener('scroll', updateViewportState)
+
+        return () => {
+            window.removeEventListener('resize', updateViewportState)
+            window.removeEventListener('orientationchange', updateViewportState)
+            window.visualViewport?.removeEventListener('resize', updateViewportState)
+            window.visualViewport?.removeEventListener('scroll', updateViewportState)
+        }
+    }, [])
 
     useEffect(() => {
         if (cooldownRemaining == 0) {
@@ -846,7 +881,13 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
                 targetAddress={moderationModal.targetAddress}
             />
 
-            <div style={{ display: 'flex', flexDirection: 'column', height: '80vh', maxHeight: '800px' }}>
+            <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                height: isMobileLayout ? `calc(100dvh - ${keyboardInset}px)` : '80vh',
+                maxHeight: isMobileLayout ? `calc(100dvh - ${keyboardInset}px)` : '800px',
+                minHeight: '420px'
+            }}>
                 <div style={{
                     flex: 1,
                     overflowY: 'auto',
@@ -883,9 +924,13 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
                 <div style={{
                     background: cardBg,
                     padding: '16px',
+                    paddingBottom: isMobileLayout ? 'calc(16px + env(safe-area-inset-bottom))' : '16px',
                     borderRadius: '0 0 10px 10px',
                     border: `1px solid ${borderColor}`,
-                    borderTop: 'none'
+                    borderTop: 'none',
+                    position: 'sticky',
+                    bottom: 0,
+                    zIndex: 10
                 }}>
                     {error && (
                         <div style={{
@@ -974,12 +1019,21 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
                         </div>
                     )}
 
-                    <div style={{ display: 'flex', gap: '12px' }}>
+                    <div style={{
+                        display: 'flex',
+                        gap: '12px',
+                        flexDirection: isMobileLayout ? 'column' : 'row'
+                    }}>
                         <input
                             ref={inputRef}
                             type="text"
                             value={inputMessage}
                             onChange={(e) => setInputMessage(e.target.value)}
+                            onFocus={() => {
+                                setTimeout(() => {
+                                    inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                                }, 150)
+                            }}
                             onKeyPress={(e) => {
                                 if (e.key === 'Enter' && !sending && cooldownRemaining === 0 && inputMessage.trim()) {
                                     handleSendMessage()
@@ -997,7 +1051,8 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
                                 borderRadius: '8px',
                                 fontSize: '14px',
                                 outline: 'none',
-                                opacity: sending ? 0.6 : 1
+                                opacity: sending ? 0.6 : 1,
+                                width: '100%'
                             }}
                         />
 
@@ -1018,7 +1073,10 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '8px',
-                                transition: 'all 0.2s ease'
+                                transition: 'all 0.2s ease',
+                                flexShrink: 0,
+                                width: isMobileLayout ? '100%' : 'auto',
+                                justifyContent: 'center'
                             }}
                         >
                             {sending ? (

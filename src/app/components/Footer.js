@@ -115,6 +115,10 @@ export default function Footer({ visibleApps, setVisibleApps, appZIndices, setAp
               <Image src="/img/icons/assets.png" alt="Assets icon" width={30} height={30} className={styles.menuIcon} />
               Assets
             </div>
+            <div className={styles.menuItem} onClick={() => { openApp("Linktree"); setStartOpen(false); }}>
+              <Image src="/img/icons/link.png" alt="Linktree icon" width={30} height={30} className={styles.menuIcon} />
+              Linktree
+            </div>
             <div className={styles.menuItem} onClick={() => { openApp("Chill"); setStartOpen(false); }}>
               <Image src="/img/icons/chill.png" alt="Nothing icon" width={30} height={30} className={styles.menuIcon} />
               Chill
