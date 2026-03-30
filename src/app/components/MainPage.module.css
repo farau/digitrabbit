@@ -46,9 +46,11 @@
   position: relative;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-wrap: wrap;
   color: white;
+  overflow: hidden;
 
   --windows-background: #f0f0f0;
   --windows-text: #000000;
@@ -116,9 +118,11 @@
   position: relative;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-wrap: wrap;
   color: white;
+  overflow: hidden;
 }
 
 .bgNight::before {

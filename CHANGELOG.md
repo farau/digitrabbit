@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 
 ## Changelog
 
+## [30/03/2026]
+
+### Mobile / Viewport
+- Fixed unwanted page micro-scroll on mobile:
+  - Added global `html, body` guards (`margin: 0`, full-size, `overscroll-behavior: none`).
+  - Switched fullscreen containers to `100dvh` (with `100vh` fallback) for better dynamic browser UI handling.
+  - Enforced hidden overflow on main desktop/mobile background wrappers.
+
+### Windows / UX
+- Improved `DraggableWindow` behavior on mobile so newly opened windows stay fully visible:
+  - Added dynamic top inset handling from `visualViewport.offsetTop`.
+  - Constrained window Y position with mobile top-safe bounds.
+  - Added safe-area aware mobile max-height in window CSS.
+- Restored classic OS-like cascade offset between multiple open windows.
+- Passed explicit window ordering metadata from `MainPage` to `DraggableWindow` (`windowIndex`, `totalWindows`) for deterministic stacking offsets.
+
+### React / Lint Fixes
+- Removed synchronous `setState` initialization pattern for screen size in effect:
+  - `screenSize` now uses lazy `useState` initialization.
+- Removed effect-driven animation state sync that could trigger cascading render warnings.
+- Deferred effect-driven window recenter/reclamp updates with `requestAnimationFrame` cleanup where needed.
+- Stabilized effect dependency usage around resize/reposition logic.
+
 ### Fixes
 - Fixed missing overlay background on Vercel/Linux by normalizing asset filename case:
   - Renamed `public/img/overlay.PNG` -> `public/img/overlay.png`.

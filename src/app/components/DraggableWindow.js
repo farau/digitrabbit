@@ -12,15 +12,23 @@ export default function DraggableWindow({
   zIndex,
   onFocus,
   visibleApps = [],
+  windowIndex = 0,
+  totalWindows = 1,
   littleWindow = false,
   onMinimize,
   isMinimized = false
 }) {
   const nodeRef = useRef(null);
   const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [screenSize, setScreenSize] = useState({ width: 0, height: 0 });
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [animationState, setAnimationState] = useState('normal'); // 'normal', 'minimizing', 'minimized'
+  const [screenSize, setScreenSize] = useState(() => {
+    if (typeof window === 'undefined') {
+      return { width: 0, height: 0 };
+    }
+    return { width: window.innerWidth, height: window.innerHeight };
+  });
+  const [mobileTopInset, setMobileTopInset] = useState(8);
+  const [, setIsAnimating] = useState(false);
+  const [animationState, setAnimationState] = useState('normal'); // 'normal', 'minimizing'
 
   // Calculs mémorisés
   const windowDimensions = useMemo(() => {
@@ -42,49 +50,54 @@ export default function DraggableWindow({
   // Position centrée calculée
   const getCenteredPosition = useCallback(() => {
     const { width, height } = windowDimensions;
-    const index = visibleApps.length;
     const spacing = 30;
 
     const baseX = (screenSize.width - width) / 2;
     const baseY = (screenSize.height - height) * 0.1;
 
     if (isMobile) {
-      return { x: 0, y: Math.max(0, 0) };
+      return { x: 0, y: mobileTopInset };
     }
 
-    if (index > 0) {
-      // Calculer un offset équilibré autour du centre
-      const offsetIndex = index - 1; // ex : pour 3 apps → 0,1,2
-      const middleIndex = (visibleApps.length - 1) / 2; // ex : 1 si 3 apps
-      const offsetX = (offsetIndex - middleIndex) * spacing;
-      const offsetY = (offsetIndex - middleIndex) * spacing;
+    // Décalage "OS classique" : basé sur l'index réel de la fenêtre
+    const middleIndex = (Math.max(totalWindows, 1) - 1) / 2;
+    const offset = (windowIndex - middleIndex) * spacing;
+    const newX = baseX + offset;
+    const newY = baseY + offset;
 
-      const newX = baseX + offsetX;
-      const newY = baseY + offsetY;
-
-      return {
-        x: Math.max(0, Math.min(newX, screenSize.width - width)),
-        y: Math.max(0, Math.min(newY, screenSize.height - height)),
-      };
-    }
-
-    return { x: Math.max(0, baseX), y: Math.max(0, baseY) };
-  }, [windowDimensions, screenSize, isMobile, visibleApps.length]);
+    return {
+      x: Math.max(0, Math.min(newX, screenSize.width - width)),
+      y: Math.max(0, Math.min(newY, screenSize.height - height)),
+    };
+  }, [windowDimensions, screenSize, isMobile, mobileTopInset, windowIndex, totalWindows]);
 
   // Contraindre la position dans les limites de l'écran
   const constrainPosition = useCallback((pos) => {
     const { width, height } = windowDimensions;
+    const minY = isMobile ? mobileTopInset : 0;
     return {
       x: Math.max(0, Math.min(pos.x, screenSize.width - width)),
-      y: Math.max(0, Math.min(pos.y, screenSize.height - height))
+      y: Math.max(minY, Math.min(pos.y, screenSize.height - height))
     };
-  }, [windowDimensions, screenSize]);
+  }, [windowDimensions, screenSize, isMobile, mobileTopInset]);
 
-  // Initialisation de la taille d'écran
+  // Évite que les fenêtres collent sous la barre système mobile (notch / browser UI)
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setScreenSize({ width: window.innerWidth, height: window.innerHeight });
-    }
+    if (typeof window === 'undefined') return;
+
+    const updateTopInset = () => {
+      const visualOffsetTop = window.visualViewport?.offsetTop ?? 0;
+      setMobileTopInset(Math.max(8, Math.round(visualOffsetTop + 8)));
+    };
+
+    updateTopInset();
+    window.visualViewport?.addEventListener('resize', updateTopInset);
+    window.visualViewport?.addEventListener('scroll', updateTopInset);
+
+    return () => {
+      window.visualViewport?.removeEventListener('resize', updateTopInset);
+      window.visualViewport?.removeEventListener('scroll', updateTopInset);
+    };
   }, []);
 
   // Gestion du redimensionnement
@@ -99,24 +112,27 @@ export default function DraggableWindow({
 
     window.addEventListener('resize', handleResize, { passive: true });
     return () => window.removeEventListener('resize', handleResize);
-  }, [screenSize]);
+  }, [constrainPosition]);
 
-  // Positionnement initial
+  // Positionnement initial + cascade quand la pile de fenêtres change
   useEffect(() => {
     if (screenSize.width > 0) {
       const newPosition = getCenteredPosition();
-      setPosition(constrainPosition(newPosition));
+      const frame = window.requestAnimationFrame(() => {
+        setPosition(constrainPosition(newPosition));
+      });
+      return () => window.cancelAnimationFrame(frame);
     }
-  }, [screenSize.width]);
+  }, [screenSize.width, screenSize.height, getCenteredPosition, constrainPosition]);
 
-  // Gestion des états de minimisation
+  // Recalage vertical quand l'inset mobile évolue (barre navigateur/notch)
   useEffect(() => {
-    if (isMinimized) {
-      setAnimationState('minimized');
-    } else if (animationState === 'minimized') {
-      setAnimationState('normal');
-    }
-  }, [isMinimized, animationState]);
+    if (!isMobile) return;
+    const frame = window.requestAnimationFrame(() => {
+      setPosition(prev => constrainPosition(prev));
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [mobileTopInset, isMobile, constrainPosition]);
 
   const [isDragging, setIsDragging] = useState(false);
 
@@ -144,6 +160,7 @@ export default function DraggableWindow({
 
       setTimeout(() => {
         onMinimize();
+        setAnimationState('normal');
         setIsAnimating(false);
       }, 300);
     }

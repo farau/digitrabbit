@@ -454,21 +454,21 @@ export default function MainPage() {
         src="/img/icons/about.png"
         label="About"
         onClick={() => restoreApp("About")}
-        position={{ x: "1%", y: "1%" }}
+        position={{ x: "20%", y: "10%" }}
       />
       <Icon
         name="Memes"
         src="/img/icons/memes.png"
         label="Memes"
         onClick={() => restoreApp("Memes")}
-        position={{ x: "1%", y: "2%" }}
+        position={{ x: "20%", y: "20%" }}
       />
       <Icon
         name="Quests"
         src="/img/icons/quests.png"
         label="Quests"
         onClick={() => restoreApp("Quests")}
-        position={{ x: "1%", y: "2%" }}
+        position={{ x: "60%", y: "50%" }}
       />
       <Icon
         name="Profile"
@@ -533,7 +533,7 @@ export default function MainPage() {
         label={"FAQ"}
         src="/img/icons/faq.png"
         onClick={() => restoreApp("FAQ")}
-        position={{ x: "12%", y: "26%" }}
+        position={{ x: "2%", y: "36%" }}
       />
 
       <Icon
@@ -649,7 +649,7 @@ export default function MainPage() {
 
 
       {
-        visibleApps.map((appName) => (
+        visibleApps.map((appName, index) => (
           <DraggableWindow
             key={appName}
             title={appName}
@@ -658,6 +658,8 @@ export default function MainPage() {
             onFocus={() => bringToFront(appName)}
             theme={themeMode}
             visibleApps={visibleApps}
+            windowIndex={index}
+            totalWindows={visibleApps.length}
             littleWindow={appName === 'Chill' ? true : false}
             onMinimize={() => setMinimizedApps(prev => [...prev, appName])}
             isMinimized={Array.isArray(minimizedApps) && minimizedApps.includes(appName)}
