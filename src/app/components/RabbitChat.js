@@ -292,17 +292,37 @@ function ModerationModal({ isOpen, onClose, onConfirm, isNight, type, targetAddr
     }
 
     const modalConfig = config[type]
+    const durationOptions = [
+        { value: '3600', label: '1 hour' },
+        { value: '21600', label: '6 hours' },
+        { value: '86400', label: '24 hours' },
+        { value: '604800', label: '7 days' },
+        { value: '0', label: 'Permanent' },
+        { value: 'custom', label: 'Custom duration' },
+    ]
+
+    const selectedDurationLabel = durationOptions.find((option) => option.value === duration)?.label || ''
 
     const handleConfirm = async () => {
-        setLoading(true)
-        if (type === 'mute') {
-            const finalDuration = duration === 'custom' ? customDuration : duration
-            await onConfirm(finalDuration)
-        } else {
-            await onConfirm()
+        try {
+            setLoading(true)
+            if (type === 'mute') {
+                const finalDuration = duration === 'custom' ? customDuration : duration
+                await onConfirm(finalDuration)
+            } else {
+                await onConfirm()
+            }
+            onClose()
+        } catch (err) {
+            console.error('Moderation action failed:', err)
+            Sentry.captureException(err, {
+                tags: { moderationAction: type },
+                extra: { targetAddress }
+            })
+        } finally {
+            setLoading(false)
         }
-        setLoading(false)
-        onClose()
+
     }
 
     return (
@@ -352,27 +372,61 @@ function ModerationModal({ isOpen, onClose, onConfirm, isNight, type, targetAddr
                         <label style={{ display: 'block', color: textColor, fontSize: '14px', marginBottom: '8px', fontWeight: '500' }}>
                             Mute Duration:
                         </label>
-                        <select
-                            value={duration}
-                            onChange={(e) => setDuration(e.target.value)}
+                        <div
                             style={{
+                                position: 'relative',
                                 width: '100%',
-                                padding: '10px 12px',
-                                backgroundColor: isNight ? '#1a1a1a' : '#f5f5f5',
-                                color: textColor,
                                 border: `1px solid ${borderColor}`,
                                 borderRadius: '8px',
-                                fontSize: '14px',
-                                cursor: 'pointer'
+                                backgroundColor: isNight ? '#141414' : '#ffffff',
+                                minHeight: '40px'
                             }}
                         >
-                            <option value="3600">1 hour</option>
-                            <option value="21600">6 hours</option>
-                            <option value="86400">24 hours</option>
-                            <option value="604800">7 days</option>
-                            <option value="0">Permanent</option>
-                            <option value="custom">Custom duration</option>
-                        </select>
+                            <select
+                                value={durationOptions.some((option) => option.value === duration) ? duration : '3600'}
+                                onChange={(e) => setDuration(e.target.value)}
+                                style={{
+                                    position: 'absolute',
+                                    inset: 0,
+                                    width: '100%',
+                                    height: '100%',
+                                    opacity: 0,
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                {durationOptions.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+                            <div
+                                style={{
+                                    pointerEvents: 'none',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    padding: '10px 12px',
+                                    color: textColor,
+                                    fontSize: '14px',
+                                    fontWeight: '600'
+                                }}
+                            >
+                                <span>{selectedDurationLabel || '1 hour'}</span>
+                                <span style={{ fontSize: '12px', opacity: 0.8 }}>▼</span>
+                            </div>
+                        </div>
+
+                        <div
+                            style={{
+                                marginTop: '8px',
+                                fontSize: '12px',
+                                color: isNight ? '#d1d5db' : '#374151',
+                                fontWeight: '600'
+                            }}
+                        >
+                            Selected: {duration === 'custom' ? (customDuration ? `${customDuration}s` : 'Custom duration') : selectedDurationLabel}
+                        </div>
 
                         {duration === 'custom' && (
                             <input
@@ -444,38 +498,44 @@ function ModerationModal({ isOpen, onClose, onConfirm, isNight, type, targetAddr
     )
 }
 
-// Notification de succès
-function SuccessNotification({ message, isVisible, onClose, isNight }) {
+// Notification (succès/erreur)
+function SuccessNotification({ message, isVisible, onClose, isNight, type = 'success', durationMs = 4000 }) {
     useEffect(() => {
         if (isVisible) {
             const timer = setTimeout(() => {
                 onClose()
-            }, 4000)
+            }, durationMs)
             return () => clearTimeout(timer)
         }
-    }, [isVisible, onClose])
+    }, [isVisible, onClose, durationMs])
 
     if (!isVisible) return null
 
+    const isError = type === 'error'
+
     return (
         <div style={{
-            background: isNight
-                ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.08) 100%)'
-                : 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%)',
-            color: isNight ? '#6ee7b7' : '#059669',
-            padding: '12px 16px',
-            borderRadius: '8px',
-            fontSize: '14px',
+            background: isError
+                ? (isNight
+                    ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.16) 0%, rgba(239, 68, 68, 0.08) 100%)'
+                    : 'linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(239, 68, 68, 0.06) 100%)')
+                : (isNight
+                    ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.08) 100%)'
+                    : 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%)'),
+            color: isError
+                ? (isNight ? '#fca5a5' : '#b91c1c')
+                : (isNight ? '#6ee7b7' : '#059669'),
+            padding: '8px 12px',
+            borderRadius: '6px',
+            fontSize: '13px',
             marginBottom: '12px',
-            textAlign: 'center',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
             gap: '8px',
-            border: `1px solid ${isNight ? '#10b981' : '#6ee7b7'}`,
+            border: `1px solid ${isError ? (isNight ? '#ef4444' : '#fca5a5') : (isNight ? '#10b981' : '#6ee7b7')}`,
             fontWeight: '500'
         }}>
-            <Check size={18} />
+            {isError ? <AlertCircle size={18} /> : <Check size={18} />}
             <span>{message}</span>
         </div>
     )
@@ -490,13 +550,13 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
 
     const [inputMessage, setInputMessage] = useState('')
     const [sending, setSending] = useState(false)
-    const [error, setError] = useState(null)
     const [userData, setUserData] = useState(null)
     const [cooldownRemaining, setCooldownRemaining] = useState(0)
     const [replyingTo, setReplyingTo] = useState(null)
     const [moderationModal, setModerationModal] = useState({ isOpen: false, type: null, targetAddress: null })
-    const [notification, setNotification] = useState({ isVisible: false, message: '' })
+    const [notification, setNotification] = useState({ isVisible: false, message: '', type: 'success', durationMs: 4000 })
     const [targetAddress, setTargetAddress] = useState('')
+    const [muteRemaining, setMuteRemaining] = useState(0)
     const [isMobileLayout, setIsMobileLayout] = useState(false)
     const [keyboardInset, setKeyboardInset] = useState(0)
 
@@ -506,6 +566,13 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
     const delayedUserDataRefreshRef = useRef(null)
 
     const isModerator = userData?.roleIndex === 2
+    const normalizedModeratorAddress = embeddedWallet?.address?.toLowerCase?.() || ''
+    const trimmedTargetAddress = targetAddress?.trim?.() || ''
+    const isValidEvmAddress = /^0x[a-fA-F0-9]{40}$/.test(trimmedTargetAddress)
+    const normalizedTargetAddress = trimmedTargetAddress.toLowerCase()
+    const isSelfTarget = Boolean(normalizedModeratorAddress && normalizedTargetAddress && normalizedModeratorAddress === normalizedTargetAddress)
+    const hasTargetInput = trimmedTargetAddress.length > 0
+    const canModerateTarget = Boolean(isValidEvmAddress && !isSelfTarget)
 
     const isNight = themeMode === 'dark'
     const textColor = isNight ? '#eee' : '#333'
@@ -569,6 +636,30 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
         return () => clearInterval(interval)
     }, [cooldownRemaining])
 
+    useEffect(() => {
+        if (!userData?.isMuted || !userData?.muteExpiresAt) {
+            setMuteRemaining(0)
+            return
+        }
+
+        const updateMuteTimer = () => {
+            const now = Math.floor(Date.now() / 1000)
+            const remaining = Math.max(Number(userData.muteExpiresAt) - now, 0)
+            setMuteRemaining(remaining)
+        }
+
+        updateMuteTimer()
+        const interval = setInterval(updateMuteTimer, 1000)
+        return () => clearInterval(interval)
+    }, [userData?.isMuted, userData?.muteExpiresAt])
+
+    const formatDuration = (seconds) => {
+        const hrs = Math.floor(seconds / 3600)
+        const mins = Math.floor((seconds % 3600) / 60)
+        const secs = seconds % 60
+        return [hrs, mins, secs].map((value) => String(value).padStart(2, '0')).join(':')
+    }
+
     const loadUserData = useCallback(async () => {
         if (!embeddedWallet?.address) return
         if (loadUserDataPromiseRef.current) return loadUserDataPromiseRef.current
@@ -623,12 +714,63 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
         }, delayMs)
     }
 
-    const showNotification = (message) => {
-        setNotification({ isVisible: true, message })
+    const showNotification = (message, options = {}) => {
+        const { type = 'success', durationMs = 4000 } = options
+        setNotification({ isVisible: true, message, type, durationMs })
+    }
+
+    const showErrorNotification = (message) => {
+        showNotification(message, { type: 'error', durationMs: 10000 })
+    }
+
+    const extractReadableError = (err) => {
+        const candidates = [
+            err?.revertReason,
+            err?.shortMessage,
+            err?.details,
+            err?.message
+        ]
+        const first = candidates.find((value) => typeof value === 'string' && value.trim().length > 0)
+        return first || 'Transaction failed'
+    }
+
+    const validateModerationTarget = (actionLabel) => {
+        if (!walletClient || !moderationModal.targetAddress) return false
+        if (!/^0x[a-fA-F0-9]{40}$/.test(moderationModal.targetAddress)) {
+            const msg = 'Please enter a valid EVM address (0x + 40 hex characters).'
+            showErrorNotification(msg)
+            return false
+        }
+        if (embeddedWallet?.address?.toLowerCase() === moderationModal.targetAddress?.toLowerCase()) {
+            const msg = `You cannot ${actionLabel} yourself.`
+            showErrorNotification(msg)
+            return false
+        }
+        return true
+    }
+
+    const ensureTransactionSucceeded = async (txHash) => {
+        const receipt = await walletClient.waitForTransactionReceipt({ hash: txHash })
+        if (receipt.status !== 'reverted') return receipt
+
+        const tx = await walletClient.getTransaction({ hash: txHash })
+        try {
+            await walletClient.call({
+                to: tx.to,
+                data: tx.input,
+                from: tx.from,
+            })
+        } catch (callError) {
+            const revertReason = extractReadableError(callError)
+            throw new Error(revertReason)
+        }
+
+        throw new Error('Transaction reverted')
     }
 
     const handleMuteUser = async (duration) => {
-        if (!walletClient || !moderationModal.targetAddress) return
+        if (!validateModerationTarget('mute')) return false
+
         try {
             const txHash = await walletClient.writeContract({
                 account: embeddedWallet.address,
@@ -641,16 +783,20 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
                 type: 'eip1559',
                 gas: 300000n,
             })
+            await ensureTransactionSucceeded(txHash)
             console.log('✅ User muted:', txHash)
-            showNotification(`User ${moderationModal.targetAddress.slice(0, 6)}...${moderationModal.targetAddress.slice(-4)} muted`)
+            return true
         } catch (err) {
             console.error('Error:', err)
-            setError(err.shortMessage || err.message)
+            const errorMessage = extractReadableError(err)
+            showErrorNotification(errorMessage)
+            return false
         }
     }
 
     const handleUnmuteUser = async () => {
-        if (!walletClient || !moderationModal.targetAddress) return
+        if (!validateModerationTarget('unmute')) return false
+
         try {
             const txHash = await walletClient.writeContract({
                 account: embeddedWallet.address,
@@ -663,16 +809,21 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
                 type: 'eip1559',
                 gas: 300000n,
             })
+            await ensureTransactionSucceeded(txHash)
             console.log('✅ User unmuted:', txHash)
             showNotification(`User ${moderationModal.targetAddress.slice(0, 6)}...${moderationModal.targetAddress.slice(-4)} unmuted`)
+            return true
         } catch (err) {
             console.error('Error:', err)
-            setError(err.shortMessage || err.message)
+            const errorMessage = extractReadableError(err)
+            showErrorNotification(errorMessage)
+            return false
         }
     }
 
     const handlePromoteUser = async () => {
-        if (!walletClient || !moderationModal.targetAddress) return
+        if (!validateModerationTarget('promote')) return false
+
         try {
             const txHash = await walletClient.writeContract({
                 account: embeddedWallet.address,
@@ -685,16 +836,21 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
                 type: 'eip1559',
                 gas: 300000n,
             })
+            await ensureTransactionSucceeded(txHash)
             console.log('✅ User promoted:', txHash)
             showNotification(`User ${moderationModal.targetAddress.slice(0, 6)}...${moderationModal.targetAddress.slice(-4)} promoted`)
+            return true
         } catch (err) {
             console.error('Error:', err)
-            setError(err.shortMessage || err.message)
+            const errorMessage = extractReadableError(err)
+            showErrorNotification(errorMessage)
+            return false
         }
     }
 
     const handleDemoteUser = async () => {
-        if (!walletClient || !moderationModal.targetAddress) return
+        if (!validateModerationTarget('demote')) return false
+
         try {
             const txHash = await walletClient.writeContract({
                 account: embeddedWallet.address,
@@ -707,16 +863,28 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
                 type: 'eip1559',
                 gas: 300000n,
             })
+            await ensureTransactionSucceeded(txHash)
             console.log('✅ User demoted:', txHash)
             showNotification(`User ${moderationModal.targetAddress.slice(0, 6)}...${moderationModal.targetAddress.slice(-4)} demoted`)
+            return true
         } catch (err) {
             console.error('Error:', err)
-            setError(err.shortMessage || err.message)
+            const errorMessage = extractReadableError(err)
+            showErrorNotification(errorMessage)
+            return false
         }
     }
 
     const openModerationModal = (type) => {
-        setModerationModal({ isOpen: true, type, targetAddress })
+        if (!isValidEvmAddress) {
+            showErrorNotification('Please enter a valid EVM address (0x + 40 hex characters).')
+            return
+        }
+        if (isSelfTarget) {
+            showErrorNotification('You cannot perform moderation actions on your own address.')
+            return
+        }
+        setModerationModal({ isOpen: true, type, targetAddress: trimmedTargetAddress })
     }
 
     const handleSendMessage = async () => {
@@ -724,7 +892,6 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
 
         try {
             setSending(true)
-            setError(null)
             const contentToSend = inputMessage.trim()
 
             const response = await fetch('/api/chat/send', {
@@ -776,7 +943,7 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
 
             setInputMessage('')
             setReplyingTo(null)
-            setCooldownRemaining(15)
+            setCooldownRemaining(10)
             setUserData((previous) => {
                 if (!previous) return previous
 
@@ -792,7 +959,7 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
 
         } catch (err) {
             console.error('Error sending message:', err)
-            setError(err.shortMessage || err.message || 'Failed to send message')
+            showErrorNotification(err.shortMessage || err.message || 'Failed to send message')
         } finally {
             setSending(false)
         }
@@ -932,22 +1099,14 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
                     bottom: 0,
                     zIndex: 10
                 }}>
-                    {error && (
-                        <div style={{
-                            background: isNight ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.05)',
-                            color: isNight ? '#fca5a5' : '#dc2626',
-                            padding: '8px 12px',
-                            borderRadius: '6px',
-                            fontSize: '13px',
-                            marginBottom: '12px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px'
-                        }}>
-                            <AlertCircle size={16} />
-                            {error}
-                        </div>
-                    )}
+                    <SuccessNotification
+                        message={notification.message}
+                        isVisible={notification.isVisible}
+                        type={notification.type}
+                        durationMs={notification.durationMs}
+                        onClose={() => setNotification({ isVisible: false, message: '', type: 'success', durationMs: 4000 })}
+                        isNight={isNight}
+                    />
 
                     {cooldownRemaining > 0 && (
                         <div style={{
@@ -962,13 +1121,6 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
                             ⏱️ Cooldown: {cooldownRemaining}s remaining
                         </div>
                     )}
-
-                    <SuccessNotification
-                        message={notification.message}
-                        isVisible={notification.isVisible}
-                        onClose={() => setNotification({ isVisible: false, message: '' })}
-                        isNight={isNight}
-                    />
 
                     {replyingTo && (
                         <div style={{
@@ -1019,11 +1171,18 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
                         </div>
                     )}
 
-                    <div style={{
-                        display: 'flex',
-                        gap: '12px',
-                        flexDirection: isMobileLayout ? 'column' : 'row'
-                    }}>
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault()
+                            if (!sending && cooldownRemaining === 0 && inputMessage.trim()) {
+                                handleSendMessage()
+                            }
+                        }}
+                        style={{
+                            display: 'flex',
+                            gap: '12px',
+                            flexDirection: isMobileLayout ? 'column' : 'row'
+                        }}>
                         <input
                             ref={inputRef}
                             type="text"
@@ -1034,14 +1193,17 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
                                     inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
                                 }, 150)
                             }}
-                            onKeyPress={(e) => {
-                                if (e.key === 'Enter' && !sending && cooldownRemaining === 0 && inputMessage.trim()) {
-                                    handleSendMessage()
+                            enterKeyHint="send"
+                            onKeyDown={(e) => {
+                                const isEnter = e.key === 'Enter' || e.keyCode === 13 || e.which === 13
+                                if (isEnter) {
+                                    e.preventDefault()
+                                    e.currentTarget.form?.requestSubmit()
                                 }
                             }}
                             placeholder={replyingTo ? `Reply to ${replyingTo.twitterUsername || 'Anonymous'}...` : "Type your message..."}
                             maxLength={200}
-                            disabled={sending || cooldownRemaining > 0}
+                            disabled={sending}
                             style={{
                                 flex: 1,
                                 background: isNight ? '#2a2a2a' : '#fff',
@@ -1057,7 +1219,7 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
                         />
 
                         <button
-                            onClick={handleSendMessage}
+                            type="submit"
                             disabled={sending || !inputMessage.trim() || cooldownRemaining > 0}
                             style={{
                                 background: (sending || !inputMessage.trim() || cooldownRemaining > 0)
@@ -1088,7 +1250,7 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
                                 <>Send</>
                             )}
                         </button>
-                    </div>
+                    </form>
 
                     <div style={{
                         display: 'flex',
@@ -1132,6 +1294,11 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
                                     {userData.role}
                                     {userData.roleIndex === 2 && <Shield size={14} className="inline ml-1" />}
                                 </span>
+                                {userData.isMuted && muteRemaining > 0 && (
+                                    <span className="font-semibold ml-2" style={{ color: isNight ? '#f59e0b' : '#b45309' }}>
+                                        🔇 Unmute in {formatDuration(muteRemaining)}
+                                    </span>
+                                )}
                             </span>
                             <span>Messages: <span className="font-semibold">{userData.messageCount}</span></span>
                             <span>RabbitPoints: <span className="font-semibold">{userData.totalScore}</span></span>
@@ -1142,124 +1309,157 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
                             <div style={{
                                 display: 'flex',
                                 gap: '8px',
-                                alignItems: 'center'
+                                alignItems: 'center',
+                                flexWrap: 'wrap',
+                                justifyContent: 'flex-start',
+                                maxWidth: '100%'
                             }}>
-                                <input
-                                    type="text"
-                                    placeholder="0x..."
-                                    value={targetAddress}
-                                    onChange={(e) => setTargetAddress(e.target.value)}
-                                    style={{
-                                        background: isNight ? '#1a1a1a' : '#f5f5f5',
-                                        color: textColor,
-                                        border: `1px solid ${borderColor}`,
-                                        padding: '6px 10px',
-                                        borderRadius: '6px',
-                                        fontSize: '12px',
-                                        width: '140px',
-                                        fontFamily: 'monospace'
-                                    }}
-                                />
-                                <button
-                                    onClick={() => openModerationModal('mute')}
-                                    disabled={!targetAddress}
-                                    style={{
-                                        background: isNight ? '#7f1d1d' : '#fee2e2',
-                                        color: isNight ? '#fca5a5' : '#dc2626',
-                                        border: 'none',
-                                        padding: '6px 12px',
-                                        borderRadius: '6px',
-                                        fontSize: '12px',
-                                        fontWeight: '600',
-                                        cursor: targetAddress ? 'pointer' : 'not-allowed',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '4px',
-                                        opacity: targetAddress ? 1 : 0.5,
-                                        transition: 'all 0.2s'
-                                    }}
-                                    onMouseOver={(e) => targetAddress && (e.currentTarget.style.opacity = '0.8')}
-                                    onMouseOut={(e) => targetAddress && (e.currentTarget.style.opacity = '1')}
-                                    title="Mute user"
-                                >
-                                    <Ban size={14} />
-                                    Mute
-                                </button>
-                                <button
-                                    onClick={() => openModerationModal('unmute')}
-                                    disabled={!targetAddress}
-                                    style={{
-                                        background: isNight ? '#14532d' : '#d1fae5',
-                                        color: isNight ? '#6ee7b7' : '#059669',
-                                        border: 'none',
-                                        padding: '6px 12px',
-                                        borderRadius: '6px',
-                                        fontSize: '12px',
-                                        fontWeight: '600',
-                                        cursor: targetAddress ? 'pointer' : 'not-allowed',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '4px',
-                                        opacity: targetAddress ? 1 : 0.5,
-                                        transition: 'all 0.2s'
-                                    }}
-                                    onMouseOver={(e) => targetAddress && (e.currentTarget.style.opacity = '0.8')}
-                                    onMouseOut={(e) => targetAddress && (e.currentTarget.style.opacity = '1')}
-                                    title="Unmute user"
-                                >
-                                    <VolumeX size={14} />
-                                    Unmute
-                                </button>
-                                <button
-                                    onClick={() => openModerationModal('promote')}
-                                    disabled={!targetAddress}
-                                    style={{
-                                        background: isNight ? '#1e3a8a' : '#dbeafe',
-                                        color: isNight ? '#93c5fd' : '#2563eb',
-                                        border: 'none',
-                                        padding: '6px 12px',
-                                        borderRadius: '6px',
-                                        fontSize: '12px',
-                                        fontWeight: '600',
-                                        cursor: targetAddress ? 'pointer' : 'not-allowed',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '4px',
-                                        opacity: targetAddress ? 1 : 0.5,
-                                        transition: 'all 0.2s'
-                                    }}
-                                    onMouseOver={(e) => targetAddress && (e.currentTarget.style.opacity = '0.8')}
-                                    onMouseOut={(e) => targetAddress && (e.currentTarget.style.opacity = '1')}
-                                    title="Promote to Confirmed Rabbit"
-                                >
-                                    <UserCheck size={14} />
-                                    Promote
-                                </button>
-                                <button
-                                    onClick={() => openModerationModal('demote')}
-                                    disabled={!targetAddress}
-                                    style={{
-                                        background: isNight ? '#7c2d12' : '#fed7aa',
-                                        color: isNight ? '#fdba74' : '#ea580c',
-                                        border: 'none',
-                                        padding: '6px 12px',
-                                        borderRadius: '6px',
-                                        fontSize: '12px',
-                                        fontWeight: '600',
-                                        cursor: targetAddress ? 'pointer' : 'not-allowed',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '4px',
-                                        opacity: targetAddress ? 1 : 0.5,
-                                        transition: 'all 0.2s'
-                                    }}
-                                    onMouseOver={(e) => targetAddress && (e.currentTarget.style.opacity = '0.8')}
-                                    onMouseOut={(e) => targetAddress && (e.currentTarget.style.opacity = '1')}
-                                    title="Remove Confirmed Role"
-                                >
-                                    <UserMinus size={14} />
-                                    Demote
-                                </button>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '140px' }}>
+                                    <input
+                                        type="text"
+                                        placeholder="0x..."
+                                        value={targetAddress}
+                                        onChange={(e) => setTargetAddress(e.target.value)}
+                                        style={{
+                                            background: isNight ? '#1a1a1a' : '#f5f5f5',
+                                            color: textColor,
+                                            border: `1px solid ${borderColor}`,
+                                            padding: '6px 10px',
+                                            borderRadius: '6px',
+                                            fontSize: '12px',
+                                            width: '140px',
+                                            fontFamily: 'monospace'
+                                        }}
+                                    />
+                                    {isSelfTarget && (
+                                        <span
+                                            style={{
+                                                fontSize: '11px',
+                                                color: isNight ? '#fca5a5' : '#dc2626',
+                                                fontWeight: 600,
+                                                lineHeight: 1.25,
+                                                maxWidth: '220px'
+                                            }}
+                                        >
+                                            Self moderation is not allowed.
+                                        </span>
+                                    )}
+                                    {hasTargetInput && !isValidEvmAddress && (
+                                        <span
+                                            style={{
+                                                fontSize: '11px',
+                                                color: isNight ? '#fca5a5' : '#dc2626',
+                                                fontWeight: 600,
+                                                lineHeight: 1.25,
+                                                maxWidth: '220px'
+                                            }}
+                                        >
+                                            Invalid address format (0x + 40 hex chars).
+                                        </span>
+                                    )}
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-start', maxWidth: '100%' }}>
+                                    <button
+                                        onClick={() => openModerationModal('mute')}
+                                        disabled={!canModerateTarget}
+                                        style={{
+                                            background: isNight ? '#7f1d1d' : '#fee2e2',
+                                            color: isNight ? '#fca5a5' : '#dc2626',
+                                            border: 'none',
+                                            padding: '6px 12px',
+                                            borderRadius: '6px',
+                                            fontSize: '12px',
+                                            fontWeight: '600',
+                                            cursor: canModerateTarget ? 'pointer' : 'not-allowed',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            opacity: canModerateTarget ? 1 : 0.5,
+                                            transition: 'all 0.2s'
+                                        }}
+                                        onMouseOver={(e) => canModerateTarget && (e.currentTarget.style.opacity = '0.8')}
+                                        onMouseOut={(e) => canModerateTarget && (e.currentTarget.style.opacity = '1')}
+                                        title={isSelfTarget ? "You can't moderate yourself" : "Mute user"}
+                                    >
+                                        <Ban size={14} />
+                                        Mute
+                                    </button>
+                                    <button
+                                        onClick={() => openModerationModal('unmute')}
+                                        disabled={!canModerateTarget}
+                                        style={{
+                                            background: isNight ? '#14532d' : '#d1fae5',
+                                            color: isNight ? '#6ee7b7' : '#059669',
+                                            border: 'none',
+                                            padding: '6px 12px',
+                                            borderRadius: '6px',
+                                            fontSize: '12px',
+                                            fontWeight: '600',
+                                            cursor: canModerateTarget ? 'pointer' : 'not-allowed',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            opacity: canModerateTarget ? 1 : 0.5,
+                                            transition: 'all 0.2s'
+                                        }}
+                                        onMouseOver={(e) => canModerateTarget && (e.currentTarget.style.opacity = '0.8')}
+                                        onMouseOut={(e) => canModerateTarget && (e.currentTarget.style.opacity = '1')}
+                                        title={isSelfTarget ? "You can't moderate yourself" : "Unmute user"}
+                                    >
+                                        <VolumeX size={14} />
+                                        Unmute
+                                    </button>
+                                    <button
+                                        onClick={() => openModerationModal('promote')}
+                                        disabled={!canModerateTarget}
+                                        style={{
+                                            background: isNight ? '#1e3a8a' : '#dbeafe',
+                                            color: isNight ? '#93c5fd' : '#2563eb',
+                                            border: 'none',
+                                            padding: '6px 12px',
+                                            borderRadius: '6px',
+                                            fontSize: '12px',
+                                            fontWeight: '600',
+                                            cursor: canModerateTarget ? 'pointer' : 'not-allowed',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            opacity: canModerateTarget ? 1 : 0.5,
+                                            transition: 'all 0.2s'
+                                        }}
+                                        onMouseOver={(e) => canModerateTarget && (e.currentTarget.style.opacity = '0.8')}
+                                        onMouseOut={(e) => canModerateTarget && (e.currentTarget.style.opacity = '1')}
+                                        title={isSelfTarget ? "You can't moderate yourself" : "Promote to Confirmed Rabbit"}
+                                    >
+                                        <UserCheck size={14} />
+                                        Promote
+                                    </button>
+                                    <button
+                                        onClick={() => openModerationModal('demote')}
+                                        disabled={!canModerateTarget}
+                                        style={{
+                                            background: isNight ? '#7c2d12' : '#fed7aa',
+                                            color: isNight ? '#fdba74' : '#ea580c',
+                                            border: 'none',
+                                            padding: '6px 12px',
+                                            borderRadius: '6px',
+                                            fontSize: '12px',
+                                            fontWeight: '600',
+                                            cursor: canModerateTarget ? 'pointer' : 'not-allowed',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            opacity: canModerateTarget ? 1 : 0.5,
+                                            transition: 'all 0.2s'
+                                        }}
+                                        onMouseOver={(e) => canModerateTarget && (e.currentTarget.style.opacity = '0.8')}
+                                        onMouseOut={(e) => canModerateTarget && (e.currentTarget.style.opacity = '1')}
+                                        title={isSelfTarget ? "You can't moderate yourself" : "Remove Confirmed Role"}
+                                    >
+                                        <UserMinus size={14} />
+                                        Demote
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>

@@ -16,6 +16,8 @@ export default function MobileBackground({ restoreApp, themeMode, showRabbit = t
     const [mouseStartPos, setMouseStartPos] = useState({ x: 0, y: 0 });
     const [mouseStartTime, setMouseStartTime] = useState(0);
     const musicRef = useRef(null);
+    const touchStartTimeRef = useRef(0);
+    const mouseStartTimeRef = useRef(0);
 
 
     useEffect(() => {
@@ -131,14 +133,15 @@ export default function MobileBackground({ restoreApp, themeMode, showRabbit = t
     const handleRabbitTouchStart = (e) => {
         //e.preventDefault();
         //e.stopPropagation();
-        setTouchStartTime(Date.now());
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        touchStartTimeRef.current = Date.now();
     };
 
     const handleRabbitTouchEnd = (e) => {
         //e.preventDefault();
         //e.stopPropagation();
 
-        const touchDuration = Date.now() - touchStartTime;
+        const touchDuration = Date.now() - touchStartTimeRef.current;
         // Seulement si c'est un tap rapide (moins de 300ms)
         if (touchDuration < 300) {
             playSound();
@@ -148,7 +151,7 @@ export default function MobileBackground({ restoreApp, themeMode, showRabbit = t
     // Gestion du lapin - Click (desktop uniquement)
     const handleRabbitClick = (e) => {
         // Empêcher le clic si c'est un événement tactile ou si on vient de faire un touch
-        if (e.detail === 0 || Date.now() - touchStartTime < 500) return;
+        if (e.detail === 0 || Date.now() - touchStartTimeRef.current < 500) return;
 
         playSound();
     };
@@ -161,7 +164,8 @@ export default function MobileBackground({ restoreApp, themeMode, showRabbit = t
         //e.stopPropagation();
         setDraggedIcon(iconName);
         setIsDragging(false);
-        setTouchStartTime(Date.now());
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        touchStartTimeRef.current = Date.now();
 
         const rect = e.currentTarget.getBoundingClientRect();
         const touch = e.touches[0];
@@ -208,7 +212,7 @@ export default function MobileBackground({ restoreApp, themeMode, showRabbit = t
             target.classList.remove(styles.dragging);
 
             // Si pas de drag et tap rapide, ouvrir l'app
-            if (!isDragging && Date.now() - touchStartTime < 300) {
+            if (!isDragging && Date.now() - touchStartTimeRef.current < 300) {
                 setTimeout(() => {
                     handleLinkClick(socialLinks.find(link => link.name === draggedIcon)?.app);
                 }, 50);
@@ -227,7 +231,8 @@ export default function MobileBackground({ restoreApp, themeMode, showRabbit = t
 
         setDraggedIcon(iconName);
         setIsDragging(false);
-        setMouseStartTime(Date.now());
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        mouseStartTimeRef.current = Date.now();
 
         const rect = e.currentTarget.getBoundingClientRect();
         setMouseStartPos({ x: e.clientX, y: e.clientY });
@@ -292,7 +297,7 @@ export default function MobileBackground({ restoreApp, themeMode, showRabbit = t
             target.classList.remove(styles.dragging);
 
             // Si pas de drag et clic rapide, ouvrir l'app
-            if (!isDragging && Date.now() - mouseStartTime < 300) {
+            if (!isDragging && Date.now() - mouseStartTimeRef.current < 300) {
                 const app = socialLinks.find(link => link.name === draggedIcon)?.app;
                 if (app) {
                     handleLinkClick(app);
@@ -370,7 +375,7 @@ export default function MobileBackground({ restoreApp, themeMode, showRabbit = t
                 }
 
                 // Si pas de drag et clic dans les temps, ouvrir l'app
-                if (!isDragging && Date.now() - mouseStartTime < 300) {
+                if (!isDragging && Date.now() - mouseStartTimeRef.current < 300) {
                     const app = socialLinks.find(link => link.name === draggedIcon)?.app;
                     if (app) {
                         handleLinkClick(app);

@@ -750,25 +750,27 @@ export default function Game({ playerData, preSignedPool, isInitializing, error,
   return embeddedWallet ? (
     <Wrapper>
       <div className={`flex flex-col items-center text-center justify-start pt-10 p-4 sm:p-8 ${styles.bgBackground}`}>
-        <div
-          className="mb-6 w-full max-w-3xl"
-          style={{
-            background: isNight
-              ? 'linear-gradient(135deg, rgba(250, 204, 21, 0.14) 0%, rgba(251, 191, 36, 0.08) 100%)'
-              : 'linear-gradient(135deg, rgba(251, 191, 36, 0.12) 0%, rgba(245, 158, 11, 0.08) 100%)',
-            border: `1px solid ${isNight ? '#ca8a04' : '#d97706'}`,
-            color: isNight ? '#fde68a' : '#92400e',
-            borderRadius: '12px',
-            padding: '12px 16px',
-            boxShadow: isNight
-              ? '0 0 14px rgba(250, 204, 21, 0.15)'
-              : '0 4px 12px rgba(217, 119, 6, 0.12)',
-            textAlign: 'center',
-            fontWeight: 600
-          }}
-        >
-          To play the game, you must own at least <b>1 Digit Rabbits NFT</b>.
-        </div>
+        {playerData.hasClaimedPoints && (
+          <div
+            className="mb-6 w-full max-w-3xl"
+            style={{
+              background: isNight
+                ? 'linear-gradient(135deg, rgba(250, 204, 21, 0.14) 0%, rgba(251, 191, 36, 0.08) 100%)'
+                : 'linear-gradient(135deg, rgba(251, 191, 36, 0.12) 0%, rgba(245, 158, 11, 0.08) 100%)',
+              border: `1px solid ${isNight ? '#ca8a04' : '#d97706'}`,
+              color: isNight ? '#fde68a' : '#92400e',
+              borderRadius: '12px',
+              padding: '12px 16px',
+              boxShadow: isNight
+                ? '0 0 14px rgba(250, 204, 21, 0.15)'
+                : '0 4px 12px rgba(217, 119, 6, 0.12)',
+              textAlign: 'center',
+              fontWeight: 600
+            }}
+          >
+            To play the game, you must own at least <b>1 Digit Rabbits NFT</b>.
+          </div>
+        )}
         {/* Player Info */}
         <div className="mb-6">
           <PlayerData

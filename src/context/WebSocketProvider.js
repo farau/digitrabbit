@@ -26,6 +26,7 @@ export function WebSocketProvider({ children }) {
     const [isSyncing, setIsSyncing] = useState(false)
 
     const unwatchChatRef = useRef(null)
+    const unwatchChatModerationRef = useRef(null)
     const unwatchRabbitsRef = useRef(null)
     const lastSyncedBlockRef = useRef(null)
     const initializedRef = useRef(false)
@@ -241,6 +242,88 @@ export function WebSocketProvider({ children }) {
         })
     }, [resync])
 
+    const formatDuration = (seconds) => {
+        const total = Math.max(0, Number(seconds) || 0)
+        const hrs = Math.floor(total / 3600)
+        const mins = Math.floor((total % 3600) / 60)
+        const secs = total % 60
+        return [hrs, mins, secs].map((value) => String(value).padStart(2, '0')).join(':')
+    }
+
+    // 🔗 Événements de modération RabbitChat (messages système)
+    const setupChatModerationWebSocket = useCallback(() => {
+        if (!isMountedRef.current) {
+            console.log('⚠️ Provider unmounted, skipping Chat moderation WebSocket setup')
+            return
+        }
+
+        if (unwatchChatModerationRef.current) {
+            unwatchChatModerationRef.current()
+        }
+
+        console.log('🌐 Setting up Chat moderation WebSocket...')
+
+        unwatchChatModerationRef.current = wsPublicClient.watchContractEvent({
+            address: DIGIT_RABBITS_CHAT_ADDRESS,
+            abi: DIGIT_RABBITS_CHAT_ABI,
+            eventName: 'UserMuted',
+
+            onLogs(logs) {
+                if (!isMountedRef.current) return
+                setIsConnected(true)
+
+                setMessages(prev => {
+                    const existing = new Set(prev.map(m => m.messageId))
+                    const next = [...prev]
+
+                    for (const log of logs) {
+                        const { args } = log
+                        if (!args) continue
+
+                        const mutedUser = args.user
+                        const mutedBy = args.mutedBy
+                        const duration = Number(args.duration || 0)
+                        const expiresAt = Number(args.expiresAt || 0)
+                        const syntheticId = `system-muted-${log.transactionHash}-${mutedUser}-${expiresAt}`
+
+                        if (existing.has(syntheticId)) continue
+
+                        const shortMutedUser = mutedUser
+                            ? `${mutedUser.slice(0, 6)}...${mutedUser.slice(-4)}`
+                            : 'Unknown'
+                        const shortMutedBy = mutedBy
+                            ? `${mutedBy.slice(0, 6)}...${mutedBy.slice(-4)}`
+                            : 'Unknown'
+
+                        next.push({
+                            messageId: syntheticId,
+                            sender: mutedBy || '0x0000000000000000000000000000000000000000',
+                            content: `🔇 ${shortMutedUser} has been muted by ${shortMutedBy} for ${formatDuration(duration)}.`,
+                            score: 0,
+                            senderRole: 2,
+                            twitterUsername: 'RabbitBot',
+                            twitterProfilePictureUrl: '/img/default-avatar.jpg',
+                            timestamp: expiresAt > duration ? (expiresAt - duration) : Math.floor(Date.now() / 1000),
+                            replyToMessageId: 0,
+                            transactionHash: log.transactionHash
+                        })
+
+                        if (onUserMutedCallbackRef.current) {
+                            onUserMutedCallbackRef.current(log)
+                        }
+                    }
+
+                    return next
+                })
+            },
+
+            onError(error) {
+                if (!isMountedRef.current) return
+                console.error('❌ Chat moderation WebSocket error:', error)
+            }
+        })
+    }, [])
+
 
     // 🔗 Établir la connexion WebSocket pour les événements de DIGIT_RABBITS
     const setupRabbitsWebSocket = useCallback(() => {
@@ -382,6 +465,7 @@ export function WebSocketProvider({ children }) {
                     // Reconnexion
                     await resync()
                     setupChatWebSocket()
+                    setupChatModerationWebSocket()
                     setupRabbitsWebSocket()
 
                     // Re-établit les listeners sur le nouveau socket
@@ -407,6 +491,7 @@ export function WebSocketProvider({ children }) {
 
         resync().then(() => {
             setupChatWebSocket()
+            setupChatModerationWebSocket()
             setupRabbitsWebSocket()
             setupSocketListeners()
         })
@@ -428,6 +513,11 @@ export function WebSocketProvider({ children }) {
                 unwatchChatRef.current = null
             }
 
+            if (unwatchChatModerationRef.current) {
+                unwatchChatModerationRef.current()
+                unwatchChatModerationRef.current = null
+            }
+
             if (unwatchRabbitsRef.current) {
                 unwatchRabbitsRef.current()
                 unwatchRabbitsRef.current = null
@@ -438,7 +528,7 @@ export function WebSocketProvider({ children }) {
                 reconnectTimeoutRef.current = null
             }
         }
-    }, [resync, setupChatWebSocket, setupRabbitsWebSocket])
+    }, [resync, setupChatWebSocket, setupChatModerationWebSocket, setupRabbitsWebSocket])
 
     return (
         <WebSocketContext.Provider

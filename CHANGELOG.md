@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 
 ## Changelog
 
+## [31/03/2026]
+
+feat: enhance chat moderation features and user experience
+- Added isMuted and muteExpiresAt fields to user stats in chat API.
+- Conditional rendering of game message based on playerData.hasClaimedPoints.
+- Improved touch and mouse event handling in MobileBackground component.
+- Introduced duration options for mute actions in RabbitChat moderation modal.
+- Enhanced error handling and notifications for moderation actions.
+- Implemented WebSocket for chat moderation events, including user mute notifications.
+- Refactored moderation target validation and user feedback mechanisms.
+
 ## [30/03/2026]
 
 ### Mobile / Viewport

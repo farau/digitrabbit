@@ -27,7 +27,9 @@ const getCachedUserStats = unstable_cache(
             messageCount: Number(userData[1]),
             totalScore: Number(userData[2]),
             lastMessageTimestamp: Number(userData[3]),
-            canSendMessage: userData[4]
+            canSendMessage: userData[4],
+            isMuted: userData[5],
+            muteExpiresAt: Number(userData[6])
         };
     },
     ['chat-user-stats'],
