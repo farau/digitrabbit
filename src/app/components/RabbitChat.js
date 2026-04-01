@@ -847,6 +847,7 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
             })
             await ensureTransactionSucceeded(txHash)
             console.log('✅ User muted:', txHash)
+            setTargetAddress('')
             return true
         } catch (err) {
             console.error('Error:', err)
@@ -874,6 +875,7 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
             await ensureTransactionSucceeded(txHash)
             console.log('✅ User unmuted:', txHash)
             showNotification(`User ${moderationModal.targetAddress.slice(0, 6)}...${moderationModal.targetAddress.slice(-4)} unmuted`)
+            setTargetAddress('')
             return true
         } catch (err) {
             console.error('Error:', err)
@@ -901,6 +903,7 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
             await ensureTransactionSucceeded(txHash)
             console.log('✅ User promoted:', txHash)
             showNotification(`User ${moderationModal.targetAddress.slice(0, 6)}...${moderationModal.targetAddress.slice(-4)} promoted`)
+            setTargetAddress('')
             return true
         } catch (err) {
             console.error('Error:', err)
@@ -928,6 +931,7 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
             await ensureTransactionSucceeded(txHash)
             console.log('✅ User demoted:', txHash)
             showNotification(`User ${moderationModal.targetAddress.slice(0, 6)}...${moderationModal.targetAddress.slice(-4)} demoted`)
+            setTargetAddress('')
             return true
         } catch (err) {
             console.error('Error:', err)
@@ -1384,22 +1388,46 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
                                 maxWidth: '100%'
                             }}>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '140px' }}>
-                                    <input
-                                        type="text"
-                                        placeholder="0x..."
-                                        value={targetAddress}
-                                        onChange={(e) => setTargetAddress(e.target.value)}
-                                        style={{
-                                            background: isNight ? '#1a1a1a' : '#f5f5f5',
-                                            color: textColor,
-                                            border: `1px solid ${borderColor}`,
-                                            padding: '6px 10px',
-                                            borderRadius: '6px',
-                                            fontSize: '12px',
-                                            width: '140px',
-                                            fontFamily: 'monospace'
-                                        }}
-                                    />
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <input
+                                            type="text"
+                                            placeholder="0x..."
+                                            value={targetAddress}
+                                            onChange={(e) => setTargetAddress(e.target.value)}
+                                            style={{
+                                                background: isNight ? '#1a1a1a' : '#f5f5f5',
+                                                color: textColor,
+                                                border: `1px solid ${borderColor}`,
+                                                padding: '6px 10px',
+                                                borderRadius: '6px',
+                                                fontSize: '12px',
+                                                width: '140px',
+                                                fontFamily: 'monospace'
+                                            }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setTargetAddress('')}
+                                            disabled={!hasTargetInput}
+                                            title="Clear address"
+                                            style={{
+                                                background: isNight ? '#2b2b2b' : '#ececec',
+                                                color: isNight ? '#bbb' : '#555',
+                                                border: `1px solid ${borderColor}`,
+                                                width: '14px',
+                                                height: '14px',
+                                                padding: '0',
+                                                borderRadius: '3px',
+                                                cursor: hasTargetInput ? 'pointer' : 'not-allowed',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                opacity: hasTargetInput ? 1 : 0.5
+                                            }}
+                                        >
+                                            <X size={10} />
+                                        </button>
+                                    </div>
                                     {isSelfTarget && (
                                         <span
                                             style={{
