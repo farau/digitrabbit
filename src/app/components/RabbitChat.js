@@ -6,6 +6,7 @@ import { Loader2, AlertCircle, Shield, UserCheck, UserMinus, Ban, VolumeX, Copy,
 import { useGame, useTheme } from '@/context'
 import Wrapper from '@/app/components/Wrapper'
 import { useWalletClient } from '../hooks/useWalletClient'
+import { useChatMessages } from '../hooks/useChatMessages'
 import WalletButton from './WalletButton'
 import * as Sentry from '@sentry/nextjs'
 import Image from 'next/image'
@@ -24,6 +25,11 @@ import { XLogo } from '@/utils/constants'
 // Composant MessageBubble avec thème amélioré
 function MessageBubble({ message, messages, isNight, user, onReply }) {
     const [copiedAddress, setCopiedAddress] = useState(false)
+    const hasOnChainMessageId = (
+        (typeof message?.messageId === 'number' && Number.isInteger(message.messageId) && message.messageId > 0)
+        || (typeof message?.messageId === 'string' && /^\d+$/.test(message.messageId))
+    )
+    const isSystemMessage = typeof message?.messageId === 'string' && message.messageId.startsWith('system-')
 
     const cardBg = isNight ? '#1a1a1a' : '#f3f3f3'
     const borderColor = isNight ? '#333' : '#ddd'
@@ -178,39 +184,45 @@ function MessageBubble({ message, messages, isNight, user, onReply }) {
                             <span className={`font-bold ${ROLE_COLORS[message.senderRole]}`}>
                                 {message?.twitterUsername || 'Anonymous'}
                             </span>
-                            <button
-                                onClick={handleCopyAddress}
-                                style={{
-                                    fontSize: '11px',
-                                    color: isNight ? '#888' : '#666',
-                                    background: 'transparent',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '4px',
-                                    padding: '2px 6px',
-                                    borderRadius: '4px',
-                                    transition: 'all 0.2s'
-                                }}
-                                onMouseOver={(e) => {
-                                    e.currentTarget.style.background = isNight ? '#333' : '#e5e5e5'
-                                }}
-                                onMouseOut={(e) => {
-                                    e.currentTarget.style.background = 'transparent'
-                                }}
-                                title="Click to copy address"
-                            >
-                                {message.sender.slice(0, 6)}...{message.sender.slice(-4)}
-                                {copiedAddress ? <Check size={12} className="text-green-500" /> : <Copy size={12} />}
-                            </button>
+                            {!isSystemMessage && (
+                                <button
+                                    onClick={handleCopyAddress}
+                                    style={{
+                                        fontSize: '11px',
+                                        color: isNight ? '#888' : '#666',
+                                        background: 'transparent',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        padding: '2px 6px',
+                                        borderRadius: '4px',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    onMouseOver={(e) => {
+                                        e.currentTarget.style.background = isNight ? '#333' : '#e5e5e5'
+                                    }}
+                                    onMouseOut={(e) => {
+                                        e.currentTarget.style.background = 'transparent'
+                                    }}
+                                    title="Click to copy address"
+                                >
+                                    {message.sender.slice(0, 6)}...{message.sender.slice(-4)}
+                                    {copiedAddress ? <Check size={12} className="text-green-500" /> : <Copy size={12} />}
+                                </button>
+                            )}
                             <span style={{ fontSize: '11px', color: isNight ? '#666' : '#999' }}>
                                 {new Date(message.timestamp * 1000).toLocaleTimeString()}
                             </span>
-                            <Image src="/img/rabbitpoint.png" alt="RB" width={20} height={20} />
-                            <span style={{ fontSize: '11px', color: '#fbbf24', marginLeft: '-4px' }}>
-                                <b>{message.score}</b>
-                            </span>
+                            {!isSystemMessage && (
+                                <>
+                                    <Image src="/img/rabbitpoint.png" alt="RB" width={20} height={20} />
+                                    <span style={{ fontSize: '11px', color: '#fbbf24', marginLeft: '-4px' }}>
+                                        <b>{message.score}</b>
+                                    </span>
+                                </>
+                            )}
                         </div>
                         <div style={{
                             color: textColor,
@@ -221,30 +233,35 @@ function MessageBubble({ message, messages, isNight, user, onReply }) {
                             {message.content}
                         </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
-                        <button
-                            onClick={() => onReply(message)}
-                            style={{
-                                background: 'transparent',
-                                border: 'none',
-                                cursor: 'pointer',
-                                padding: '3px',
-                                borderRadius: '3px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                color: isNight ? '#888' : '#666'
-                            }}
-                            onMouseOver={(e) => {
-                                e.currentTarget.style.background = isNight ? '#333' : '#e5e5e5'
-                            }}
-                            onMouseOut={(e) => {
-                                e.currentTarget.style.background = 'transparent'
-                            }}
-                            title="Reply to this message"
-                        >
-                            <Reply size={13} />
-                        </button>
-                    </div>
+                    {!isSystemMessage && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+                            <button
+                                onClick={() => hasOnChainMessageId && onReply(message)}
+                                disabled={!hasOnChainMessageId}
+                                style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    cursor: hasOnChainMessageId ? 'pointer' : 'not-allowed',
+                                    padding: '3px',
+                                    borderRadius: '3px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    color: isNight ? '#888' : '#666',
+                                    opacity: hasOnChainMessageId ? 1 : 0.45
+                                }}
+                                onMouseOver={(e) => {
+                                    if (!hasOnChainMessageId) return
+                                    e.currentTarget.style.background = isNight ? '#333' : '#e5e5e5'
+                                }}
+                                onMouseOut={(e) => {
+                                    e.currentTarget.style.background = 'transparent'
+                                }}
+                                title={hasOnChainMessageId ? 'Reply to this message' : 'System message cannot be replied to on-chain'}
+                            >
+                                <Reply size={13} />
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
@@ -545,6 +562,7 @@ function SuccessNotification({ message, isVisible, onClose, isNight, type = 'suc
 export default function RabbitChat({ playerData, messages, isConnected, resyncMessages }) {
     const { user } = usePrivy()
     const { embeddedWallet, isValidating, validationError } = useGame()
+    const { registerCallbacks } = useChatMessages()
     const { themeMode } = useTheme()
     const { walletClient } = useWalletClient(embeddedWallet)
 
@@ -693,6 +711,50 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
             void loadUserData()
         }
     }, [embeddedWallet?.address, loadUserData])
+
+    useEffect(() => {
+        if (!embeddedWallet?.address) return
+
+        // Keep footer stats (role, mute state, messages, points) fresh even without sending a message.
+        const interval = setInterval(() => {
+            void loadUserData()
+        }, 120000)
+
+        return () => {
+            clearInterval(interval)
+        }
+    }, [embeddedWallet?.address, loadUserData])
+
+    useEffect(() => {
+        if (!embeddedWallet?.address) return
+
+        const isCurrentAddressInLogs = (logs) => {
+            const currentAddress = embeddedWallet.address.toLowerCase()
+            return logs?.some((log) => {
+                const sender = log?.args?.sender?.toLowerCase?.()
+                const userAddress = log?.args?.user?.toLowerCase?.()
+                const playerAddress = log?.args?.player?.toLowerCase?.()
+                return sender === currentAddress || userAddress === currentAddress || playerAddress === currentAddress
+            })
+        }
+
+        registerCallbacks({
+            onChatStatsRefresh: ({ reason, logs } = {}) => {
+                if (reason === 'visibility-visible' || reason === 'window-focus') {
+                    void loadUserData()
+                    return
+                }
+
+                if (isCurrentAddressInLogs(logs)) {
+                    void loadUserData()
+                }
+            }
+        })
+
+        return () => {
+            registerCallbacks({ onChatStatsRefresh: null })
+        }
+    }, [embeddedWallet?.address, loadUserData, registerCallbacks])
 
     useEffect(() => {
         return () => {
@@ -907,13 +969,20 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
             if (!response.ok) throw new Error(data.error || 'Failed to send message')
 
             const { score, nonce, signature, twitterUsername, twitterProfilePictureUrl } = data
+            const replyToMessageId = (() => {
+                const id = replyingTo?.messageId
+                if (typeof id === 'bigint' && id > 0n) return id
+                if (typeof id === 'number' && Number.isInteger(id) && id > 0) return BigInt(id)
+                if (typeof id === 'string' && /^\d+$/.test(id)) return BigInt(id)
+                return 0n
+            })()
 
             const txHash = await walletClient.writeContract({
                 account: embeddedWallet.address,
                 address: DIGIT_RABBITS_ADDRESS,
                 abi: DIGIT_RABBITS_ABI,
                 functionName: 'sendChatMessage',
-                args: [contentToSend, score, nonce, twitterUsername, twitterProfilePictureUrl, signature, replyingTo ? BigInt(replyingTo.messageId) : BigInt(0)],
+                args: [contentToSend, score, nonce, twitterUsername, twitterProfilePictureUrl, signature, replyToMessageId],
                 chain: customMegaethTestnet,
                 gas: 30000000n
             })

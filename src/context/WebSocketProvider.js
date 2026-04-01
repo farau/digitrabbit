@@ -43,26 +43,37 @@ export function WebSocketProvider({ children }) {
     const onGameStartedCallbackRef = useRef(null)
     const onGamePlayedCallbackRef = useRef(null)
     const onQuestRewardCreditedCallbackRef = useRef(null)
+    const onChatStatsRefreshCallbackRef = useRef(null)
+
+    const triggerChatStatsRefresh = useCallback((payload = {}) => {
+        if (!isMountedRef.current) return
+        if (typeof onChatStatsRefreshCallbackRef.current === 'function') {
+            onChatStatsRefreshCallbackRef.current(payload)
+        }
+    }, [])
 
     // Fonction pour enregistrer les callbacks
     const registerCallbacks = useCallback((callbacks) => {
-        if (callbacks.onPointsClaimed) {
+        if ('onPointsClaimed' in callbacks) {
             onPointsClaimedCallbackRef.current = callbacks.onPointsClaimed
         }
-        if (callbacks.onUserRoleChanged) {
+        if ('onUserRoleChanged' in callbacks) {
             onUserRoleChangedCallbackRef.current = callbacks.onUserRoleChanged
         }
-        if (callbacks.onUserMuted) {
+        if ('onUserMuted' in callbacks) {
             onUserMutedCallbackRef.current = callbacks.onUserMuted
         }
-        if (callbacks.onGameStarted) {
+        if ('onGameStarted' in callbacks) {
             onGameStartedCallbackRef.current = callbacks.onGameStarted
         }
-        if (callbacks.onGamePlayed) {
+        if ('onGamePlayed' in callbacks) {
             onGamePlayedCallbackRef.current = callbacks.onGamePlayed
         }
-        if (callbacks.onQuestRewardCredited) {
+        if ('onQuestRewardCredited' in callbacks) {
             onQuestRewardCreditedCallbackRef.current = callbacks.onQuestRewardCredited
+        }
+        if ('onChatStatsRefresh' in callbacks) {
+            onChatStatsRefreshCallbackRef.current = callbacks.onChatStatsRefresh
         }
     }, [])
 
@@ -313,6 +324,10 @@ export function WebSocketProvider({ children }) {
                         }
                     }
 
+                    if (logs.length > 0) {
+                        triggerChatStatsRefresh({ reason: 'chat-user-muted', logs })
+                    }
+
                     return next
                 })
             },
@@ -322,7 +337,7 @@ export function WebSocketProvider({ children }) {
                 console.error('❌ Chat moderation WebSocket error:', error)
             }
         })
-    }, [])
+    }, [triggerChatStatsRefresh])
 
 
     // 🔗 Établir la connexion WebSocket pour les événements de DIGIT_RABBITS
@@ -347,6 +362,7 @@ export function WebSocketProvider({ children }) {
                 if (!isMountedRef.current) return
 
                 setIsConnected(true)
+                let shouldRefreshChatStats = false
 
                 for (const log of logs) {
                     console.log(`📡 Event from DIGIT_RABBITS: ${log.eventName}`, log)
@@ -359,11 +375,13 @@ export function WebSocketProvider({ children }) {
                         }
                     } else if (log.eventName === 'RoleChanged') {
                         console.log('👤 RoleChanged event detected')
+                        shouldRefreshChatStats = true
                         if (onUserRoleChangedCallbackRef.current) {
                             onUserRoleChangedCallbackRef.current(log)
                         }
                     } else if (log.eventName === 'UserMuted') {
                         console.log('🔇 UserMuted event detected')
+                        shouldRefreshChatStats = true
                         if (onUserMutedCallbackRef.current) {
                             onUserMutedCallbackRef.current(log)
                         }
@@ -384,6 +402,10 @@ export function WebSocketProvider({ children }) {
                         }
                     }
                 }
+
+                if (shouldRefreshChatStats) {
+                    triggerChatStatsRefresh({ reason: 'rabbits-role-or-mute', logs })
+                }
             },
 
             onError(error) {
@@ -402,7 +424,7 @@ export function WebSocketProvider({ children }) {
                 }
             }
         })
-    }, [])
+    }, [triggerChatStatsRefresh])
 
     // 📱 Détecter visibilité de l'onglet
     useEffect(() => {
@@ -414,12 +436,22 @@ export function WebSocketProvider({ children }) {
             } else {
                 console.log('👁️ App visible - syncing missed events...')
                 resync()
+                triggerChatStatsRefresh({ reason: 'visibility-visible' })
             }
         }
 
+        const handleFocus = () => {
+            if (!isMountedRef.current) return
+            triggerChatStatsRefresh({ reason: 'window-focus' })
+        }
+
         document.addEventListener('visibilitychange', handleVisibilityChange)
-        return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
-    }, [resync])
+        window.addEventListener('focus', handleFocus)
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange)
+            window.removeEventListener('focus', handleFocus)
+        }
+    }, [resync, triggerChatStatsRefresh])
 
     // 🚀 Initialisation (une seule fois)
     useEffect(() => {

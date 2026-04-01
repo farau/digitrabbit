@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 
 ## Changelog
 
+## [01/04/2026]
+
+### Chat / RabbitBot
+- Fixed Vercel/Linux asset case issue for default chat avatar:
+  - Renamed tracked file `public/img/default-avatar.JPG` -> `public/img/default-avatar.jpg`.
+- Fixed reply crash on system messages (`Cannot convert system-muted-... to a BigInt`):
+  - Added safe `replyToMessageId` conversion (numeric-only to `BigInt`, fallback to `0n`).
+  - Prevented on-chain reply flow for non-numeric/system message IDs.
+- Updated RabbitBot/system message UI:
+  - Removed address display for system messages.
+  - Removed RabbitPoints icon + RB score for system messages.
+  - Removed Reply button for RabbitBot/system messages.
+
+### Chat / Footer Live Refresh
+- Improved RabbitChat footer refresh behavior (`Role`, `Messages`, `RabbitPoints`):
+  - Added `onChatStatsRefresh` callback channel in `WebSocketProvider`.
+  - Triggered footer stats refresh from provider on:
+    - app visibility return / window focus
+    - moderation/role events (`UserMuted`, `RoleChanged`) relevant to chat stats.
+  - Kept a lightweight fallback polling in `RabbitChat`, updated from 30s to 2 minutes.
+
 ## [31/03/2026]
 
 feat: enhance chat moderation features and user experience
