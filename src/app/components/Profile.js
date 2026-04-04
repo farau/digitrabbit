@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { XLogo } from '@/utils/constants'
 import Wrapper from '@/app/components/Wrapper'
 import { useTheme, useGame } from '@/context'
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
 import WalletButton from './WalletButton'
 import { useBalance } from 'wagmi'
@@ -23,7 +23,7 @@ import {
   YAxis,
 } from 'recharts'
 
-export default function Profile({ playerData }) {
+function Profile({ playerData }) {
   const { user } = usePrivy();
   const { themeMode } = useTheme();
   const isNight = themeMode === 'dark';
@@ -677,3 +677,37 @@ export default function Profile({ playerData }) {
     )
   )
 }
+
+function areWeeklyMessagesEqual(prevWeekly, nextWeekly) {
+  if (prevWeekly === nextWeekly) return true
+  if (!Array.isArray(prevWeekly) || !Array.isArray(nextWeekly)) return false
+  if (prevWeekly.length !== nextWeekly.length) return false
+
+  for (let i = 0; i < prevWeekly.length; i += 1) {
+    if (Number(prevWeekly[i]) !== Number(nextWeekly[i])) {
+      return false
+    }
+  }
+
+  return true
+}
+
+function arePlayerDataEqual(prev, next) {
+  if (prev === next) return true
+  if (!prev || !next) return false
+
+  return (
+    Number(prev.rabbitPoints) === Number(next.rabbitPoints) &&
+    Number(prev.totalClicks) === Number(next.totalClicks) &&
+    Number(prev.streak) === Number(next.streak) &&
+    Number(prev.maxClicks) === Number(next.maxClicks) &&
+    Number(prev.dailyMessages) === Number(next.dailyMessages) &&
+    Number(prev.gamePlayed) === Number(next.gamePlayed) &&
+    Number(prev.totalMessages) === Number(next.totalMessages) &&
+    areWeeklyMessagesEqual(prev.weeklyMessages, next.weeklyMessages)
+  )
+}
+
+export default memo(Profile, (prevProps, nextProps) =>
+  arePlayerDataEqual(prevProps.playerData, nextProps.playerData)
+)

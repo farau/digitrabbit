@@ -832,9 +832,7 @@ export default function MainPage() {
       case "Assets":
         return <Assets assetsList={assetsList} setSelectedAssetsIndex={setSelectedAssetsIndex} />;
       case "Profile":
-        return <Profile playerData={playerData}
-          isGameStarted={isGameStarted}
-        />;
+        return <Profile playerData={playerData} />;
       case "Game":
         return <Game
           playerData={playerData}

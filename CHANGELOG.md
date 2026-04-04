@@ -46,6 +46,10 @@ All notable changes to this project will be documented in this file.
   - Moved to bottom-right, above footer.
   - Kept above `overlay.png` and below main app windows.
 
+### Profile / Rendering Performance
+- Fixed unnecessary `Profile` re-renders when unrelated `MainPage` UI state updates occur (click/focus/timers/notifications).
+- Wrapped `Profile` with `React.memo` and a custom player-data comparator so stats UI re-renders only when profile-relevant data actually changes.
+
 ### Quests / Chat Notification Reliability
 - Improved quest notification refresh flow:
   - Waits for player data load before evaluating claimable quests.
