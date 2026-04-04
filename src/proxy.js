@@ -6,6 +6,7 @@ import { Redis } from '@upstash/redis';
 const RABBITBOT_DAILY_IP_LIMIT = Math.max(Number(process.env.RABBITBOT_DAILY_IP_LIMIT || 25), 1);
 const AUTH_IP_ATTEMPTS_LIMIT = Math.max(Number(process.env.AUTH_IP_ATTEMPTS_LIMIT || 6), 1);
 const AUTH_IP_WINDOW_SECONDS = Math.max(Number(process.env.AUTH_IP_WINDOW_SECONDS || 300), 1);
+const ETH_ADDRESS_REGEX = /^0x[a-fA-F0-9]{40}$/;
 const redis = Redis.fromEnv();
 // Rate limiters pour les différentes routes sensibles
 const authIpRateLimit = new Ratelimit({
@@ -140,6 +141,8 @@ export async function proxy(req) {
     let rabbitBotRateLimitHeaders = null;
 
     // =============== RATE LIMIT CENTRALISÉ (IP) ===============
+
+    // cas pour l'authentification du site en BETA (protection contre les attaques de force brute sur le mot de passe)
     if (method === 'POST' && pathname === '/api/auth') {
         const clientIp = getClientIp(req);
         const authRateLimit = await authIpRateLimit.limit(clientIp);
@@ -152,14 +155,81 @@ export async function proxy(req) {
         }
     }
 
+    if (method === 'POST' && pathname === '/api/chat/send') {
+        let shouldTriggerRabbitBot = false;
+        let walletAddress = '';
+        try {
+            const body = await req.clone().json();
+            shouldTriggerRabbitBot = body?.sendToRabbitBot === true;
+            const candidateAddress = typeof body?.userAddress === 'string' ? body.userAddress.trim() : '';
+            if (ETH_ADDRESS_REGEX.test(candidateAddress)) {
+                walletAddress = candidateAddress.toLowerCase();
+            }
+        } catch (error) {
+            // Validation handled below when bot mode is enabled
+        }
+
+        if (shouldTriggerRabbitBot) {
+            if (!walletAddress) {
+                return NextResponse.json(
+                    { error: 'Missing or invalid userAddress in request payload' },
+                    { status: 400 }
+                );
+            }
+
+            const userIdentifier = `SEND:${walletAddress}`;
+            const chatBotRateLimit = await rabbitBotIpRateLimit.limit(userIdentifier);
+
+            if (!chatBotRateLimit.success) {
+                const limitedResponse = NextResponse.json(
+                    {
+                        error: 'RabbitBot daily limit reached for this user.',
+                        limit: chatBotRateLimit.limit,
+                        remaining: chatBotRateLimit.remaining,
+                        resetAt: chatBotRateLimit.reset
+                    },
+                    { status: 429 }
+                );
+                limitedResponse.headers.set('X-RateLimit-Limit', String(chatBotRateLimit.limit));
+                limitedResponse.headers.set('X-RateLimit-Remaining', String(chatBotRateLimit.remaining));
+                limitedResponse.headers.set('X-RateLimit-Reset', String(chatBotRateLimit.reset));
+                return limitedResponse;
+            }
+
+            rabbitBotRateLimitHeaders = {
+                limit: chatBotRateLimit.limit,
+                remaining: chatBotRateLimit.remaining,
+                reset: chatBotRateLimit.reset
+            };
+        }
+    }
+
     if (method === 'POST' && pathname === '/api/chat/bot') {
-        const clientIp = getClientIp(req);
-        const chatBotRateLimit = await rabbitBotIpRateLimit.limit(clientIp);
+        let walletAddress = '';
+        try {
+            const body = await req.clone().json();
+            const candidateAddress = typeof body?.userAddress === 'string' ? body.userAddress.trim() : '';
+            if (ETH_ADDRESS_REGEX.test(candidateAddress)) {
+                walletAddress = candidateAddress.toLowerCase();
+            }
+        } catch (error) {
+            // Validation handled below
+        }
+
+        if (!walletAddress) {
+            return NextResponse.json(
+                { error: 'Missing or invalid userAddress in request payload' },
+                { status: 400 }
+            );
+        }
+
+        const userIdentifier = `BOT:${walletAddress}`;
+        const chatBotRateLimit = await rabbitBotIpRateLimit.limit(userIdentifier);
 
         if (!chatBotRateLimit.success) {
             const limitedResponse = NextResponse.json(
                 {
-                    error: 'Daily limit reached for this user.',
+                    error: 'RabbitBot daily limit reached for this user.',
                     limit: chatBotRateLimit.limit,
                     remaining: chatBotRateLimit.remaining,
                     resetAt: chatBotRateLimit.reset
@@ -222,7 +292,7 @@ export async function proxy(req) {
         }
     }
 
-    const isPrivyProtectedRoute = ['/api/users', '/api/validate-wallet'].some(route =>
+    const isPrivyProtectedRoute = ['/api/users/', '/api/validate-wallet', '/api/chat/', '/api/game', '/api/leaderboard',].some(route =>
         pathname.startsWith(route)
     );
 

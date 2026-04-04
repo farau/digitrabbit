@@ -8,7 +8,9 @@ import { sendRabbitBotAwardPoints, sendRabbitBotChatMessage } from '@/lib/wallet
 import {
     publicClient,
     DIGIT_RABBITS_ABI,
-    DIGIT_RABBITS_ADDRESS
+    DIGIT_RABBITS_ADDRESS,
+    DIGIT_RABBITS_CHAT_ABI,
+    DIGIT_RABBITS_CHAT_ADDRESS
 } from '@/utils/chainConfig'
 
 const ETH_ADDRESS_REGEX = /^0x[a-fA-F0-9]{40}$/
@@ -16,6 +18,7 @@ const RABBITBOT_MAX_INPUT_LENGTH = Math.max(Number(process.env.RABBITBOT_MAX_INP
 const RABBITBOT_ENABLED = process.env.RABBITBOT_ENABLED !== '0'
 const RABBITBOT_AWARD_ENABLED = process.env.RABBITBOT_AWARD_ENABLED === '1'
 const AUTH_CACHE_TTL_SECONDS = 30
+const RABBITBOT_REPLY_MAX_AGE_SECONDS = 120
 
 const getCachedChatUser = unstable_cache(
     async (idToken) => verifyAndGetUser(idToken),
@@ -80,6 +83,36 @@ function parseReplyToMessageId(value) {
     return 0n
 }
 
+async function getReplyTargetValidation(userAddress, replyToMessageId) {
+    try {
+        const message = await publicClient.readContract({
+            address: DIGIT_RABBITS_CHAT_ADDRESS,
+            abi: DIGIT_RABBITS_CHAT_ABI,
+            functionName: 'getMessage',
+            args: [replyToMessageId]
+        })
+
+        const sender = typeof message?.[0] === 'string'
+            ? message[0].toLowerCase()
+            : ''
+        const timestamp = Number(message?.[2] || 0)
+        const now = Math.floor(Date.now() / 1000)
+        const isFresh = Number.isFinite(timestamp)
+            && timestamp > 0
+            && (now - timestamp) <= RABBITBOT_REPLY_MAX_AGE_SECONDS
+
+        return {
+            isOwner: sender === String(userAddress || '').toLowerCase(),
+            isFresh,
+        }
+    } catch (error) {
+        return {
+            isOwner: false,
+            isFresh: false,
+        }
+    }
+}
+
 export async function POST(request) {
     if (!RABBITBOT_ENABLED) {
         return NextResponse.json({ error: 'RabbitBot is currently disabled' }, { status: 503 })
@@ -128,6 +161,24 @@ export async function POST(request) {
             return NextResponse.json(
                 { error: 'Address does not belong to authenticated user' },
                 { status: 403 }
+            )
+        }
+
+        const replyValidation = await getReplyTargetValidation(
+            userAddress,
+            replyToMessageId
+        )
+        if (!replyValidation.isOwner) {
+            return NextResponse.json(
+                { error: 'Reply target message is not a valid on-chain message from this user' },
+                { status: 403 }
+            )
+        }
+
+        if (!replyValidation.isFresh) {
+            return NextResponse.json(
+                { error: `Reply target is too old (max ${RABBITBOT_REPLY_MAX_AGE_SECONDS}s). Send a new message.` },
+                { status: 429 }
             )
         }
 

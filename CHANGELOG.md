@@ -50,6 +50,17 @@ All notable changes to this project will be documented in this file.
 - Fixed unnecessary `Profile` re-renders when unrelated `MainPage` UI state updates occur (click/focus/timers/notifications).
 - Wrapped `Profile` with `React.memo` and a custom player-data comparator so stats UI re-renders only when profile-relevant data actually changes.
 
+### RabbitBot / Security
+- Added double proxy Redis guard for RabbitBot flow:
+  - `POST /api/chat/send` (when `sendToRabbitBot=true`) applies RabbitBot rate-limit before any on-chain send.
+  - `POST /api/chat/bot` applies the same RabbitBot rate-limit as a second guard.
+- RabbitBot rate-limit identifier now uses validated `walletAddress` only.
+- Added strict payload validation in proxy for RabbitBot-related calls:
+  - Requests fail fast if `userAddress` is missing/invalid.
+- Hardened `POST /api/chat/bot` with on-chain reply-target validation:
+  - Verifies `replyToMessageId` points to an on-chain message sent by the authenticated wallet.
+  - Verifies reply-target freshness (recent message window).
+
 ### Quests / Chat Notification Reliability
 - Improved quest notification refresh flow:
   - Waits for player data load before evaluating claimable quests.
