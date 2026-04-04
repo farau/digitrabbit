@@ -65,7 +65,7 @@ export default function MainPage() {
 
   const [volumePlayer, setVolumePlayer] = useState(0.2); // Volume musique principale
 
-  const { themeMode, toggleTheme, show3DEffects, toggle3DEffects } = useTheme();
+  const { themeMode, toggleTheme, show3DEffects, toggle3DEffects, setShow3DEffects } = useTheme();
   const { width, isMobile } = useWindowSize();
   // Setters pour memes
   const [selectedMemeIndex, setSelectedMemeIndex] = useState(null);
@@ -117,6 +117,7 @@ export default function MainPage() {
   })
   const [onboardingStepIndex, setOnboardingStepIndex] = useState(0)
   const [onboardingDismissed, setOnboardingDismissed] = useState(false)
+  const [onboardingTargetAppOverride, setOnboardingTargetAppOverride] = useState(null)
   const [onboardingTargetPosition, setOnboardingTargetPosition] = useState(null)
   const [onboardingBubblePosition, setOnboardingBubblePosition] = useState(null)
   const [typedOnboardingDescription, setTypedOnboardingDescription] = useState('')
@@ -142,6 +143,7 @@ export default function MainPage() {
   const { messages, isConnected, isSyncing, resync, registerCallbacks } = useChatMessages()
   const isRabbitChatOpen = visibleApps.includes('RabbitChat')
   const hasNoPoints = Number(playerData?.rabbitPoints || 0) <= 0
+  const isAppInteractionLocked = Boolean(embeddedWallet?.address) && !hasLoadedPlayerData
   const shouldRunOnboarding = Boolean(embeddedWallet?.address) && hasLoadedPlayerData && hasNoPoints && !onboardingDismissed
   const activeOnboardingStep = shouldRunOnboarding ? ONBOARDING_STEPS[onboardingStepIndex] : null
   const onboardingProgressText = `${Math.min(onboardingStepIndex + 1, ONBOARDING_STEPS.length)}/${ONBOARDING_STEPS.length}`
@@ -169,9 +171,17 @@ export default function MainPage() {
   }, [])
 
   useEffect(() => {
+    if (!shouldRunOnboarding || isMobile) return
+    if (!show3DEffects) {
+      setShow3DEffects(true)
+      localStorage.setItem('show3DEffects', JSON.stringify(true))
+    }
+  }, [shouldRunOnboarding, isMobile, show3DEffects, setShow3DEffects])
+
+  useEffect(() => {
     if (!embeddedWallet?.address) {
       setOnboardingStepIndex(0)
-      setOnboardingDismissed(false)
+      setOnboardingTargetAppOverride(null)
       return
     }
 
@@ -200,7 +210,14 @@ export default function MainPage() {
     }
 
     const updateTargetPosition = () => {
-      const targetElements = Array.from(document.querySelectorAll(`[data-app="${activeOnboardingStep.app}"]`))
+      const appKey = String(onboardingTargetAppOverride || activeOnboardingStep.app || '')
+      const selectors = Array.from(new Set([
+        `[data-app="${appKey}"]`,
+        `[data-app="${appKey.toLowerCase()}"]`,
+        `[data-app="${appKey.toUpperCase()}"]`
+      ]))
+
+      const targetElements = selectors.flatMap((selector) => Array.from(document.querySelectorAll(selector)))
       const targetElement = targetElements.find((element) => {
         const rect = element.getBoundingClientRect()
         return rect.width > 0 && rect.height > 0
@@ -233,22 +250,28 @@ export default function MainPage() {
         left: centerLeft,
         top: centerTop,
       })
+
+      // During desktop return-to-origin animation, move only the rabbit head.
+      if (!(onboardingTargetAppOverride === 'digit-head' && !isMobile)) {
       setOnboardingBubblePosition({
         left: bubbleLeft,
         top: bubbleTop,
         width: bubbleWidth
       })
+      }
     }
 
     updateTargetPosition()
-    const interval = setInterval(updateTargetPosition, 220)
+    const interval = setInterval(updateTargetPosition, 180)
     window.addEventListener('resize', updateTargetPosition)
+    window.addEventListener('scroll', updateTargetPosition, true)
 
     return () => {
       clearInterval(interval)
       window.removeEventListener('resize', updateTargetPosition)
+      window.removeEventListener('scroll', updateTargetPosition, true)
     }
-  }, [activeOnboardingStep, isMobile])
+  }, [activeOnboardingStep, onboardingTargetAppOverride, onboardingStepIndex, isMobile])
 
   useEffect(() => {
     const fullText = activeOnboardingStep?.description || ''
@@ -398,10 +421,11 @@ export default function MainPage() {
   useEffect(() => {
     const wasTempDisabled = sessionStorage.getItem('3d_temp_disabled') === 'true';
     if (wasTempDisabled) {
-      toggle3DEffects(); // Réactive l'effet 3D
+      setShow3DEffects(true); // Réactive explicitement l'effet 3D
+      localStorage.setItem('show3DEffects', JSON.stringify(true))
       sessionStorage.removeItem('3d_temp_disabled'); // Nettoie le flag
     }
-  }, []);
+  }, [setShow3DEffects]);
 
   // 1. On récupère la saison une seule fois au montage
   useEffect(() => {
@@ -657,7 +681,10 @@ export default function MainPage() {
   }
 
 
-  const restoreApp = (appName) => {
+  const restoreApp = (appName, options = {}) => {
+    const { force = false } = options
+    if (isAppInteractionLocked && !force) return
+
     if (appName === 'RabbitChat') {
       // Mark chat notifications as read when user opens RabbitChat
       previousMessagesLengthRef.current = Array.isArray(messages) ? messages.length : 0
@@ -707,15 +734,32 @@ export default function MainPage() {
   };
 
   const advanceOnboardingStep = () => {
-    setOnboardingStepIndex((previousStep) => {
-      const nextStep = previousStep + 1
-      if (nextStep >= ONBOARDING_STEPS.length) {
-        restoreApp('FAQ')
-        setOnboardingDismissed(true)
-        return ONBOARDING_STEPS.length
+    if (onboardingStepIndex >= ONBOARDING_STEPS.length - 1) {
+      if (!isMobile) {
+        setShow3DEffects(true)
+        localStorage.setItem('show3DEffects', JSON.stringify(true))
+        sessionStorage.removeItem('3d_temp_disabled')
       }
-      return nextStep
-    })
+
+      // Close onboarding immediately on Finish (no return translation animation).
+      setShow3DEffects(true)
+      localStorage.setItem('show3DEffects', JSON.stringify(true))
+      sessionStorage.removeItem('3d_temp_disabled')
+      setOnboardingDismissed(true)
+      setOnboardingStepIndex(ONBOARDING_STEPS.length)
+      setOnboardingTargetAppOverride(null)
+      restoreApp('FAQ', { force: true })
+
+      // Ensure the state remains ON after the FAQ window mount cycle.
+      setTimeout(() => {
+        setShow3DEffects(true)
+        localStorage.setItem('show3DEffects', JSON.stringify(true))
+        sessionStorage.removeItem('3d_temp_disabled')
+      }, 0)
+      return
+    }
+
+    setOnboardingStepIndex((previousStep) => Math.min(previousStep + 1, ONBOARDING_STEPS.length))
   }
 
 
@@ -911,14 +955,15 @@ export default function MainPage() {
             <div
               style={{
                 position: 'fixed',
-                left: onboardingTargetPosition.left + 52,
-                top: onboardingTargetPosition.top - (isMobile ? 0 : 18),
+                left: onboardingTargetPosition.left + (onboardingTargetAppOverride === 'digit-head' ? 0 : 52),
+                top: onboardingTargetPosition.top - (onboardingTargetAppOverride === 'digit-head' ? 0 : 18),
                 transform: 'translate(-50%, -50%)',
                 zIndex: 1305,
                 pointerEvents: 'none',
-                width: isMobile ? 92 : 112,
-                height: isMobile ? 92 : 112,
-                filter: 'drop-shadow(0 8px 20px rgba(0, 0, 0, 0.35))'
+                width: isMobile ? 56 : 90,
+                height: isMobile ? 56 : 120,
+                filter: 'drop-shadow(0 8px 20px rgba(0, 0, 0, 0.35))',
+                transition: 'left 0.28s ease, top 0.28s ease, width 0.28s ease, height 0.28s ease'
               }}
             >
               <Canvas camera={{ position: [1, 0, 3] }} style={{ pointerEvents: 'none' }}>
@@ -928,6 +973,7 @@ export default function MainPage() {
                   mouse={null}
                   isClicked={false}
                   themeMode={themeMode}
+                  forceLight={true}
                   onPointerDown={() => { }}
                   onPointerUp={() => { }}
                 />
@@ -1101,7 +1147,7 @@ export default function MainPage() {
         sound={sound}
         themeMode={themeMode}
         position={{ x: `${width - 790}px`, y: "1%" }}
-        show3DEffects={show3DEffects}
+        show3DEffects={show3DEffects && !(activeOnboardingStep && !isMobile)}
         volume={volume}
       />
       <Icon
@@ -1119,7 +1165,7 @@ export default function MainPage() {
         position={{ x: "10%", y: "6%" }}
       />
       <Icon
-        name="faq"
+        name="FAQ"
         label={"FAQ"}
         src="/img/icons/faq.png"
         onClick={() => restoreApp("FAQ")}

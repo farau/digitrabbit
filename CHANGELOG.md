@@ -23,6 +23,13 @@ All notable changes to this project will be documented in this file.
 - Onboarding visibility rule restored:
   - Onboarding now displays only for users with zero RabbitPoints (`rabbitPoints <= 0`) after player data is loaded.
   - Removed temporary forced-test onboarding behavior.
+- Onboarding finish flow polish:
+  - Removed desktop return translation animation on `Finish` for an immediate close/open behavior.
+  - `Finish` now closes onboarding immediately and opens `FAQ` directly.
+- 3D rabbit head stability fixes:
+  - Prevented duplicate rabbit head display during onboarding by hiding the base desktop head icon while onboarding overlay head is active.
+  - Forced onboarding rabbit head to always use the light model (`head`) for visual consistency.
+  - Fixed disappearing head after onboarding/FAQ open by cloning GLTF scenes per instance (prevents shared-scene mount/unmount conflicts).
 
 ### MainPage / Notification Center
 - Added compact Notification Center with live status:

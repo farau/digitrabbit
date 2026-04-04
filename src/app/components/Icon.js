@@ -7,6 +7,7 @@ import { useGLTF, OrbitControls } from "@react-three/drei";
 import { useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useEffect } from "react";
+import { useMemo } from "react";
 import { useTheme } from "@/context";
 
 function RotatingHeadModel({ themeMode, isClicked, onPointerDown, onPointerUp }) {
@@ -14,7 +15,10 @@ function RotatingHeadModel({ themeMode, isClicked, onPointerDown, onPointerUp })
   const cryGltf = useGLTF("/3d/cry");
   const headGltfDark = useGLTF("/3d/sleep");
 
-  const headGltf = themeMode === "dark" ? headGltfDark : headGltfLight;
+  const headLightScene = useMemo(() => headGltfLight.scene.clone(true), [headGltfLight.scene]);
+  const headDarkScene = useMemo(() => headGltfDark.scene.clone(true), [headGltfDark.scene]);
+  const cryScene = useMemo(() => cryGltf.scene.clone(true), [cryGltf.scene]);
+  const headScene = themeMode === "dark" ? headDarkScene : headLightScene;
 
   const modelRef = useRef();
   const targetScale = useRef(1.5);
@@ -40,12 +44,12 @@ function RotatingHeadModel({ themeMode, isClicked, onPointerDown, onPointerUp })
   return (
     <group ref={modelRef} onPointerDown={onPointerDown} onPointerUp={onPointerUp}>
       <primitive
-        object={cryGltf.scene}
+        object={cryScene}
         visible={isClicked}
         dispose={null}
       />
       <primitive
-        object={headGltf.scene}
+        object={headScene}
         visible={!isClicked}
         dispose={null}
       />
@@ -53,12 +57,15 @@ function RotatingHeadModel({ themeMode, isClicked, onPointerDown, onPointerUp })
   );
 }
 
-export function FloatingHeadModel({ mouse, isClicked, themeMode, onPointerDown, onPointerUp }) {
+export function FloatingHeadModel({ mouse, isClicked, themeMode, onPointerDown, onPointerUp, forceLight = false }) {
   const headGltfLight = useGLTF("/3d/head");
   const cryGltf = useGLTF("/3d/cry");
   const headGltfDark = useGLTF("/3d/sleep");
 
-  const headGltf = themeMode === "dark" ? headGltfDark : headGltfLight;
+  const headLightScene = useMemo(() => headGltfLight.scene.clone(true), [headGltfLight.scene]);
+  const headDarkScene = useMemo(() => headGltfDark.scene.clone(true), [headGltfDark.scene]);
+  const cryScene = useMemo(() => cryGltf.scene.clone(true), [cryGltf.scene]);
+  const headScene = forceLight ? headLightScene : (themeMode === "dark" ? headDarkScene : headLightScene);
 
   const modelRef = useRef();
   const headRef = useRef();
@@ -67,9 +74,9 @@ export function FloatingHeadModel({ mouse, isClicked, themeMode, onPointerDown, 
   const scaleRef = useRef(1.5);
 
   useEffect(() => {
-    const head = headGltf.scene.getObjectByName("Head") || headGltf.scene;
+    const head = headScene.getObjectByName("Head") || headScene;
     headRef.current = head;
-  }, [headGltf]);
+  }, [headScene]);
 
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
@@ -101,12 +108,12 @@ export function FloatingHeadModel({ mouse, isClicked, themeMode, onPointerDown, 
   return (
     <group ref={modelRef} onPointerDown={onPointerDown} onPointerUp={onPointerUp}>
       <primitive
-        object={cryGltf.scene}
+        object={cryScene}
         visible={isClicked}
         dispose={null}
       />
       <primitive
-        object={headGltf.scene}
+        object={headScene}
         visible={!isClicked}
         dispose={null}
       />
@@ -228,7 +235,7 @@ export default function Icon({ name, src, label, onClick, position, sound, show3
         </div>
       )}
 
-      {!show3DEffects && !is3D && (
+      {!is3D && (
         /* Sticker wrapper — contour blanc autour de l'icône + label */
         <div style={{
           display: "inline-flex",
