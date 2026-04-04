@@ -123,6 +123,7 @@ export default function MainPage() {
   const [typedOnboardingDescription, setTypedOnboardingDescription] = useState('')
   const [hasLoadedPlayerData, setHasLoadedPlayerData] = useState(false)
   const [notificationNow, setNotificationNow] = useState(Date.now())
+  const [gameCooldownSeconds, setGameCooldownSeconds] = useState(COOLDOWN_SECONDS)
   const previousMessagesLengthRef = useRef(0)
   const questFetchStateRef = useRef({ inFlight: false, lastAt: 0 })
   const playerFetchStateRef = useRef({ inFlight: false, lastAt: 0, pendingForce: false })
@@ -161,14 +162,42 @@ export default function MainPage() {
     if (!sessionEndsAt) return 0
 
     const now = Math.floor(notificationNow / 1000)
-    const cooldownEnd = sessionEndsAt + Number(COOLDOWN_SECONDS || 0)
+    const cooldownEnd = sessionEndsAt + Number(gameCooldownSeconds || COOLDOWN_SECONDS || 0)
     return Math.max(cooldownEnd - now, 0)
-  }, [notificationNow, playerData?.sessionEndsAt])
+  }, [notificationNow, playerData?.sessionEndsAt, gameCooldownSeconds])
 
   useEffect(() => {
     const interval = setInterval(() => setNotificationNow(Date.now()), 1000)
     return () => clearInterval(interval)
   }, [])
+
+  useEffect(() => {
+    let mounted = true
+
+    const fetchGameCooldown = async () => {
+      try {
+        const cooldown = await publicClient.readContract({
+          address: DIGIT_RABBITS_ADDRESS,
+          abi: DIGIT_RABBITS_ABI,
+          functionName: 'COOLDOWN',
+        })
+
+        if (!mounted) return
+        const parsedCooldown = Number(cooldown)
+        if (Number.isFinite(parsedCooldown) && parsedCooldown > 0) {
+          setGameCooldownSeconds(parsedCooldown)
+        }
+      } catch (cooldownError) {
+        console.warn('Could not read COOLDOWN from contract for Notification Center, fallback to local constant:', cooldownError)
+      }
+    }
+
+    void fetchGameCooldown()
+
+    return () => {
+      mounted = false
+    }
+  }, [embeddedWallet?.address])
 
   useEffect(() => {
     if (!shouldRunOnboarding || isMobile) return
@@ -253,11 +282,11 @@ export default function MainPage() {
 
       // During desktop return-to-origin animation, move only the rabbit head.
       if (!(onboardingTargetAppOverride === 'digit-head' && !isMobile)) {
-      setOnboardingBubblePosition({
-        left: bubbleLeft,
-        top: bubbleTop,
-        width: bubbleWidth
-      })
+        setOnboardingBubblePosition({
+          left: bubbleLeft,
+          top: bubbleTop,
+          width: bubbleWidth
+        })
       }
     }
 
@@ -914,7 +943,7 @@ export default function MainPage() {
                 ? `${questNotifications.readyCount} ready to claim`
                 : questNotifications.nextReadyIn !== null
                   ? `next in ${formatDuration(questNotifications.nextReadyIn)}`
-                  : 'no quest available'}</span>
+                  : 'no quest claimable'}</span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: themeMode === 'dark' ? '#d1d5db' : '#1f2937', opacity: 0.88 }}>
@@ -928,9 +957,9 @@ export default function MainPage() {
             <Image src="/img/icons/rabbitchat.png" alt="Chat" width={12} height={12} />
             <span>{chatNotifications.unreadNewMessages > 0
               ? chatNotifications.unreadNewMessages > 10
-                ? '+10 messages unread'
-                : `+${chatNotifications.unreadNewMessages} unread message(s)`
-              : '0 messages unread'}</span>
+                ? '+10 messages unseen'
+                : `+${chatNotifications.unreadNewMessages} unseen message(s)`
+              : '0 messages unseen'}</span>
           </div>
         </div>
       </div>
@@ -1040,37 +1069,37 @@ export default function MainPage() {
                 {ONBOARDING_TX_HINT}
               </div>
 
-            <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-              <button
-                onClick={advanceOnboardingStep}
+              <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                <button
+                  onClick={advanceOnboardingStep}
+                  style={{
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '7px 12px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    background: '#111827',
+                    color: '#f9fafb',
+                    border: '2px solid #111827'
+                  }}
+                >
+                  {onboardingStepIndex >= ONBOARDING_STEPS.length - 1 ? 'Finish' : 'Next'}
+                </button>
+              </div>
+              <div
                 style={{
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '7px 12px',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  background: '#111827',
-                  color: '#f9fafb',
-                  border: '2px solid #111827'
-                }}
-              >
-                {onboardingStepIndex >= ONBOARDING_STEPS.length - 1 ? 'Finish' : 'Next'}
-              </button>
-            </div>
-            <div
-              style={{
-                position: 'absolute',
-                left: isMobile
-                  ? activeOnboardingStep?.app === 'Game'
-                    ? '36%'
-                    : activeOnboardingStep?.app === 'FAQ'
-                      ? '66%'
-                      : '50%'
-                  : '50%',
-                bottom: '-12px',
-                width: '20px',
-                height: '20px',
+                  position: 'absolute',
+                  left: isMobile
+                    ? activeOnboardingStep?.app === 'Game'
+                      ? '36%'
+                      : activeOnboardingStep?.app === 'FAQ'
+                        ? '66%'
+                        : '50%'
+                    : '50%',
+                  bottom: '-12px',
+                  width: '20px',
+                  height: '20px',
                   transform: 'translateX(-50%) rotate(45deg)',
                   background: '#f8f8f8',
                   borderRight: '3px solid #111827',

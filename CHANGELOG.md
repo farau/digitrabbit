@@ -36,6 +36,9 @@ All notable changes to this project will be documented in this file.
   - Quests readiness / next quest timer.
   - Game cooldown timer.
   - Chat unread count.
+- Updated game cooldown source:
+  - Notification Center now reads `COOLDOWN()` directly from the smart contract.
+  - Falls back to local `COOLDOWN_SECONDS` only if on-chain read fails.
 - Replaced `Q/G/C` labels with corresponding icons.
 - Unread chat display capped to:
   - `+10 messages unread` when unread count is greater than 10.
@@ -57,6 +60,8 @@ All notable changes to this project will be documented in this file.
   - Mentions leaderboard visibility through the `Leaderboard` tab.
 - Improved first-time user guidance around chat activity:
   - Onboarding now frames chat interactions as part of the point-earning flow.
+- Updated LLM behavior:
+  - RabbitBot `systemPrompt` now enforces English-only responses.
 
 ### Mobile Background
 - Added `data-app` attributes on mobile floating icons to support onboarding targeting logic.
