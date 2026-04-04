@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import { privy, verifyAndGetUser } from '@/lib/privyClient';
 import { cookies } from 'next/headers';
+import { consumeUserRateLimit } from '@/lib/upstashRateLimit';
 
 // Cache pour éviter les appels répétés (optionnel)
 const validationCache = new Map();
@@ -134,39 +135,19 @@ async function checkWalletStatus(walletAddress) {
 }
 
 async function checkRateLimit(userId) {
-    // Implémenter une vérification de limite de taux
-    // Exemple avec Redis ou base de données
-
     try {
-        const rateLimitKey = `rate_limit_${userId}`;
         const maxRequests = 60; // 60 requêtes par heure
-        const windowMs = 60 * 60 * 1000; // 1 heure
-
-        // Ici vous devriez utiliser Redis, une base de données ou un service de rate limiting
-        // Pour l'exemple, utilisons une Map simple (pas persistante)
-        const rateLimitData = rateLimitStore.get(rateLimitKey) || { count: 0, resetTime: Date.now() + windowMs };
-
-        if (Date.now() > rateLimitData.resetTime) {
-            rateLimitData.count = 0;
-            rateLimitData.resetTime = Date.now() + windowMs;
+        const windowSeconds = 60 * 60; // 1 heure
+        const result = await consumeUserRateLimit(userId, maxRequests, windowSeconds);
+        if (!result.allowed) {
+            return { allowed: false, resetTime: result.resetAt };
         }
-
-        if (rateLimitData.count >= maxRequests) {
-            return { allowed: false, resetTime: rateLimitData.resetTime };
-        }
-
-        rateLimitData.count++;
-        rateLimitStore.set(rateLimitKey, rateLimitData);
-
-        return { allowed: true, remaining: maxRequests - rateLimitData.count };
+        return { allowed: true, remaining: result.remaining };
     } catch (error) {
         console.error('Erreur lors de la vérification du rate limit:', error);
         return { allowed: true }; // Par défaut, autoriser en cas d'erreur
     }
 }
-
-// Stores temporaires (utiliser Redis ou une base de données en production)
-const rateLimitStore = new Map();
 
 async function getBlacklistedWallets() {
     // Récupérer la liste des wallets blacklistés depuis votre base de données

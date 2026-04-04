@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import styles from "./MainPage.module.css";
-import Icon from "./Icon";
+import Icon, { FloatingHeadModel } from "./Icon";
 import Footer from "./Footer";
 import MemeGallery from "./MemeGallery";
 import Profile from "./Profile";
@@ -24,14 +24,37 @@ import Quests from "./Quests";
 import Linktree from "./Linktree";
 import { useChatMessages } from "../hooks/useChatMessages";
 
-import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, DIGIT_RABBITS_CHAT_ADDRESS, DIGIT_RABBITS_CHAT_ABI, publicClient, NUM_SLOTS } from '@/utils/chainConfig'
+import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, DIGIT_RABBITS_CHAT_ADDRESS, DIGIT_RABBITS_CHAT_ABI, publicClient, NUM_SLOTS, COOLDOWN_SECONDS } from '@/utils/chainConfig'
 import { usePreSignedPool } from "../hooks/usePreSignedPool";
 
 // Dynamic import pour le BackgroundEffect
 import dynamic from 'next/dynamic';
 import { userData } from "three/src/nodes/accessors/UserDataNode";
+import { Canvas } from "@react-three/fiber";
+
+const ONBOARDING_STEPS = [
+  {
+    app: 'Game',
+    title: 'Step 1',
+    description: 'Game.exe is where you play to earn RabbitPoints and progress your account. To play, you need a Digit Rabbits NFT. You can find the purchase links in the Linktree section.'
+  },
+  {
+    app: 'RabbitChat',
+    title: 'Step 2',
+    description: 'RabbitChat is the social hub where you earn points by chatting and interacting with RabbitBot. A leaderboard is available and can be checked anytime in the Leaderboard tab.'
+  },
+  {
+    app: 'FAQ',
+    title: 'Step 3',
+    description: 'For more details about gameplay, points, chat, and rewards, refer to the FAQ section.'
+  }
+]
+const ONBOARDING_TX_HINT = "To perform transactions, open the Settings icon and send gas fee tokens (ETH) to your embedded wallet created via Privy."
 
 export default function MainPage() {
+  const QUEST_REFRESH_INTERVAL_MS = 120000
+  const QUEST_MIN_FETCH_INTERVAL_MS = 30000
+  const PLAYER_MIN_FETCH_INTERVAL_MS = 5000
 
   const [visibleApps, setVisibleApps] = useState([]);
   const [minimizedApps, setMinimizedApps] = useState([]);
@@ -71,6 +94,7 @@ export default function MainPage() {
     // Chat stats
     dailyMessages: 0,
     weeklyMessages: 0,
+    totalMessages: 0,
 
   })
 
@@ -79,6 +103,28 @@ export default function MainPage() {
 
   // Setter game
   const [isGameStarted, setIsGameStarted] = useState(false)
+  const [questNotifications, setQuestNotifications] = useState({
+    readyCount: 0,
+    nextReadyIn: null,
+    isLoading: true,
+    error: null,
+    lastUpdatedAt: 0
+  })
+  const [chatNotifications, setChatNotifications] = useState({
+    unreadNewMessages: 0,
+    totalLoadedMessages: 0,
+    lastMessageAt: 0
+  })
+  const [onboardingStepIndex, setOnboardingStepIndex] = useState(0)
+  const [onboardingDismissed, setOnboardingDismissed] = useState(false)
+  const [onboardingTargetPosition, setOnboardingTargetPosition] = useState(null)
+  const [onboardingBubblePosition, setOnboardingBubblePosition] = useState(null)
+  const [typedOnboardingDescription, setTypedOnboardingDescription] = useState('')
+  const [hasLoadedPlayerData, setHasLoadedPlayerData] = useState(false)
+  const [notificationNow, setNotificationNow] = useState(Date.now())
+  const previousMessagesLengthRef = useRef(0)
+  const questFetchStateRef = useRef({ inFlight: false, lastAt: 0 })
+  const playerFetchStateRef = useRef({ inFlight: false, lastAt: 0, pendingForce: false })
 
   // Utilisation du hook usePreSignedPool
   const {
@@ -94,6 +140,245 @@ export default function MainPage() {
 
   // ✅ Hook WebSocket
   const { messages, isConnected, isSyncing, resync, registerCallbacks } = useChatMessages()
+  const isRabbitChatOpen = visibleApps.includes('RabbitChat')
+  const hasNoPoints = Number(playerData?.rabbitPoints || 0) <= 0
+  const shouldRunOnboarding = Boolean(embeddedWallet?.address) && hasLoadedPlayerData && hasNoPoints && !onboardingDismissed
+  const activeOnboardingStep = shouldRunOnboarding ? ONBOARDING_STEPS[onboardingStepIndex] : null
+  const onboardingProgressText = `${Math.min(onboardingStepIndex + 1, ONBOARDING_STEPS.length)}/${ONBOARDING_STEPS.length}`
+
+  const formatDuration = useCallback((seconds) => {
+    const total = Math.max(0, Number(seconds) || 0)
+    const hrs = Math.floor(total / 3600)
+    const mins = Math.floor((total % 3600) / 60)
+    const secs = total % 60
+    return [hrs, mins, secs].map((value) => String(value).padStart(2, '0')).join(':')
+  }, [])
+
+  const getGameStartCooldownRemaining = useCallback(() => {
+    const sessionEndsAt = Number(playerData?.sessionEndsAt || 0)
+    if (!sessionEndsAt) return 0
+
+    const now = Math.floor(notificationNow / 1000)
+    const cooldownEnd = sessionEndsAt + Number(COOLDOWN_SECONDS || 0)
+    return Math.max(cooldownEnd - now, 0)
+  }, [notificationNow, playerData?.sessionEndsAt])
+
+  useEffect(() => {
+    const interval = setInterval(() => setNotificationNow(Date.now()), 1000)
+    return () => clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
+    if (!embeddedWallet?.address) {
+      setOnboardingStepIndex(0)
+      setOnboardingDismissed(false)
+      return
+    }
+
+    if (!shouldRunOnboarding) {
+      setOnboardingStepIndex(0)
+      return
+    }
+
+  }, [
+    embeddedWallet?.address,
+    shouldRunOnboarding,
+    onboardingStepIndex
+  ])
+
+  useEffect(() => {
+    if (embeddedWallet?.address && seasonId !== null) {
+      setHasLoadedPlayerData(false)
+    }
+  }, [embeddedWallet?.address, seasonId])
+
+  useEffect(() => {
+    if (!activeOnboardingStep) {
+      setOnboardingTargetPosition(null)
+      setOnboardingBubblePosition(null)
+      return
+    }
+
+    const updateTargetPosition = () => {
+      const targetElements = Array.from(document.querySelectorAll(`[data-app="${activeOnboardingStep.app}"]`))
+      const targetElement = targetElements.find((element) => {
+        const rect = element.getBoundingClientRect()
+        return rect.width > 0 && rect.height > 0
+      })
+
+      if (!targetElement) {
+        setOnboardingTargetPosition(null)
+        setOnboardingBubblePosition(null)
+        return
+      }
+
+      const rect = targetElement.getBoundingClientRect()
+      const centerLeft = rect.left + rect.width / 2
+      const centerTop = rect.top + rect.height / 2
+      const viewportWidth = window.innerWidth
+      const viewportHeight = window.innerHeight
+      const horizontalMargin = 12
+      const rabbitOffsetX = isMobile ? 0 : 52
+      const bubbleWidth = isMobile ? Math.min(viewportWidth - 24, 320) : 360
+      const minCenter = horizontalMargin + bubbleWidth / 2
+      const maxCenter = viewportWidth - horizontalMargin - bubbleWidth / 2
+      const bubbleLeft = Math.min(Math.max(centerLeft + rabbitOffsetX * 0.85, minCenter), Math.max(minCenter, maxCenter))
+      const bubbleHeight = isMobile ? 210 : 228
+      const topMin = 10
+      const topMax = Math.max(topMin, viewportHeight - bubbleHeight - 14)
+      const preferredTop = centerTop - (isMobile ? 245 : 270)
+      const bubbleTop = Math.min(Math.max(preferredTop, topMin), topMax)
+
+      setOnboardingTargetPosition({
+        left: centerLeft,
+        top: centerTop,
+      })
+      setOnboardingBubblePosition({
+        left: bubbleLeft,
+        top: bubbleTop,
+        width: bubbleWidth
+      })
+    }
+
+    updateTargetPosition()
+    const interval = setInterval(updateTargetPosition, 220)
+    window.addEventListener('resize', updateTargetPosition)
+
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('resize', updateTargetPosition)
+    }
+  }, [activeOnboardingStep, isMobile])
+
+  useEffect(() => {
+    const fullText = activeOnboardingStep?.description || ''
+    setTypedOnboardingDescription('')
+    if (!fullText) return
+
+    let index = 0
+    const interval = setInterval(() => {
+      index += 1
+      setTypedOnboardingDescription(fullText.slice(0, index))
+      if (index >= fullText.length) {
+        clearInterval(interval)
+      }
+    }, 16)
+
+    return () => clearInterval(interval)
+  }, [activeOnboardingStep?.title, activeOnboardingStep?.description])
+
+  const fetchQuestNotifications = useCallback(async ({ force = false } = {}) => {
+    if (!embeddedWallet?.address) {
+      setQuestNotifications((previous) => ({
+        ...previous,
+        readyCount: 0,
+        nextReadyIn: null,
+        isLoading: true,
+        error: null,
+      }))
+      return
+    }
+
+    if (!hasLoadedPlayerData) {
+      setQuestNotifications((previous) => ({
+        ...previous,
+        isLoading: true,
+        error: null,
+      }))
+      return
+    }
+
+    const now = Date.now()
+    if (questFetchStateRef.current.inFlight) {
+      return
+    }
+    if (!force && now - questFetchStateRef.current.lastAt < QUEST_MIN_FETCH_INTERVAL_MS) {
+      return
+    }
+
+    questFetchStateRef.current.inFlight = true
+    questFetchStateRef.current.lastAt = now
+
+    const questIds = ['daily_messages', 'daily_streak', 'daily_hold', 'weekly_messages', 'weekly_games']
+    setQuestNotifications((previous) => ({ ...previous, isLoading: true, error: null }))
+
+    try {
+      const response = await fetch(
+        `/api/quests/claim?playerAddress=${embeddedWallet.address}&questIds=${questIds.join(',')}&period=all`
+      )
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`)
+      }
+
+      const payload = await response.json()
+      const claimStatus = payload?.data?.claimStatus || {}
+      const cooldowns = payload?.data?.cooldowns || {}
+      const holdings = Number(payload?.data?.holdings || 0)
+
+      const streak = Number(playerData?.streak || 0)
+      const dailyMessages = Number(playerData?.dailyMessages || 0)
+      const weeklyMessagesTotal = Array.isArray(playerData?.weeklyMessages)
+        ? playerData.weeklyMessages.reduce((sum, value) => sum + Number(value || 0), 0)
+        : Number(playerData?.weeklyMessages || 0)
+      const weeklyGames = Number(playerData?.gamePlayed || 0)
+
+      const targets = {
+        daily_messages: Math.max(10 + Math.max(streak - 1, 0) * 2, 10),
+        daily_streak: 1,
+        daily_hold: Math.max(streak, 1),
+        weekly_messages: 1000,
+        weekly_games: 14,
+      }
+
+      const progress = {
+        daily_messages: dailyMessages,
+        daily_streak: streak >= 1 ? 1 : 0,
+        daily_hold: holdings,
+        weekly_messages: weeklyMessagesTotal,
+        weekly_games: weeklyGames,
+      }
+
+      let readyCount = 0
+      let nextReadyIn = null
+
+      for (const questId of questIds) {
+        const isClaimed = claimStatus?.[questId] === true
+        const cooldown = Number(cooldowns?.[questId] || 0)
+        const isCompleted = Number(progress?.[questId] || 0) >= Number(targets?.[questId] || 0)
+
+        if (!isClaimed && isCompleted && cooldown <= 0) {
+          readyCount += 1
+        } else if (!isClaimed && isCompleted && cooldown > 0) {
+          nextReadyIn = nextReadyIn === null ? cooldown : Math.min(nextReadyIn, cooldown)
+        }
+      }
+
+      setQuestNotifications({
+        readyCount,
+        nextReadyIn,
+        isLoading: false,
+        error: null,
+        lastUpdatedAt: Date.now()
+      })
+    } catch (questError) {
+      console.error('Failed to fetch quest notifications:', questError)
+      setQuestNotifications((previous) => ({
+        ...previous,
+        isLoading: false,
+        error: questError?.message || 'Failed to refresh quests',
+      }))
+    } finally {
+      questFetchStateRef.current.inFlight = false
+    }
+  }, [
+    embeddedWallet?.address,
+    hasLoadedPlayerData,
+    playerData?.dailyMessages,
+    playerData?.weeklyMessages,
+    playerData?.gamePlayed,
+    playerData?.streak
+  ])
 
   // Récupération de la liste des assets et des memes
   useEffect(() => {
@@ -163,6 +448,7 @@ export default function MainPage() {
         // Chat stats
         dailyMessages: 0,
         weeklyMessages: 0,
+        totalMessages: 0,
       }
       setPlayerData(data)
     } catch (error) {
@@ -171,8 +457,22 @@ export default function MainPage() {
   }
 
   // Fonction pour fetch toutes les données du joueur
-  const fetchPlayerData = useCallback(async () => {
+  const fetchPlayerData = useCallback(async ({ force = false } = {}) => {
     if (!embeddedWallet?.address || seasonId === null) return;
+
+    const now = Date.now()
+    if (playerFetchStateRef.current.inFlight) {
+      if (force) {
+        playerFetchStateRef.current.pendingForce = true
+      }
+      return
+    }
+    if (!force && now - playerFetchStateRef.current.lastAt < PLAYER_MIN_FETCH_INTERVAL_MS) {
+      return
+    }
+
+    playerFetchStateRef.current.inFlight = true
+    playerFetchStateRef.current.lastAt = now
 
     console.log("📥 Fetching player data");
     try {
@@ -223,8 +523,19 @@ export default function MainPage() {
         weeklyMessages: messages7days,
         totalMessages: Number(userDataChat[1]),
       });
+      setHasLoadedPlayerData(true)
     } catch (error) {
       console.error("Error fetching player data:", error);
+      setHasLoadedPlayerData(false)
+    } finally {
+      playerFetchStateRef.current.inFlight = false
+
+      if (playerFetchStateRef.current.pendingForce) {
+        playerFetchStateRef.current.pendingForce = false
+        setTimeout(() => {
+          void fetchPlayerData({ force: true })
+        }, 0)
+      }
     }
   }, [embeddedWallet?.address, seasonId]);
 
@@ -235,7 +546,7 @@ export default function MainPage() {
       fetchTotalClicks();
       return;
     }
-    fetchPlayerData();
+    void fetchPlayerData({ force: true });
   }, [embeddedWallet?.address, seasonId]);
 
   // Enregistrement des callbacks pour les événements du contrat
@@ -250,33 +561,80 @@ export default function MainPage() {
       onPointsClaimed: (log) => {
         if (!isCurrentPlayerEvent(log)) return
         console.log('💰 Points claimed, refreshing player data...')
-        fetchPlayerData()
+        void fetchPlayerData({ force: true })
       },
       onGameStarted: (log) => {
         if (!isCurrentPlayerEvent(log)) return
         console.log('🚀 Game started, refreshing player data...')
-        fetchPlayerData()
+        void fetchPlayerData({ force: true })
       },
       onGamePlayed: (log) => {
         if (!isCurrentPlayerEvent(log)) return
         console.log('🎮 Game played, refreshing player data...')
-        fetchPlayerData()
+        void fetchPlayerData({ force: true })
       },
       onQuestRewardCredited: (log) => {
         if (!isCurrentPlayerEvent(log)) return
         console.log('💰 Quest reward credited, refreshing player data...')
-        fetchPlayerData()
+        void fetchPlayerData({ force: true })
+        void fetchQuestNotifications({ force: true })
       },
       onUserRoleChanged: (log) => {
         if (!isCurrentPlayerEvent(log)) return
         console.log('👤 Role changed, refreshing player data...')
-        fetchPlayerData()
+        void fetchPlayerData({ force: true })
       },
       onUserMuted: (log) => {
         console.log('🔇 User muted')
       },
     })
-  }, [embeddedWallet?.address, fetchPlayerData, registerCallbacks])
+  }, [embeddedWallet?.address, fetchPlayerData, fetchQuestNotifications, registerCallbacks])
+
+  // Notification center: refresh des quêtes même si la fenêtre Quests n'est pas ouverte
+  useEffect(() => {
+    if (!embeddedWallet?.address || !hasLoadedPlayerData) return
+
+    void fetchQuestNotifications({ force: true })
+
+    const interval = setInterval(() => {
+      void fetchQuestNotifications()
+    }, QUEST_REFRESH_INTERVAL_MS)
+
+    const onFocus = () => {
+      if (document.hidden) return
+      void fetchQuestNotifications({ force: true })
+    }
+
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onFocus)
+
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onFocus)
+    }
+  }, [embeddedWallet?.address, hasLoadedPlayerData, fetchQuestNotifications])
+
+  // Notification center: activité chat
+  useEffect(() => {
+    const currentLength = Array.isArray(messages) ? messages.length : 0
+    const previousLength = previousMessagesLengthRef.current
+    const delta = Math.max(0, currentLength - previousLength)
+
+    const newestTimestamp = currentLength > 0
+      ? Number(messages[currentLength - 1]?.timestamp || 0)
+      : 0
+
+    setChatNotifications((previous) => ({
+      unreadNewMessages: (delta > 0 && !isRabbitChatOpen)
+        ? Math.min(previous.unreadNewMessages + delta, 99)
+        : previous.unreadNewMessages,
+      totalLoadedMessages: currentLength,
+      lastMessageAt: newestTimestamp || previous.lastMessageAt
+    }))
+
+    previousMessagesLengthRef.current = currentLength
+  }, [isRabbitChatOpen, messages])
 
   // Fonction pour recharger uniquement les clics totaux (pour le bouton reload)
   const reloadTotalClicks = async () => {
@@ -300,6 +658,12 @@ export default function MainPage() {
 
 
   const restoreApp = (appName) => {
+    if (appName === 'RabbitChat') {
+      // Mark chat notifications as read when user opens RabbitChat
+      previousMessagesLengthRef.current = Array.isArray(messages) ? messages.length : 0
+      setChatNotifications((previous) => ({ ...previous, unreadNewMessages: 0 }))
+    }
+
     setVisibleApps((apps) => {
       if (apps.includes(appName)) {
         // L'app est déjà visible : on ne change pas l'ordre, on met simplement le zIndex à jour
@@ -341,6 +705,18 @@ export default function MainPage() {
     }, 0);
 
   };
+
+  const advanceOnboardingStep = () => {
+    setOnboardingStepIndex((previousStep) => {
+      const nextStep = previousStep + 1
+      if (nextStep >= ONBOARDING_STEPS.length) {
+        restoreApp('FAQ')
+        setOnboardingDismissed(true)
+        return ONBOARDING_STEPS.length
+      }
+      return nextStep
+    })
+  }
 
 
   const bringToFront = (appName, visibleAppsRaw) => {
@@ -410,6 +786,15 @@ export default function MainPage() {
         return <Quests
           playerData={playerData}
           embeddedWallet={embeddedWallet}
+          onQuestClaimed={() => {
+            // Immediate visual decrement for notification center, then sync from APIs.
+            setQuestNotifications((previous) => ({
+              ...previous,
+              readyCount: Math.max(Number(previous.readyCount || 0) - 1, 0)
+            }))
+            void fetchQuestNotifications({ force: true })
+            void fetchPlayerData({ force: true })
+          }}
         />;
       case "Leaderboard":
         return <Leaderboard />;
@@ -456,6 +841,203 @@ export default function MainPage() {
 
   return (
     <div className={`${themeMode === 'light' ? styles.bgDay : styles.bgNight}`}>
+      <div
+        style={{
+          position: 'fixed',
+          bottom: isMobile ? '62px' : '52px',
+          right: isMobile ? '12px' : '16px',
+          zIndex: 1,
+          width: isMobile ? 'min(78vw, 220px)' : '230px',
+          maxWidth: '80vw',
+          background: themeMode === 'dark' ? 'rgba(26, 26, 26, 0.78)' : 'rgba(255, 255, 255, 0.8)',
+          border: `1px solid ${themeMode === 'dark' ? '#3f3f46' : '#d1d5db'}`,
+          borderRadius: '10px',
+          backdropFilter: 'blur(5px)',
+          boxShadow: themeMode === 'dark' ? '0 4px 12px rgba(0, 0, 0, 0.28)' : '0 4px 12px rgba(0, 0, 0, 0.1)',
+          padding: '8px 10px'
+        }}
+      >
+        <div style={{ fontSize: '11px', fontWeight: 700, marginBottom: '6px', color: themeMode === 'dark' ? '#e5e7eb' : '#111827', opacity: 0.92 }}>
+          Notification Center
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: themeMode === 'dark' ? '#d1d5db' : '#1f2937', opacity: 0.88 }}>
+            <Image src="/img/icons/quests.png" alt="Quests" width={12} height={12} />
+            <span>{questNotifications.isLoading
+              ? 'checking...'
+              : questNotifications.readyCount > 0
+                ? `${questNotifications.readyCount} ready to claim`
+                : questNotifications.nextReadyIn !== null
+                  ? `next in ${formatDuration(questNotifications.nextReadyIn)}`
+                  : 'no quest available'}</span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: themeMode === 'dark' ? '#d1d5db' : '#1f2937', opacity: 0.88 }}>
+            <Image src="/img/icons/game.png" alt="Game" width={12} height={12} />
+            <span>{getGameStartCooldownRemaining() > 0
+              ? `ready in ${formatDuration(getGameStartCooldownRemaining())}`
+              : 'ready to start'}</span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: themeMode === 'dark' ? '#d1d5db' : '#1f2937', opacity: 0.88 }}>
+            <Image src="/img/icons/rabbitchat.png" alt="Chat" width={12} height={12} />
+            <span>{chatNotifications.unreadNewMessages > 0
+              ? chatNotifications.unreadNewMessages > 10
+                ? '+10 messages unread'
+                : `+${chatNotifications.unreadNewMessages} unread message(s)`
+              : '0 messages unread'}</span>
+          </div>
+        </div>
+      </div>
+
+      {activeOnboardingStep && onboardingStepIndex < ONBOARDING_STEPS.length && (
+        <>
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 1300,
+              pointerEvents: 'auto',
+              cursor: 'not-allowed',
+              background: onboardingTargetPosition
+                ? `radial-gradient(circle 84px at ${onboardingTargetPosition.left}px ${onboardingTargetPosition.top}px, rgba(0,0,0,0.05) 0, rgba(0,0,0,0.08) 38px, rgba(0,0,0,0.5) 84px, rgba(0,0,0,0.62) 100%)`
+                : 'rgba(0, 0, 0, 0.58)'
+            }}
+            onClick={(event) => event.preventDefault()}
+          />
+
+          {onboardingTargetPosition && !isMobile && (
+            <div
+              style={{
+                position: 'fixed',
+                left: onboardingTargetPosition.left + 52,
+                top: onboardingTargetPosition.top - (isMobile ? 0 : 18),
+                transform: 'translate(-50%, -50%)',
+                zIndex: 1305,
+                pointerEvents: 'none',
+                width: isMobile ? 92 : 112,
+                height: isMobile ? 92 : 112,
+                filter: 'drop-shadow(0 8px 20px rgba(0, 0, 0, 0.35))'
+              }}
+            >
+              <Canvas camera={{ position: [1, 0, 3] }} style={{ pointerEvents: 'none' }}>
+                <ambientLight intensity={1.1} />
+                <directionalLight position={[2, 2, 2]} intensity={1.3} />
+                <FloatingHeadModel
+                  mouse={null}
+                  isClicked={false}
+                  themeMode={themeMode}
+                  onPointerDown={() => { }}
+                  onPointerUp={() => { }}
+                />
+              </Canvas>
+            </div>
+          )}
+
+          {onboardingBubblePosition && (
+            <div
+              style={{
+                position: 'fixed',
+                top: onboardingBubblePosition.top,
+                left: onboardingBubblePosition.left,
+                transform: 'translateX(-50%)',
+                zIndex: 1306,
+                width: onboardingBubblePosition.width,
+                background: themeMode === 'dark'
+                  ? 'linear-gradient(160deg, rgba(245,245,245,0.96) 0%, rgba(231,231,231,0.94) 100%)'
+                  : 'linear-gradient(160deg, rgba(255,255,255,0.98) 0%, rgba(244,244,244,0.98) 100%)',
+                border: '3px solid #111827',
+                borderRadius: '18px',
+                boxShadow: '6px 6px 0 #111827',
+                padding: isMobile ? '10px 12px' : '12px 14px',
+                backdropFilter: 'blur(2px)',
+                fontFamily: '"Comic Sans MS", "Comic Neue", "Chalkboard SE", cursive',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <strong style={{
+                  fontSize: '12px',
+                  color: '#111827',
+                  letterSpacing: '0.03em',
+                  textTransform: 'uppercase'
+                }}>
+                  New player onboarding
+                </strong>
+                <span style={{ fontSize: '10px', color: '#374151', fontWeight: 700 }}>
+                  {onboardingProgressText}
+                </span>
+              </div>
+
+              <div style={{ fontSize: '11px', lineHeight: 1.4, color: '#111827' }}>
+                <strong>{activeOnboardingStep.title}:</strong> {typedOnboardingDescription}
+                {typedOnboardingDescription.length < (activeOnboardingStep?.description?.length || 0) && (
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      marginLeft: '2px',
+                      width: '6px',
+                    }}
+                  >
+                    |
+                  </span>
+                )}
+              </div>
+              <div
+                style={{
+                  marginTop: '8px',
+                  fontSize: '10px',
+                  lineHeight: 1.35,
+                  color: '#374151'
+                }}
+              >
+                {ONBOARDING_TX_HINT}
+              </div>
+
+            <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+              <button
+                onClick={advanceOnboardingStep}
+                style={{
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '7px 12px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  background: '#111827',
+                  color: '#f9fafb',
+                  border: '2px solid #111827'
+                }}
+              >
+                {onboardingStepIndex >= ONBOARDING_STEPS.length - 1 ? 'Finish' : 'Next'}
+              </button>
+            </div>
+            <div
+              style={{
+                position: 'absolute',
+                left: isMobile
+                  ? activeOnboardingStep?.app === 'Game'
+                    ? '36%'
+                    : activeOnboardingStep?.app === 'FAQ'
+                      ? '66%'
+                      : '50%'
+                  : '50%',
+                bottom: '-12px',
+                width: '20px',
+                height: '20px',
+                  transform: 'translateX(-50%) rotate(45deg)',
+                  background: '#f8f8f8',
+                  borderRight: '3px solid #111827',
+                  borderBottom: '3px solid #111827',
+                  borderTop: '0',
+                  borderLeft: '0'
+                }}
+              />
+            </div>
+          )}
+        </>
+      )}
+
       {/* Icônes interactives */}
       <Icon
         name="About"

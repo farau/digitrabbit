@@ -130,6 +130,7 @@ export const DIGIT_RABBITS_CHAT_ABI = parseAbi([
   'function setMinMessageCooldown(uint256 _seconds) external',
   'function setMaxMessageLength(uint256 _length) external',
   'function setRoleBonus(uint8 _role, uint256 _bonusPercent) external',
+  'function setBotSigner(address _botSigner) external',
   'function syncSeasonFromSeason1(uint256 _newSeasonId) external', // ✅ NEW
   'function setCurrentSeason(uint256 _seasonId) external', // ✅ NEW
 
@@ -138,6 +139,7 @@ export const DIGIT_RABBITS_CHAT_ABI = parseAbi([
   'function demoteToRabbitMob(address _user) external',
   'function muteUser(address _user, uint256 _duration) external',
   'function unmuteUser(address _user) external',
+  'function awardPoints(address _user, uint256 _amount, string calldata _reason) external',
 
   // RabbitChat ABI - Payment Functions
   'function buyConfirmedRabbit() external payable',
@@ -184,6 +186,8 @@ export const DIGIT_RABBITS_CHAT_ABI = parseAbi([
   'event ContractUnpaused(address indexed by)',
   'event Season1ContractUpdated(address indexed oldContract, address indexed newContract)',
   'event TrustedSignerUpdated(address indexed oldSigner, address indexed newSigner)',
+  'event BotSignerUpdated(address indexed oldBotSigner, address indexed newBotSigner)',
+  'event BotPointsAwarded(address indexed user, uint256 amount, string reason, address indexed bot, uint256 indexed seasonId)',
   'event SeasonSynchronized(uint256 indexed newSeasonId)', // ✅ NEW
 ])
 
@@ -193,21 +197,24 @@ export const DIGIT_RABBITS_CHAT_ABI = parseAbi([
 export const ROLE_NAMES = {
   0: 'Rabbit Mob',
   1: 'Confirmed Rabbit',
-  2: 'Moderator'
+  2: 'Moderator',
+  3: 'Bot'
 }
 
 // Role badges
 export const ROLE_BADGES = {
   0: '🐰',
   1: '✨🐰',
-  2: '👑'
+  2: '👑',
+  3: '🤖'
 }
 
 // Role colors (Tailwind classes)
 export const ROLE_COLORS = {
   0: 'text-gray-400',
   1: 'text-blue-400',
-  2: 'text-red-400'
+  2: 'text-red-400',
+  3: 'text-emerald-400'
 }
 
 // Helper: Format address

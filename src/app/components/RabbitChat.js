@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
-import { Loader2, AlertCircle, Shield, UserCheck, UserMinus, Ban, VolumeX, Copy, Check, Reply, X, Gift, Trophy } from 'lucide-react'
+import { Loader2, AlertCircle, Shield, UserCheck, UserMinus, Ban, VolumeX, Copy, Check, Reply, X, Gift, Trophy, Bot } from 'lucide-react'
 import { useGame, useTheme } from '@/context'
 import Wrapper from '@/app/components/Wrapper'
 import { useWalletClient } from '../hooks/useWalletClient'
@@ -10,6 +10,7 @@ import { useChatMessages } from '../hooks/useChatMessages'
 import WalletButton from './WalletButton'
 import * as Sentry from '@sentry/nextjs'
 import Image from 'next/image'
+import { decodeEventLog } from 'viem'
 import { customMegaethTestnet } from '@/utils/chainConfig'
 
 import {
@@ -25,16 +26,44 @@ import { XLogo } from '@/utils/constants'
 // Composant MessageBubble avec thème amélioré
 function MessageBubble({ message, messages, isNight, user, onReply }) {
     const [copiedAddress, setCopiedAddress] = useState(false)
+    const resolveRoleIndex = (chatMessage) => {
+        if (!chatMessage) return 0
+
+        const username = typeof chatMessage?.twitterUsername === 'string'
+            ? chatMessage.twitterUsername.trim().toLowerCase()
+            : ''
+        if (username === 'rabbitbot') return 3
+
+        const numericRole = Number(chatMessage?.senderRole)
+        return Number.isInteger(numericRole) && numericRole >= 0 ? numericRole : 0
+    }
+
+    const currentMessageRoleIndex = resolveRoleIndex(message)
     const hasOnChainMessageId = (
         (typeof message?.messageId === 'number' && Number.isInteger(message.messageId) && message.messageId > 0)
         || (typeof message?.messageId === 'string' && /^\d+$/.test(message.messageId))
     )
     const isSystemMessage = typeof message?.messageId === 'string' && message.messageId.startsWith('system-')
+    const isRabbitBotMessage = currentMessageRoleIndex === 3
+    const isBotAwardSystemMessage = isSystemMessage && message?.systemType === 'bot-award'
+    const shouldHideAvatar = Boolean(message?.hideAvatar || isBotAwardSystemMessage)
 
     const cardBg = isNight ? '#1a1a1a' : '#f3f3f3'
     const borderColor = isNight ? '#333' : '#ddd'
     const textColor = isNight ? '#eee' : '#333'
     const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)'
+    const botAwardBg = isNight ? 'rgba(245, 158, 11, 0.12)' : 'rgba(251, 191, 36, 0.14)'
+    const botAwardBorderColor = isNight ? '#d97706' : '#f59e0b'
+    const botAwardTextColor = isNight ? '#fcd34d' : '#b45309'
+
+    const txUrl = typeof message?.txUrl === 'string' && message.txUrl
+        ? message.txUrl
+        : (typeof message?.transactionHash === 'string' && message.transactionHash
+            ? `https://megaeth-testnet-v2.blockscout.com/tx/${message.transactionHash}`
+            : '')
+    const shortTxHash = typeof message?.transactionHash === 'string' && message.transactionHash.length > 12
+        ? `${message.transactionHash.slice(0, 6)}...${message.transactionHash.slice(-4)}`
+        : ''
 
     const handleCopyAddress = async () => {
         try {
@@ -49,8 +78,10 @@ function MessageBubble({ message, messages, isNight, user, onReply }) {
     const repliedMessage = message.replyToMessageId && message.replyToMessageId > 0
         ? messages.find(m => m.messageId === message.replyToMessageId)
         : null
+    const repliedMessageRoleIndex = resolveRoleIndex(repliedMessage)
 
     const getRoleColor = (roleIndex) => {
+        if (roleIndex === 3) return isNight ? '#34d399' : '#059669'
         if (roleIndex === 2) return isNight ? '#ef4444' : '#dc2626'
         if (roleIndex === 1) return isNight ? '#3b82f6' : '#2563eb'
         return isNight ? '#6b7280' : '#9ca3af'
@@ -74,8 +105,8 @@ function MessageBubble({ message, messages, isNight, user, onReply }) {
                         top: '30px',
                         width: '24px',
                         height: '14px',
-                        borderLeft: `2px solid ${getRoleColor(repliedMessage.senderRole)}`,
-                        borderTop: `2px solid ${getRoleColor(repliedMessage.senderRole)}`,
+                        borderLeft: `2px solid ${getRoleColor(repliedMessageRoleIndex)}`,
+                        borderTop: `2px solid ${getRoleColor(repliedMessageRoleIndex)}`,
                         borderTopLeftRadius: '12px'
                     }} />
 
@@ -93,7 +124,7 @@ function MessageBubble({ message, messages, isNight, user, onReply }) {
                             height={20}
                             style={{
                                 borderRadius: '50%',
-                                border: `2px solid ${getRoleColor(repliedMessage.senderRole)}`,
+                                border: `2px solid ${getRoleColor(repliedMessageRoleIndex)}`,
                                 opacity: 0.8
                             }}
                         />
@@ -103,7 +134,7 @@ function MessageBubble({ message, messages, isNight, user, onReply }) {
                         background: isNight ? 'rgba(79, 70, 229, 0.08)' : 'rgba(99, 102, 241, 0.08)',
                         padding: '6px 10px',
                         borderRadius: '6px',
-                        borderLeft: `3px solid ${getRoleColor(repliedMessage.senderRole)}`,
+                        borderLeft: `3px solid ${getRoleColor(repliedMessageRoleIndex)}`,
                         cursor: 'pointer',
                         transition: 'all 0.2s ease',
                         minWidth: 0
@@ -122,11 +153,11 @@ function MessageBubble({ message, messages, isNight, user, onReply }) {
                             marginBottom: '2px'
                         }}>
                             <Reply size={11} style={{
-                                color: getRoleColor(repliedMessage.senderRole),
+                                color: getRoleColor(repliedMessageRoleIndex),
                                 flexShrink: 0
                             }} />
                             <span style={{
-                                color: getRoleColor(repliedMessage.senderRole),
+                                color: getRoleColor(repliedMessageRoleIndex),
                                 fontWeight: '700',
                                 fontSize: '11px'
                             }}>
@@ -151,40 +182,50 @@ function MessageBubble({ message, messages, isNight, user, onReply }) {
             {/* Message principal */}
             <div
                 style={{
-                    background: cardBg,
-                    padding: '12px',
+                    background: isBotAwardSystemMessage ? botAwardBg : cardBg,
+                    padding: isBotAwardSystemMessage ? '9px 10px' : '12px',
                     borderRadius: '10px',
-                    marginBottom: '12px',
-                    border: `1px solid ${borderColor}`,
-                    boxShadow,
+                    marginBottom: isBotAwardSystemMessage ? '8px' : '12px',
+                    border: `1px solid ${isBotAwardSystemMessage ? botAwardBorderColor : borderColor}`,
+                    boxShadow: isBotAwardSystemMessage ? 'none' : boxShadow,
                     transition: 'all 0.2s ease',
                     position: 'relative'
                 }}
                 onMouseOver={(e) => {
+                    if (isBotAwardSystemMessage) return
                     e.currentTarget.style.background = isNight ? '#2a2a2a' : '#f8f8f8'
                     e.currentTarget.style.boxShadow = isNight ? '0 0 12px rgba(255,255,255,0.08)' : '0 4px 8px rgba(0,0,0,0.12)'
                 }}
                 onMouseOut={(e) => {
+                    if (isBotAwardSystemMessage) return
                     e.currentTarget.style.background = cardBg
                     e.currentTarget.style.boxShadow = boxShadow
                 }}
             >
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                    <div style={{ flexShrink: 0 }}>
-                        <Image
-                            src={message?.twitterProfilePictureUrl || '/img/default-avatar.jpg'}
-                            alt="Avatar"
-                            width={48}
-                            height={48}
-                            style={{ borderRadius: '50%' }}
-                        />
-                    </div>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: shouldHideAvatar ? '0px' : '12px' }}>
+                    {!shouldHideAvatar && (
+                        <div style={{ flexShrink: 0 }}>
+                            <Image
+                                src={message?.twitterProfilePictureUrl || '/img/default-avatar.jpg'}
+                                alt="Avatar"
+                                width={48}
+                                height={48}
+                                style={{ borderRadius: '50%' }}
+                            />
+                        </div>
+                    )}
                     <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
-                            <span className={`font-bold ${ROLE_COLORS[message.senderRole]}`}>
-                                {message?.twitterUsername || 'Anonymous'}
-                            </span>
-                            {!isSystemMessage && (
+                            {isBotAwardSystemMessage ? (
+                                <span style={{ fontWeight: '700', fontSize: '12px', color: botAwardTextColor }}>
+                                    RabbitBot Reward
+                                </span>
+                            ) : (
+                                <span className={`font-bold ${ROLE_COLORS[currentMessageRoleIndex] || ROLE_COLORS[0]}`}>
+                                    {message?.twitterUsername || 'Anonymous'}
+                                </span>
+                            )}
+                            {!isSystemMessage && !isRabbitBotMessage && (
                                 <button
                                     onClick={handleCopyAddress}
                                     style={{
@@ -215,7 +256,7 @@ function MessageBubble({ message, messages, isNight, user, onReply }) {
                             <span style={{ fontSize: '11px', color: isNight ? '#666' : '#999' }}>
                                 {new Date(message.timestamp * 1000).toLocaleTimeString()}
                             </span>
-                            {!isSystemMessage && (
+                            {!isSystemMessage && !isRabbitBotMessage && (
                                 <>
                                     <Image src="/img/rabbitpoint.png" alt="RB" width={20} height={20} />
                                     <span style={{ fontSize: '11px', color: '#fbbf24', marginLeft: '-4px' }}>
@@ -225,15 +266,37 @@ function MessageBubble({ message, messages, isNight, user, onReply }) {
                             )}
                         </div>
                         <div style={{
-                            color: textColor,
+                            color: isBotAwardSystemMessage ? botAwardTextColor : textColor,
                             wordBreak: 'break-word',
-                            fontSize: '14px',
+                            fontSize: isBotAwardSystemMessage ? '12px' : '14px',
                             lineHeight: '1.5'
                         }}>
-                            {message.content}
+                            {isBotAwardSystemMessage ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                    <span>
+                                        +{Number(message?.rewardPoints || 0)} Rabbit Points awarded
+                                    </span>
+                                    {txUrl && shortTxHash && (
+                                        <a
+                                            href={txUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{
+                                                color: botAwardTextColor,
+                                                textDecoration: 'underline',
+                                                fontWeight: '700'
+                                            }}
+                                        >
+                                            tx {shortTxHash}
+                                        </a>
+                                    )}
+                                </div>
+                            ) : (
+                                message.content
+                            )}
                         </div>
                     </div>
-                    {!isSystemMessage && (
+                    {!isSystemMessage && !isRabbitBotMessage && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
                             <button
                                 onClick={() => hasOnChainMessageId && onReply(message)}
@@ -575,6 +638,9 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
     const [notification, setNotification] = useState({ isVisible: false, message: '', type: 'success', durationMs: 4000 })
     const [targetAddress, setTargetAddress] = useState('')
     const [muteRemaining, setMuteRemaining] = useState(0)
+    const [sendToRabbitBot, setSendToRabbitBot] = useState(false)
+    const [isRabbitBotThinking, setIsRabbitBotThinking] = useState(false)
+    const [rabbitBotThinkingDotCount, setRabbitBotThinkingDotCount] = useState(1)
     const [isMobileLayout, setIsMobileLayout] = useState(false)
     const [keyboardInset, setKeyboardInset] = useState(0)
 
@@ -670,6 +736,19 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
         const interval = setInterval(updateMuteTimer, 1000)
         return () => clearInterval(interval)
     }, [userData?.isMuted, userData?.muteExpiresAt])
+
+    useEffect(() => {
+        if (!isRabbitBotThinking) {
+            setRabbitBotThinkingDotCount(1)
+            return
+        }
+
+        const interval = setInterval(() => {
+            setRabbitBotThinkingDotCount((previous) => (previous % 3) + 1)
+        }, 450)
+
+        return () => clearInterval(interval)
+    }, [isRabbitBotThinking])
 
     const formatDuration = (seconds) => {
         const hrs = Math.floor(seconds / 3600)
@@ -783,6 +862,91 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
 
     const showErrorNotification = (message) => {
         showNotification(message, { type: 'error', durationMs: 10000 })
+    }
+
+    const extractOwnMessageIdFromReceipt = (receipt) => {
+        const logs = Array.isArray(receipt?.logs) ? receipt.logs : []
+        const currentUserAddress = embeddedWallet?.address?.toLowerCase()
+        const chatAddress = DIGIT_RABBITS_CHAT_ADDRESS?.toLowerCase()
+        if (!currentUserAddress) return 0n
+
+        for (const log of logs) {
+            if (chatAddress && log?.address?.toLowerCase() !== chatAddress) {
+                continue
+            }
+
+            try {
+                const decoded = decodeEventLog({
+                    abi: DIGIT_RABBITS_CHAT_ABI,
+                    data: log.data,
+                    topics: log.topics,
+                })
+
+                if (decoded.eventName !== 'MessageSent') continue
+
+                const sender = typeof decoded.args?.sender === 'string'
+                    ? decoded.args.sender.toLowerCase()
+                    : ''
+                if (sender !== currentUserAddress) continue
+
+                const messageId = decoded.args?.messageId
+                if (typeof messageId === 'bigint' && messageId > 0n) {
+                    return messageId
+                }
+            } catch {
+                // Ignore unrelated logs
+            }
+        }
+
+        return 0n
+    }
+
+    const requestRabbitBotReply = async (content, replyToMessageId = 0n) => {
+        if (!embeddedWallet?.address) return
+
+        let normalizedReplyToMessageId = '0'
+        if (typeof replyToMessageId === 'bigint' && replyToMessageId > 0n) {
+            normalizedReplyToMessageId = replyToMessageId.toString()
+        } else if (typeof replyToMessageId === 'number' && Number.isInteger(replyToMessageId) && replyToMessageId > 0) {
+            normalizedReplyToMessageId = String(replyToMessageId)
+        } else if (typeof replyToMessageId === 'string' && /^\d+$/.test(replyToMessageId) && replyToMessageId !== '0') {
+            normalizedReplyToMessageId = replyToMessageId
+        }
+
+        setIsRabbitBotThinking(true)
+
+        try {
+            const response = await fetch('/api/chat/bot', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    content,
+                    userAddress: embeddedWallet.address,
+                    replyToMessageId: normalizedReplyToMessageId,
+                })
+            })
+
+            const data = await response.json().catch(() => null)
+            if (!response.ok) {
+                if (response.status === 429) {
+                    showErrorNotification(data?.error || 'RabbitBot daily limit reached for your IP')
+                    return
+                }
+
+                showErrorNotification(data?.error || 'RabbitBot failed to respond')
+                return
+            }
+
+            const awardedPoints = Number(data?.awardedPoints || 0)
+            if (awardedPoints > 0) {
+                refreshUserDataInBackground(800)
+            }
+        } catch (error) {
+            console.error('RabbitBot request failed:', error)
+            showErrorNotification('RabbitBot is unavailable right now')
+        } finally {
+            setIsRabbitBotThinking(false)
+        }
     }
 
     const extractReadableError = (err) => {
@@ -959,6 +1123,7 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
         try {
             setSending(true)
             const contentToSend = inputMessage.trim()
+            const shouldTriggerRabbitBot = sendToRabbitBot
 
             const response = await fetch('/api/chat/send', {
                 method: 'POST',
@@ -966,6 +1131,7 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
                 body: JSON.stringify({
                     content: contentToSend,
                     userAddress: embeddedWallet.address,
+                    sendToRabbitBot: shouldTriggerRabbitBot,
                 })
             })
 
@@ -1014,6 +1180,8 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
 
             console.log('✅ Message sent:', txHash)
 
+            const sentMessageId = extractOwnMessageIdFromReceipt(receipt)
+
             setInputMessage('')
             setReplyingTo(null)
             setCooldownRemaining(10)
@@ -1029,6 +1197,29 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
                 }
             })
             refreshUserDataInBackground()
+
+            if (shouldTriggerRabbitBot) {
+                if (sentMessageId <= 0n) {
+                    Sentry.captureMessage('RabbitBot reply link failed: missing user messageId', {
+                        level: 'warning',
+                        tags: {
+                            feature: 'rabbitbot',
+                            action: 'link-reply',
+                        },
+                        extra: {
+                            userAddress: embeddedWallet?.address || null,
+                            txHash,
+                            logsCount: Array.isArray(receipt?.logs) ? receipt.logs.length : 0,
+                            chatAddress: DIGIT_RABBITS_CHAT_ADDRESS || null,
+                            contentLength: contentToSend.length,
+                        },
+                    })
+                    showErrorNotification('RabbitBot could not link a reply to your message. Please try again.')
+                    return
+                }
+
+                void requestRabbitBotReply(contentToSend, sentMessageId)
+            }
 
         } catch (err) {
             console.error('Error sending message:', err)
@@ -1181,6 +1372,16 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
                         isNight={isNight}
                     />
 
+                    {isRabbitBotThinking && (
+                        <div style={{
+                            fontSize: '11px',
+                            color: isNight ? '#9ca3af' : '#6b7280',
+                            marginBottom: '8px'
+                        }}>
+                            RabbitBot is thinking{'.'.repeat(rabbitBotThinkingDotCount)}
+                        </div>
+                    )}
+
                     {cooldownRemaining > 0 && (
                         <div style={{
                             background: isNight ? 'rgba(251, 191, 36, 0.1)' : 'rgba(251, 191, 36, 0.05)',
@@ -1244,6 +1445,51 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
                         </div>
                     )}
 
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '8px',
+                        marginBottom: '10px',
+                        flexWrap: 'wrap'
+                    }}>
+                        <button
+                            type="button"
+                            onClick={() => setSendToRabbitBot((previous) => !previous)}
+                            disabled={sending}
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                background: sendToRabbitBot
+                                    ? (isNight ? 'rgba(16, 185, 129, 0.22)' : 'rgba(16, 185, 129, 0.12)')
+                                    : (isNight ? '#2b2b2b' : '#efefef'),
+                                color: sendToRabbitBot
+                                    ? (isNight ? '#6ee7b7' : '#047857')
+                                    : (isNight ? '#d1d5db' : '#374151'),
+                                border: `1px solid ${sendToRabbitBot
+                                    ? (isNight ? '#10b981' : '#34d399')
+                                    : borderColor}`,
+                                borderRadius: '999px',
+                                padding: '4px 10px',
+                                fontSize: '11px',
+                                fontWeight: '700',
+                                cursor: sending ? 'not-allowed' : 'pointer',
+                                opacity: sending ? 0.7 : 1
+                            }}
+                            title="Toggle RabbitBot mode"
+                        >
+                            <Bot size={12} />
+                            RabbitBot {sendToRabbitBot ? 'ON' : 'OFF'}
+                        </button>
+
+                        {sendToRabbitBot && (
+                            <span style={{ fontSize: '11px', color: isNight ? '#9ca3af' : '#6b7280' }}>
+                                Your next message will trigger an on-chain RabbitBot reply.
+                            </span>
+                        )}
+                    </div>
+
                     <form
                         onSubmit={(e) => {
                             e.preventDefault()
@@ -1274,7 +1520,11 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
                                     e.currentTarget.form?.requestSubmit()
                                 }
                             }}
-                            placeholder={replyingTo ? `Reply to ${replyingTo.twitterUsername || 'Anonymous'}...` : "Type your message..."}
+                            placeholder={replyingTo
+                                ? `Reply to ${replyingTo.twitterUsername || 'Anonymous'}...`
+                                : sendToRabbitBot
+                                    ? 'Ask RabbitBot...'
+                                    : 'Type your message...'}
                             maxLength={200}
                             disabled={sending}
                             style={{
@@ -1360,11 +1610,13 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
                             color: isNight ? '#9ca3af' : '#6b7280'
                         }}>
                             <span>
-                                Role: <span className={`font-semibold ${userData.roleIndex === 2 ? 'text-red-500' :
-                                    userData.roleIndex === 1 ? 'text-blue-500' :
-                                        'text-gray-500'
+                                Role: <span className={`font-semibold ${userData.roleIndex === 3 ? 'text-emerald-500' :
+                                    userData.roleIndex === 2 ? 'text-red-500' :
+                                        userData.roleIndex === 1 ? 'text-blue-500' :
+                                            'text-gray-500'
                                     }`}>
                                     {userData.role}
+                                    {userData.roleIndex === 3 && <Bot size={14} className="inline ml-1" />}
                                     {userData.roleIndex === 2 && <Shield size={14} className="inline ml-1" />}
                                 </span>
                                 {userData.isMuted && muteRemaining > 0 && (

@@ -65,6 +65,11 @@ Example variables used in the project include:
 - `PRIVY_APP_SECRET` - Privy secret (server-only)
 - `NEXT_PUBLIC_DIGIT_RABBITS_ADDRESS` - contract address for on-chain data
 - `GRAPHQL_ENDPOINT` - The Graph endpoint for indexing/queries
+- RabbitBot backend vars:
+  - `RABBITBOT_ENABLED`
+  - `RABBITBOT_PRIVATE_KEY`
+  - `RABBITBOT_DAILY_IP_LIMIT`
+  - `RABBITBOT_AWARD_ENABLED`
 - Sentry and other monitoring keys
 
 Do not commit secrets. Keep `.env.local` out of version control.

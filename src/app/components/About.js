@@ -136,7 +136,7 @@ export default function About() {
             </div>
 
             <p style={{ margin: 0, padding: 10, color: textColor }} className="text-center">
-                Our clicking game brings the community together in a competition where every click represents a real on-chain transaction on the <span style={{ fontWeight: "bold" }}>MegaETH testnet</span>. It&apos;s our way of showcasing the unmatched speed of MegaETH, while rewarding the most active players along the way.
+                Our clicking game brings the community together in a competition where every click represents a real on-chain transaction on the <span style={{ fontWeight: "bold" }}>MegaETH network</span>. It&apos;s our way of showcasing the unmatched speed of MegaETH, while rewarding the most active players along the way.
             </p>
 
             <p style={{ margin: 0, padding: 10, color: textColor }} className="text-center">

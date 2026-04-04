@@ -157,7 +157,7 @@ export default function Shop({ playerData, isGameStarted }) {
 
     } catch (err) {
       if (err.shortMessage?.toLowerCase().includes("maximum limit")) {
-        setError("Please fund your wallet with testnet tokens. Go to the Settings section, copy your wallet address and paste it into the faucet.");
+        setError("Please fund your wallet with gas fee tokens. Go to the Settings section, copy your wallet address and paste it into the faucet.");
       } else {
         setError(err.shortMessage)
       }
@@ -445,7 +445,7 @@ export default function Shop({ playerData, isGameStarted }) {
               className="underline hover:text-green-700 dark:hover:text-green-400"
               target="_blank"
               rel="noopener noreferrer"
-              href={`https://www.megaexplorer.xyz/tx/${txResult}`}
+              href={`https://megaeth-testnet-v2.blockscout.com/tx/${txResult}`}
             >
               See on explorer
             </a>

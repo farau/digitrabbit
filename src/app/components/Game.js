@@ -166,7 +166,7 @@ function TwitterShareButton({ score, gameClicks, themeMode, onClose }) {
   const subTextColor = isNight ? 'text-zinc-400' : 'text-gray-600';
 
   const handleTwitterShare = () => {
-    const tweetText = `Just realized ${gameClicks} transactions in 1 minute on the @digitrabbits website!\n\n1 click = 1 on-chain transaction on MegaETH testnet ⚡️\n\nThink you can beat me? Come play & climb the leaderboard! 🐰\n\nOnly at digitrabbits.com`;
+    const tweetText = `Just realized ${gameClicks} transactions in 1 minute on the @digitrabbits website!\n\n1 click = 1 on-chain transaction on MegaETH network ⚡️\n\nThink you can beat me? Come play & climb the leaderboard! 🐰\n\nOnly at digitrabbits.com`;
     const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
     window.open(tweetUrl, '_blank', 'width=600,height=400');
     onClose();
@@ -231,6 +231,7 @@ export default function Game({ playerData, preSignedPool, isInitializing, error,
   const [finalScore, setFinalScore] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
   const [isCheckingPause, setIsCheckingPause] = useState(true)
+  const [transactionError, setTransactionError] = useState('')
 
 
   // Design
@@ -334,6 +335,30 @@ export default function Game({ playerData, preSignedPool, isInitializing, error,
       // 1. Vérification du wallet
       if (!walletClient || !embeddedWallet || !embeddedWallet.address) {
         throw new Error('No wallet client set');
+      }
+
+      // 1.1 Vérifier le cooldown avant toute opération coûteuse (auth + pool init)
+      const currentSessionEndsAt = Number(playerData?.sessionEndsAt || 0)
+      if (currentSessionEndsAt > 0) {
+        let cooldownSeconds = COOLDOWN_SECONDS
+        try {
+          const onchainCooldown = await walletClient.readContract({
+            address: DIGIT_RABBITS_ADDRESS,
+            abi: DIGIT_RABBITS_ABI,
+            functionName: 'COOLDOWN',
+          })
+          cooldownSeconds = Number(onchainCooldown || COOLDOWN_SECONDS)
+        } catch (cooldownError) {
+          // On garde la constante locale en fallback si la lecture échoue
+          console.warn('Could not read COOLDOWN from contract, fallback to local constant:', cooldownError)
+        }
+
+        const now = Math.floor(Date.now() / 1000)
+        const cooldownEnd = currentSessionEndsAt + cooldownSeconds
+        if (now < cooldownEnd) {
+          setErrorStartGame('Cooldown not finished yet. Please try again later.')
+          return
+        }
       }
 
       setIsWritingContract(true);
@@ -572,6 +597,11 @@ export default function Game({ playerData, preSignedPool, isInitializing, error,
       return
     }
 
+    // Garde-fou: ne jamais lancer une nouvelle tx tant que la précédente est en cours.
+    if (isExecuting) {
+      return
+    }
+
 
     const currentTxId = `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
@@ -579,6 +609,8 @@ export default function Game({ playerData, preSignedPool, isInitializing, error,
     setResult('')
     setShowSuccess(false)
     setSignedTx(currentTxId)
+    setCurrentTransactionHash('')
+    setTransactionError('')
 
     try {
       const txResult = await executeTransaction()
@@ -608,12 +640,9 @@ export default function Game({ playerData, preSignedPool, isInitializing, error,
       });
       console.error('❌ Error executing transaction:', err)
       setShowSuccess(false)
+      setTransactionError(err?.message || 'Transaction failed')
     } finally {
       setIsExecuting(false)
-
-      setTimeout(() => {
-        setSignedTx('')
-      }, 100)
     }
   }
 
@@ -750,7 +779,7 @@ export default function Game({ playerData, preSignedPool, isInitializing, error,
   return embeddedWallet ? (
     <Wrapper>
       <div className={`flex flex-col items-center text-center justify-start pt-10 p-4 sm:p-8 ${styles.bgBackground}`}>
-        {playerData.hasClaimedPoints && (
+        {playerData.gamePlayed === 0 && (
           <div
             className="mb-6 w-full max-w-3xl"
             style={{
@@ -796,7 +825,7 @@ export default function Game({ playerData, preSignedPool, isInitializing, error,
         <TransactionStack
           isExecuting={isExecuting}
           showSuccess={showSuccess}
-          error={error}
+          error={transactionError || error}
           txId={signedTx}
           transactionHash={currentTransactionHash}
         />

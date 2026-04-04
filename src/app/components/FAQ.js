@@ -213,6 +213,8 @@ export default function FAQ() {
                                     <span style={{ color: 'green', fontWeight: 600 }}>Confirmed Rabbit</span> status
                                     {' '}by being consistent and respectful
                                 </li>
+                                <li>RabbitBot can award RabbitPoints depending on the questions you ask, with a maximum of 10 attempts per user.</li>
+                                <li>Your data won&apos;t be used for training purposes.</li>
                             </ul>
                         </div>
                     </div>
@@ -431,8 +433,8 @@ export default function FAQ() {
                     </h5>
                     <div className={`text-xs leading-relaxed text-center ${subTextColor} space-y-2`}>
                         <p>
-                            Launch the game and click as fast as you can on Digit Rabbit's head to get the
-                            highest score. Each click represents an onchain transaction on the MegaETH testnet,
+                            Launch the game and click as fast as you can on Digit Rabbit&apos;s head to get the
+                            highest score. Each click represents an onchain transaction on the MegaETH network,
                             and will earn you RabbitPoints.
                         </p>
                     </div>
@@ -482,7 +484,7 @@ export default function FAQ() {
                     </h5>
                     <p className={`text-xs leading-relaxed text-center ${subTextColor}`}>
                         An embedded wallet is a secure, self-custodial crypto wallet that is created for you
-                        automatically within the game. You don't need to download a separate browser extension
+                        automatically within the game. You don&apos;t need to download a separate browser extension
                         or mobile app. This wallet is essential for the game as it stores your hard-earned
                         RabbitPoints and any in-game items you purchase, which are recorded on the blockchain.
                         This ensures you have true ownership of your assets.
@@ -549,7 +551,7 @@ export default function FAQ() {
                         Can I export my private key from the embedded wallet?
                     </h5>
                     <p className={`text-xs leading-relaxed text-center ${subTextColor}`}>
-                        Yes, to do so go to Settings and click on the "Export private key" button.
+                        Yes, to do so go to Settings and click on the &quot;Export private key&quot; button.
                     </p>
                 </div>
 
@@ -569,7 +571,7 @@ export default function FAQ() {
                         Can I link my wallets containing partnerships NFTs?
                     </h5>
                     <p className={`text-xs leading-relaxed text-center ${subTextColor}`}>
-                        Yes, head over the Settings section, you will see appear all of the wallets you've
+                        Yes, head over the Settings section, you will see appear all of the wallets you&apos;ve
                         previously linked. These one will be used to compute your final score once the season
                         is over.
                     </p>

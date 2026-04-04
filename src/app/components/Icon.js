@@ -195,6 +195,7 @@ export default function Icon({ name, src, label, onClick, position, sound, show3
 
   return (
     <div
+      data-app={name}
       className={`${styles.icon} ${styles.iconHiddenOnMobile}`}
       style={{
         left: position.x,

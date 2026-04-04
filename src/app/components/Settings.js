@@ -226,7 +226,7 @@ function WalletBalance({ embeddedWallet, themeMode }) {
       {!hasBalance && (
         <div className="space-y-2">
           <p className="text-red-600 dark:text-red-400 text-base font-medium">
-            ⚠️ You need testnet tokens to interact
+            ⚠️ You need gas fee tokens to interact
 
             <a
               href="https://docs.megaeth.com/faucet"

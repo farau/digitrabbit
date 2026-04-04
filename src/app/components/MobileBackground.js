@@ -419,6 +419,7 @@ export default function MobileBackground({ restoreApp, themeMode, showRabbit = t
                 <button
                     key={link.name}
                     data-icon={link.name}
+                    data-app={link.app}
                     className={`${styles.floatingLink} ${styles[themeMode]}`}
                     style={{
                         ...iconPositions[link.name] || link.position,

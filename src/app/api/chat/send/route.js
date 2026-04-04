@@ -8,9 +8,10 @@ import { verifyAndGetUser } from '@/lib/privyClient';
 const CHAT_AUTH_CACHE_TTL_SECONDS = 30;
 const ETH_ADDRESS_REGEX = /^0x[a-fA-F0-9]{40}$/;
 const CHAT_SEND_PERF_LOG_ENABLED = process.env.NODE_ENV !== 'production' || process.env.DEBUG_CHAT_PERF === '1';
+const CHAT_MESSAGE_MAX_SCORE = 2;
 
 /**
- * Calculer le score d'un message (0-5)
+ * Calculer le score d'un message (0-2)
  */
 function calculateMessageScore(content) {
     // 1. Score de base selon la longueur (0-2 points)
@@ -67,7 +68,7 @@ function calculateMessageScore(content) {
 
     // 4. Calcul du score final
     const totalScore = lengthBonus + qualityScore + nftBonus;
-    const finalScore = Math.min(Math.round(totalScore), 5);
+    const finalScore = Math.min(Math.round(totalScore), CHAT_MESSAGE_MAX_SCORE);
 
     return {
         baseScore: finalScore,
@@ -119,6 +120,7 @@ export async function POST(request) {
         const rawContent = typeof payload?.content === 'string' ? payload.content : '';
         const content = rawContent.trim();
         const userAddress = typeof payload?.userAddress === 'string' ? payload.userAddress : '';
+        const sendToRabbitBot = payload?.sendToRabbitBot === true;
         const normalizedAddress = userAddress.toLowerCase();
         mark('parsed_payload');
 
@@ -146,6 +148,7 @@ export async function POST(request) {
 
         // 3. Calculer le score (pure function)
         const scoreFactors = calculateMessageScore(content);
+        const effectiveScore = sendToRabbitBot ? 0 : scoreFactors.finalScore;
         mark('message_scored');
 
         // 4. Auth user (cached) + vérification ownership adresse
@@ -173,15 +176,19 @@ export async function POST(request) {
         const signature = await signMessageChat(
             userAddress,
             content,
-            scoreFactors.finalScore,
+            effectiveScore,
             nonce
         );
         mark('message_signed');
 
         const response = NextResponse.json({
             success: true,
-            score: scoreFactors.finalScore,
-            scoreBreakdown: scoreFactors,
+            score: effectiveScore,
+            scoreBreakdown: {
+                ...scoreFactors,
+                finalScore: effectiveScore,
+                botModeNoMessageScore: sendToRabbitBot
+            },
             nonce,
             twitterUsername,
             twitterProfilePictureUrl,
@@ -200,7 +207,8 @@ export async function POST(request) {
             console.log('[chat/send][perf]', {
                 userAddress,
                 contentLength: content.length,
-                score: scoreFactors.finalScore,
+                score: effectiveScore,
+                sendToRabbitBot,
                 timingsMs,
                 totalMs: Date.now() - startedAt
             });

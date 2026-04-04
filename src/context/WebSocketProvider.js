@@ -27,6 +27,8 @@ export function WebSocketProvider({ children }) {
 
     const unwatchChatRef = useRef(null)
     const unwatchChatModerationRef = useRef(null)
+    const unwatchChatPointsRef = useRef(null)
+    const unwatchChatBotAwardsRef = useRef(null)
     const unwatchRabbitsRef = useRef(null)
     const lastSyncedBlockRef = useRef(null)
     const initializedRef = useRef(false)
@@ -50,6 +52,33 @@ export function WebSocketProvider({ children }) {
         if (typeof onChatStatsRefreshCallbackRef.current === 'function') {
             onChatStatsRefreshCallbackRef.current(payload)
         }
+    }, [])
+
+    const resolveBlockTimestamps = useCallback(async (logs = []) => {
+        const uniqueBlockNumbers = Array.from(
+            new Set(
+                logs
+                    .map((log) => log?.blockNumber)
+                    .filter((blockNumber) => typeof blockNumber === 'bigint')
+                    .map((blockNumber) => blockNumber.toString())
+            )
+        )
+
+        if (uniqueBlockNumbers.length === 0) return {}
+
+        const entries = await Promise.all(
+            uniqueBlockNumbers.map(async (blockNumberAsString) => {
+                try {
+                    const block = await publicClient.getBlock({ blockNumber: BigInt(blockNumberAsString) })
+                    return [blockNumberAsString, Number(block?.timestamp || 0)]
+                } catch (error) {
+                    console.error(`❌ Failed to fetch block timestamp for ${blockNumberAsString}:`, error)
+                    return [blockNumberAsString, 0]
+                }
+            })
+        )
+
+        return Object.fromEntries(entries)
     }, [])
 
     // Fonction pour enregistrer les callbacks
@@ -108,25 +137,36 @@ export function WebSocketProvider({ children }) {
 
             console.log(`📡 Syncing from block ${fromBlock} to ${currentBlock}`)
 
-            const logs = await publicClient.getContractEvents({
-                address: DIGIT_RABBITS_CHAT_ADDRESS,
-                abi: DIGIT_RABBITS_CHAT_ABI,
-                eventName: 'MessageSent',
-                fromBlock,
-                toBlock: currentBlock
-            })
+            const [messageLogs, botAwardLogs] = await Promise.all([
+                publicClient.getContractEvents({
+                    address: DIGIT_RABBITS_CHAT_ADDRESS,
+                    abi: DIGIT_RABBITS_CHAT_ABI,
+                    eventName: 'MessageSent',
+                    fromBlock,
+                    toBlock: currentBlock
+                }),
+                publicClient.getContractEvents({
+                    address: DIGIT_RABBITS_CHAT_ADDRESS,
+                    abi: DIGIT_RABBITS_CHAT_ABI,
+                    eventName: 'BotPointsAwarded',
+                    fromBlock,
+                    toBlock: currentBlock
+                })
+            ])
 
             if (!isMountedRef.current) {
                 console.log('⚠️ Provider unmounted during resync, discarding results')
                 return
             }
 
-            if (logs.length) {
+            if (messageLogs.length || botAwardLogs.length) {
+                const botAwardTimestampsByBlock = await resolveBlockTimestamps(botAwardLogs)
+
                 setMessages(prev => {
                     const existing = new Set(prev.map(m => m.messageId))
                     const next = [...prev]
 
-                    for (const log of logs) {
+                    for (const log of messageLogs) {
                         const { args } = log
                         if (!args) continue
 
@@ -147,10 +187,54 @@ export function WebSocketProvider({ children }) {
                         })
                     }
 
-                    return next.sort((a, b) => a.messageId - b.messageId)
+                    for (const log of botAwardLogs) {
+                        const { args } = log
+                        if (!args) continue
+
+                        const rewardedUser = typeof args.user === 'string'
+                            ? args.user
+                            : '0x0000000000000000000000000000000000000000'
+                        const amountRaw = Number(args.amount || 0n)
+                        const amount = Number.isFinite(amountRaw) ? Math.max(0, amountRaw) : 0
+                        const txHash = typeof log.transactionHash === 'string' ? log.transactionHash : ''
+                        const syntheticId = `system-bot-award-${txHash}-${String(log.logIndex ?? 0)}`
+
+                        if (existing.has(syntheticId)) continue
+
+                        next.push({
+                            messageId: syntheticId,
+                            sender: rewardedUser,
+                            content: `Reward +${amount} Rabbit Points`,
+                            score: 0,
+                            senderRole: 0,
+                            twitterUsername: 'System',
+                            twitterProfilePictureUrl: '',
+                            timestamp: Number(
+                                botAwardTimestampsByBlock[String(log.blockNumber || '')]
+                                || Math.floor(Date.now() / 1000)
+                            ),
+                            replyToMessageId: 0,
+                            transactionHash: txHash,
+                            txUrl: txHash ? `https://megaeth-testnet-v2.blockscout.com/tx/${txHash}` : '',
+                            rewardPoints: amount,
+                            rewardedUser,
+                            hideAvatar: true,
+                            systemType: 'bot-award'
+                        })
+                    }
+
+                    return next.sort((a, b) => {
+                        const ta = Number(a?.timestamp || 0)
+                        const tb = Number(b?.timestamp || 0)
+                        if (ta !== tb) return ta - tb
+
+                        const ida = typeof a?.messageId === 'number' ? a.messageId : Number.MAX_SAFE_INTEGER
+                        const idb = typeof b?.messageId === 'number' ? b.messageId : Number.MAX_SAFE_INTEGER
+                        return ida - idb
+                    })
                 })
 
-                console.log(`✅ Synced ${logs.length} messages`)
+                console.log(`✅ Synced ${messageLogs.length} chat messages and ${botAwardLogs.length} bot rewards`)
             }
 
             lastSyncedBlockRef.current = currentBlock
@@ -168,7 +252,7 @@ export function WebSocketProvider({ children }) {
                 setTimeout(() => resync(), 500)
             }
         }
-    }, [])
+    }, [resolveBlockTimestamps])
 
     // 🔗 Établir la connexion WebSocket pour les messages du chat
     const setupChatWebSocket = useCallback(() => {
@@ -229,7 +313,15 @@ export function WebSocketProvider({ children }) {
                         }
                     }
 
-                    return next
+                    return next.sort((a, b) => {
+                        const ta = Number(a?.timestamp || 0)
+                        const tb = Number(b?.timestamp || 0)
+                        if (ta !== tb) return ta - tb
+
+                        const ida = typeof a?.messageId === 'number' ? a.messageId : Number.MAX_SAFE_INTEGER
+                        const idb = typeof b?.messageId === 'number' ? b.messageId : Number.MAX_SAFE_INTEGER
+                        return ida - idb
+                    })
                 })
             },
 
@@ -311,7 +403,7 @@ export function WebSocketProvider({ children }) {
                             sender: mutedBy || '0x0000000000000000000000000000000000000000',
                             content: `🔇 ${shortMutedUser} has been muted by ${shortMutedBy} for ${formatDuration(duration)}.`,
                             score: 0,
-                            senderRole: 2,
+                            senderRole: 3,
                             twitterUsername: 'RabbitBot',
                             twitterProfilePictureUrl: '/img/default-avatar.jpg',
                             timestamp: expiresAt > duration ? (expiresAt - duration) : Math.floor(Date.now() / 1000),
@@ -338,6 +430,119 @@ export function WebSocketProvider({ children }) {
             }
         })
     }, [triggerChatStatsRefresh])
+
+    // 🔗 Événements de points RabbitChat
+    const setupChatPointsWebSocket = useCallback(() => {
+        if (!isMountedRef.current) {
+            console.log('⚠️ Provider unmounted, skipping Chat points WebSocket setup')
+            return
+        }
+
+        if (unwatchChatPointsRef.current) {
+            unwatchChatPointsRef.current()
+        }
+
+        console.log('🌐 Setting up Chat points WebSocket...')
+
+        unwatchChatPointsRef.current = wsPublicClient.watchContractEvent({
+            address: DIGIT_RABBITS_CHAT_ADDRESS,
+            abi: DIGIT_RABBITS_CHAT_ABI,
+            eventName: 'PointsAwarded',
+
+            onLogs(logs) {
+                if (!isMountedRef.current) return
+                setIsConnected(true)
+
+                if (logs.length > 0) {
+                    triggerChatStatsRefresh({ reason: 'chat-points-awarded', logs })
+                }
+            },
+
+            onError(error) {
+                if (!isMountedRef.current) return
+                console.error('❌ Chat points WebSocket error:', error)
+            }
+        })
+    }, [triggerChatStatsRefresh])
+
+    // 🔗 Événements de récompense RabbitBot (notification système légère)
+    const setupChatBotAwardsWebSocket = useCallback(() => {
+        if (!isMountedRef.current) {
+            console.log('⚠️ Provider unmounted, skipping Chat bot awards WebSocket setup')
+            return
+        }
+
+        if (unwatchChatBotAwardsRef.current) {
+            unwatchChatBotAwardsRef.current()
+        }
+
+        console.log('🌐 Setting up Chat bot awards WebSocket...')
+
+        unwatchChatBotAwardsRef.current = wsPublicClient.watchContractEvent({
+            address: DIGIT_RABBITS_CHAT_ADDRESS,
+            abi: DIGIT_RABBITS_CHAT_ABI,
+            eventName: 'BotPointsAwarded',
+
+            async onLogs(logs) {
+                if (!isMountedRef.current) return
+                setIsConnected(true)
+
+                if (!Array.isArray(logs) || logs.length === 0) return
+                const botAwardTimestampsByBlock = await resolveBlockTimestamps(logs)
+                if (!isMountedRef.current) return
+
+                setMessages(prev => {
+                    const existing = new Set(prev.map(m => m.messageId))
+                    const next = [...prev]
+
+                    for (const log of logs) {
+                        const { args } = log
+                        if (!args) continue
+
+                        const rewardedUser = typeof args.user === 'string'
+                            ? args.user
+                            : '0x0000000000000000000000000000000000000000'
+                        const amountRaw = Number(args.amount || 0n)
+                        const amount = Number.isFinite(amountRaw) ? Math.max(0, amountRaw) : 0
+                        const txHash = typeof log.transactionHash === 'string' ? log.transactionHash : ''
+                        const syntheticId = `system-bot-award-${txHash}-${String(log.logIndex ?? 0)}`
+
+                        if (existing.has(syntheticId)) continue
+
+                        next.push({
+                            messageId: syntheticId,
+                            sender: rewardedUser,
+                            content: `Reward +${amount} Rabbit Points`,
+                            score: 0,
+                            senderRole: 0,
+                            twitterUsername: 'System',
+                            twitterProfilePictureUrl: '',
+                            timestamp: Number(
+                                botAwardTimestampsByBlock[String(log.blockNumber || '')]
+                                || Math.floor(Date.now() / 1000)
+                            ),
+                            replyToMessageId: 0,
+                            transactionHash: txHash,
+                            txUrl: txHash ? `https://megaeth-testnet-v2.blockscout.com/tx/${txHash}` : '',
+                            rewardPoints: amount,
+                            rewardedUser,
+                            hideAvatar: true,
+                            systemType: 'bot-award'
+                        })
+                    }
+
+                    return next
+                })
+
+                triggerChatStatsRefresh({ reason: 'chat-bot-points-awarded', logs })
+            },
+
+            onError(error) {
+                if (!isMountedRef.current) return
+                console.error('❌ Chat bot awards WebSocket error:', error)
+            }
+        })
+    }, [resolveBlockTimestamps, triggerChatStatsRefresh])
 
 
     // 🔗 Établir la connexion WebSocket pour les événements de DIGIT_RABBITS
@@ -498,6 +703,8 @@ export function WebSocketProvider({ children }) {
                     await resync()
                     setupChatWebSocket()
                     setupChatModerationWebSocket()
+                    setupChatPointsWebSocket()
+                    setupChatBotAwardsWebSocket()
                     setupRabbitsWebSocket()
 
                     // Re-établit les listeners sur le nouveau socket
@@ -524,6 +731,8 @@ export function WebSocketProvider({ children }) {
         resync().then(() => {
             setupChatWebSocket()
             setupChatModerationWebSocket()
+            setupChatPointsWebSocket()
+            setupChatBotAwardsWebSocket()
             setupRabbitsWebSocket()
             setupSocketListeners()
         })
@@ -550,6 +759,16 @@ export function WebSocketProvider({ children }) {
                 unwatchChatModerationRef.current = null
             }
 
+            if (unwatchChatPointsRef.current) {
+                unwatchChatPointsRef.current()
+                unwatchChatPointsRef.current = null
+            }
+
+            if (unwatchChatBotAwardsRef.current) {
+                unwatchChatBotAwardsRef.current()
+                unwatchChatBotAwardsRef.current = null
+            }
+
             if (unwatchRabbitsRef.current) {
                 unwatchRabbitsRef.current()
                 unwatchRabbitsRef.current = null
@@ -560,7 +779,7 @@ export function WebSocketProvider({ children }) {
                 reconnectTimeoutRef.current = null
             }
         }
-    }, [resync, setupChatWebSocket, setupChatModerationWebSocket, setupRabbitsWebSocket])
+    }, [resync, setupChatWebSocket, setupChatModerationWebSocket, setupChatPointsWebSocket, setupChatBotAwardsWebSocket, setupRabbitsWebSocket])
 
     return (
         <WebSocketContext.Provider

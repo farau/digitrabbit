@@ -257,7 +257,7 @@ function QuestCard({ quest, progress, streak, isNight, claimed, onClaim, isClaim
     );
 }
 
-export default function Quests({ playerData, embeddedWallet }) {
+export default function Quests({ playerData, embeddedWallet, onQuestClaimed = null }) {
     // ✅ Utilise themeMode comme dans Settings.js
     const { themeMode } = useTheme();
     const isNight = themeMode === 'dark';
@@ -491,6 +491,13 @@ export default function Quests({ playerData, embeddedWallet }) {
 
             // 4. Refetch unified quest status
             await refetchAll();
+            if (typeof onQuestClaimed === 'function') {
+                onQuestClaimed({
+                    questId: quest.id,
+                    txHash,
+                    period: quest.period
+                });
+            }
 
         } catch (error) {
             console.error('Error claiming quest:', error);

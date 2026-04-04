@@ -1,11 +1,25 @@
 import { NextResponse } from 'next/server';
-import { PrivyClient } from '@privy-io/server-auth';
 import { cookies } from 'next/headers';
+import { Ratelimit } from '@upstash/ratelimit';
+import { Redis } from '@upstash/redis';
 
-const privy = new PrivyClient(
-    process.env.NEXT_PUBLIC_PRIVY_APP_ID,
-    process.env.PRIVY_APP_SECRET
-);
+const RABBITBOT_DAILY_IP_LIMIT = Math.max(Number(process.env.RABBITBOT_DAILY_IP_LIMIT || 25), 1);
+const AUTH_IP_ATTEMPTS_LIMIT = Math.max(Number(process.env.AUTH_IP_ATTEMPTS_LIMIT || 6), 1);
+const AUTH_IP_WINDOW_SECONDS = Math.max(Number(process.env.AUTH_IP_WINDOW_SECONDS || 300), 1);
+const redis = Redis.fromEnv();
+// Rate limiters pour les différentes routes sensibles
+const authIpRateLimit = new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(AUTH_IP_ATTEMPTS_LIMIT, `${AUTH_IP_WINDOW_SECONDS} s`),
+    analytics: true,
+    prefix: '@upstash/ratelimit:auth-ip',
+});
+const rabbitBotIpRateLimit = new Ratelimit({
+    redis,
+    limiter: Ratelimit.fixedWindow(RABBITBOT_DAILY_IP_LIMIT, '1 d'),
+    analytics: true,
+    prefix: '@upstash/ratelimit:rabbitbot-ip',
+});
 
 // Liste des User-Agents de bots à bloquer
 const BOT_USER_AGENTS = [
@@ -105,9 +119,65 @@ function hasValidBrowserHeaders(req) {
     return true;
 }
 
+function getClientIp(req) {
+    const xForwardedFor = req.headers.get('x-forwarded-for');
+    if (xForwardedFor) {
+        const [firstIp] = xForwardedFor.split(',');
+        if (firstIp?.trim()) return firstIp.trim();
+    }
+
+    const realIp = req.headers.get('x-real-ip');
+    if (realIp?.trim()) return realIp.trim();
+
+    return '127.0.0.1';
+}
+
 export async function proxy(req) {
     const cookieStore = await cookies();
     const userAgent = req.headers.get('user-agent') || '';
+    const pathname = req.nextUrl.pathname;
+    const method = req.method.toUpperCase();
+    let rabbitBotRateLimitHeaders = null;
+
+    // =============== RATE LIMIT CENTRALISÉ (IP) ===============
+    if (method === 'POST' && pathname === '/api/auth') {
+        const clientIp = getClientIp(req);
+        const authRateLimit = await authIpRateLimit.limit(clientIp);
+
+        if (!authRateLimit.success) {
+            return NextResponse.json(
+                { message: 'Too many attempts' },
+                { status: 429 }
+            );
+        }
+    }
+
+    if (method === 'POST' && pathname === '/api/chat/bot') {
+        const clientIp = getClientIp(req);
+        const chatBotRateLimit = await rabbitBotIpRateLimit.limit(clientIp);
+
+        if (!chatBotRateLimit.success) {
+            const limitedResponse = NextResponse.json(
+                {
+                    error: 'Daily limit reached for this user.',
+                    limit: chatBotRateLimit.limit,
+                    remaining: chatBotRateLimit.remaining,
+                    resetAt: chatBotRateLimit.reset
+                },
+                { status: 429 }
+            );
+            limitedResponse.headers.set('X-RateLimit-Limit', String(chatBotRateLimit.limit));
+            limitedResponse.headers.set('X-RateLimit-Remaining', String(chatBotRateLimit.remaining));
+            limitedResponse.headers.set('X-RateLimit-Reset', String(chatBotRateLimit.reset));
+            return limitedResponse;
+        }
+
+        rabbitBotRateLimitHeaders = {
+            limit: chatBotRateLimit.limit,
+            remaining: chatBotRateLimit.remaining,
+            reset: chatBotRateLimit.reset
+        };
+    }
 
     // =============== PROTECTION ANTI-BOTS ===============
     if (process.env.ENABLE_BOT_PROTECTION === 'true') {
@@ -123,7 +193,7 @@ export async function proxy(req) {
         }
 
         // Vérification des headers de navigateur (pour les routes non-API)
-        if (!req.nextUrl.pathname.startsWith('/api/') && !hasValidBrowserHeaders(req)) {
+        if (!pathname.startsWith('/api/') && !hasValidBrowserHeaders(req)) {
             return new Response('Access Denied - Invalid request headers', {
                 status: 403,
                 headers: {
@@ -145,7 +215,7 @@ export async function proxy(req) {
         ];
 
         // Pour ces patterns, on peut être plus strict
-        if (suspiciousPatterns.some(pattern => req.nextUrl.pathname.includes(pattern))) {
+        if (suspiciousPatterns.some(pattern => pathname.includes(pattern))) {
             if (isBotUserAgent(userAgent) || !hasValidBrowserHeaders(req)) {
                 return new Response('Not Found', { status: 404 });
             }
@@ -153,7 +223,7 @@ export async function proxy(req) {
     }
 
     const isPrivyProtectedRoute = ['/api/users', '/api/validate-wallet'].some(route =>
-        req.nextUrl.pathname.startsWith(route)
+        pathname.startsWith(route)
     );
 
     // =============== PROTECTION PRIVY (routes API spécifiques) ===============
@@ -173,14 +243,14 @@ export async function proxy(req) {
 
         // Si l'utilisateur n'est pas authentifié et n'est pas sur une route publique
         if (!isAuthenticated &&
-            req.nextUrl.pathname !== '/login' &&
-            req.nextUrl.pathname !== '/api/auth') {
+            pathname !== '/login' &&
+            pathname !== '/api/auth') {
             return NextResponse.redirect(new URL('/login', req.url));
         }
 
         // Si l'utilisateur EST authentifié et essaie d'accéder à /login
         // on le redirige vers / (pour éviter qu'un utilisateur déjà connecté reste sur login)
-        if (isAuthenticated && req.nextUrl.pathname === '/login') {
+        if (isAuthenticated && pathname === '/login') {
             return NextResponse.redirect(new URL('/', req.url));
         }
 
@@ -188,7 +258,14 @@ export async function proxy(req) {
         // (cette route gère l'authentification)
     }
 
-    return NextResponse.next();
+    const response = NextResponse.next();
+    if (rabbitBotRateLimitHeaders) {
+        response.headers.set('X-RateLimit-Limit', String(rabbitBotRateLimitHeaders.limit));
+        response.headers.set('X-RateLimit-Remaining', String(rabbitBotRateLimitHeaders.remaining));
+        response.headers.set('X-RateLimit-Reset', String(rabbitBotRateLimitHeaders.reset));
+    }
+
+    return response;
 }
 
 export const config = {

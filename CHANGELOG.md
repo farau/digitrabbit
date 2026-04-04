@@ -5,6 +5,55 @@ All notable changes to this project will be documented in this file.
 
 ## Changelog
 
+## [04/04/2026]
+
+### MainPage / Onboarding
+- Added a full onboarding overlay flow for new players:
+  - 3 guided steps (`Game`, `RabbitChat`, `FAQ`) with progressive typing effect.
+  - Focus mode with darkened background and spotlight around the targeted icon.
+  - Comic-style dialogue bubble UI on desktop.
+- Desktop onboarding enhancements:
+  - Added floating 3D rabbit head guide (positioned and tuned to avoid hiding icons).
+  - `Finish` now auto-opens `FAQ`.
+- Mobile onboarding enhancements:
+  - No floating 3D rabbit head in mobile mode.
+  - Same guided flow with `Next` / `Finish` buttons (no required app opening).
+  - Pointer tip alignment tuned per step (including FAQ/Game positioning).
+  - `Finish` auto-opens `FAQ`.
+- Onboarding visibility rule restored:
+  - Onboarding now displays only for users with zero RabbitPoints (`rabbitPoints <= 0`) after player data is loaded.
+  - Removed temporary forced-test onboarding behavior.
+
+### MainPage / Notification Center
+- Added compact Notification Center with live status:
+  - Quests readiness / next quest timer.
+  - Game cooldown timer.
+  - Chat unread count.
+- Replaced `Q/G/C` labels with corresponding icons.
+- Unread chat display capped to:
+  - `+10 messages unread` when unread count is greater than 10.
+- Updated positioning and layering:
+  - Moved to bottom-right, above footer.
+  - Kept above `overlay.png` and below main app windows.
+
+### Quests / Chat Notification Reliability
+- Improved quest notification refresh flow:
+  - Waits for player data load before evaluating claimable quests.
+  - Prevents false “no quest available” state during initial sync.
+- Added chat unread tracking behavior:
+  - Increments when new messages arrive and chat is closed.
+  - Resets unread count when RabbitChat is opened.
+
+### RabbitBot / Chat UX
+- Expanded onboarding messaging to include RabbitBot context in Step 2:
+  - Clarifies RabbitChat purpose and RabbitBot presence for new users.
+  - Mentions leaderboard visibility through the `Leaderboard` tab.
+- Improved first-time user guidance around chat activity:
+  - Onboarding now frames chat interactions as part of the point-earning flow.
+
+### Mobile Background
+- Added `data-app` attributes on mobile floating icons to support onboarding targeting logic.
+
 ## [01/04/2026]
 
 ### Chat / RabbitBot
@@ -25,6 +74,27 @@ All notable changes to this project will be documented in this file.
     - app visibility return / window focus
     - moderation/role events (`UserMuted`, `RoleChanged`) relevant to chat stats.
   - Kept a lightweight fallback polling in `RabbitChat`, updated from 30s to 2 minutes.
+
+### Chat / RabbitBot Conversational Flow
+- Added a dedicated RabbitBot conversation mode in `RabbitChat`:
+  - New composer toggle button (`RabbitBot ON/OFF`) to explicitly send a message to bot flow.
+  - Bot mode now calls `POST /api/chat/bot` after user message send success.
+  - Added user feedback for RabbitBot thinking state and rate-limit/backend failures.
+- Added new backend endpoint `POST /api/chat/bot`:
+  - Auth + wallet ownership checks using Privy identity token.
+  - Added game-activity prerequisite check (`getPlayerCurrentSeasonData`) before bot usage.
+  - Daily IP rate-limit (`25/day` default, configurable via env).
+  - RabbitBot response generation and on-chain chat reply via backend bot wallet.
+  - Optional points award transaction wiring (`awardPoints`) behind feature flag.
+- Added backend utilities:
+  - `src/lib/rabbitBot.js` for response/reward heuristics.
+  - `src/lib/dailyIpRateLimit.js` for daily IP quota tracking.
+  - Extended `src/lib/walletBackend.js` with RabbitBot wallet + on-chain send/award helpers.
+- Extended `DIGIT_RABBITS_CHAT_ABI` with RabbitBot management hooks:
+  - `setBotSigner(...)`
+  - `awardPoints(...)`
+  - `BotSignerUpdated` event
+- Added RabbitBot env configuration keys in `.env.local.example`.
 
 ## [31/03/2026]
 
