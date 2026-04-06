@@ -5,6 +5,57 @@ All notable changes to this project will be documented in this file.
 
 ## Changelog
 
+## [06/04/2026]
+
+### Onboarding / MainPage
+- Refactored onboarding logic out of `MainPage` into a dedicated hook:
+  - Added `src/app/hooks/useMainPageOnboarding.js`.
+  - Moved onboarding state, targeting logic, step transitions, and typed text effects into the hook.
+- Expanded onboarding flow before FAQ:
+  - Added explicit guidance steps to highlight where to click for `Game.exe` and `RabbitChat`.
+  - FAQ now comes after these guided navigation steps.
+- Reworked Settings onboarding into sequential sub-steps:
+  - `Copy embedded wallet` -> `Add funds` -> `Link Wallet`.
+  - Progression from copy now triggers on actual copy action (event-driven), not on `Next`.
+  - Funding step no longer auto-skips; progression is controlled by onboarding rules/UI.
+- Added wallet-link guidance guardrails:
+  - New red warning copy clarifies users only need to link wallets that already hold NFTs.
+  - Explicitly states no transfer/rebuy is needed on embedded wallet.
+  - `Next` is locked until user clicks `Link Wallet` at least once.
+- Added auto-scroll to reveal hidden `Link Wallet` control during onboarding when needed.
+- Closed `Settings` window when leaving the funding/link part of onboarding with required conditions met.
+
+### Settings
+- Renamed CTA from `Send funds` to `Add funds`.
+- Added `data-app=\"settings-link-wallet\"` to `Link Wallet` button for onboarding targeting.
+- Emitted onboarding event when `Link Wallet` is clicked to unlock next step.
+- Emitted onboarding event after successful embedded wallet copy action.
+
+### Onboarding Audio / UX
+- Added retro typing SFX while onboarding text is progressively rendered.
+- Added step-complete SFX (`/sounds/text_complete.wav`) when clicking onboarding `Next`.
+
+### RabbitChat / Mobile
+- Fixed mobile composer behavior to avoid excessive viewport lift/zoom issues:
+  - Removed keyboard-inset overcompensation behavior.
+  - Switched mobile chat container sizing to stable `100dvh`.
+  - Removed input focus `scrollIntoView` jump for composer.
+  - Increased mobile input font size to `16px` to avoid iOS auto-zoom.
+- Updated message score display behavior:
+  - RabbitPoints badge/logo is now hidden for chat messages with score `0`.
+
+### Audio / MainPage Entry
+- Updated taskbar audio player to support startup autoplay and source fallback:
+  - Tries `/sounds/background.mp3` on page entry.
+  - Falls back to `/sounds/soundtrack.mp3` if primary source fails.
+  - Added retry-on-user-interaction behavior for autoplay-restricted environments.
+
+### Quests / Notification Center
+- Simplified quest notification refresh in `MainPage` by integrating `useQuestsStatus`:
+  - Replaced manual quest status fetch pipeline with hook-driven status (`period=all`).
+  - Kept notification calculations (ready count / next cooldown) in `MainPage` using hook data + player progress.
+  - Updated quest-related refetch triggers to call `refetchQuestStatus()`.
+
 ## [04/04/2026]
 
 ### MainPage / Onboarding

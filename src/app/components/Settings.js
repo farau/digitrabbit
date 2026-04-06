@@ -132,11 +132,17 @@ function AllLinkedWallets() {
 
 function LinkButton() {
   const { linkWallet } = useLinkAccount();
+  const handleLinkWallet = () => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('settings-link-wallet-clicked'));
+    }
+    linkWallet();
+  };
 
   return (
     <div className="link-options mb-4">
       <p className='text-base mb-2'>Link wallets containing &quot;partnerships&quot; NFTs to get bonuses.</p>
-      <button onClick={linkWallet}>Link Wallet</button>
+      <button data-app="settings-link-wallet" onClick={handleLinkWallet}>Link Wallet</button>
     </div>
   );
 }
@@ -227,19 +233,22 @@ function WalletBalance({ embeddedWallet, themeMode }) {
         <div className="space-y-2">
           <p className="text-red-600 dark:text-red-400 text-base font-medium">
             ⚠️ You need gas fee tokens to interact
-
-            <a
-              href="https://docs.megaeth.com/faucet"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center px-3 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-md shadow-sm hover:shadow transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ml-2"
-              style={{ color: 'white' }}
-            >
-              Get Tokens
-            </a>
           </p>
         </div>
       )}
+
+      <div className="space-y-2">
+        <a
+          data-app="settings-send-funds"
+          href="https://docs.megaeth.com/faucet"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center px-3 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-md shadow-sm hover:shadow transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+          style={{ color: 'white' }}
+        >
+          Add funds
+        </a>
+      </div>
     </div>
   );
 }
@@ -259,7 +268,13 @@ export default function Settings({ sound, setSound, volume, setVolume, volumePla
   if (!ready) return;
 
   const handleCopy = (text, type) => {
-    navigator.clipboard.writeText(text);
+    void navigator.clipboard.writeText(text).then(() => {
+      if (type === 'embedded' && typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('embedded-wallet-address-copied'));
+      }
+    }).catch(() => {
+      // Keep UI behavior unchanged even if clipboard access is denied.
+    });
     setCopied(type);
     setTimeout(() => setCopied(null), 2000);
   };
@@ -494,6 +509,7 @@ export default function Settings({ sound, setSound, volume, setVolume, volumePla
                         <button
                           onClick={() => handleCopy(wallet.address, type)}
                           aria-label={`Copy ${type} wallet address`}
+                          data-app={type === 'embedded' ? 'settings-copy-wallet' : undefined}
                           className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-zinc-700 transition focus:outline-none focus:ring-2 focus:ring-indigo-400"
                         >
                           {copied === type ? (

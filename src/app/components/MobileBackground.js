@@ -6,16 +6,14 @@ import styles from './MobileBackground.module.css';
 
 export default function MobileBackground({ restoreApp, themeMode, showRabbit = true }) {
     const [isVisible, setIsVisible] = useState(false);
-    const [isWiggling, setIsWiggling] = useState(false);
-    const [showMusicNote, setShowMusicNote] = useState(false);
+
     const [iconPositions, setIconPositions] = useState({});
     const [draggedIcon, setDraggedIcon] = useState(null);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
-    const [touchStartTime, setTouchStartTime] = useState(0);
     const [mouseStartPos, setMouseStartPos] = useState({ x: 0, y: 0 });
     const [mouseStartTime, setMouseStartTime] = useState(0);
-    const musicRef = useRef(null);
+
     const touchStartTimeRef = useRef(0);
     const mouseStartTimeRef = useRef(0);
 
@@ -33,18 +31,6 @@ export default function MobileBackground({ restoreApp, themeMode, showRabbit = t
 
         return () => clearTimeout(timer);
     }, []);
-
-    useEffect(() => {
-        const path =
-            themeMode === 'light'
-                ? '/sounds/harp_song.mp3'
-                : '/sounds/mandolin_song.mp3';
-
-        const preloadAudio = new Audio(path);
-        preloadAudio.volume = 1;
-        preloadAudio.load(); // Force le chargement
-        musicRef.current = preloadAudio;
-    }, [themeMode]);
 
 
     const socialLinks = [
@@ -106,55 +92,6 @@ export default function MobileBackground({ restoreApp, themeMode, showRabbit = t
             position: { top: "20%", left: "15%" }
         },
     ];
-
-    // Fonction unifiée pour jouer le son
-    const playSound = async () => {
-        setIsWiggling(true);
-        setShowMusicNote(true);
-
-        setTimeout(() => {
-            setIsWiggling(false);
-            setShowMusicNote(false);
-        }, 500);
-
-        const audio = musicRef.current;
-        if (!audio) return;
-
-        try {
-            audio.currentTime = 0;
-            await audio.play();
-        } catch (error) {
-            console.error('Error playing audio:', error);
-        }
-    };
-
-
-    // Gestion du lapin - Touch
-    const handleRabbitTouchStart = (e) => {
-        //e.preventDefault();
-        //e.stopPropagation();
-        // eslint-disable-next-line react-hooks/rules-of-hooks
-        touchStartTimeRef.current = Date.now();
-    };
-
-    const handleRabbitTouchEnd = (e) => {
-        //e.preventDefault();
-        //e.stopPropagation();
-
-        const touchDuration = Date.now() - touchStartTimeRef.current;
-        // Seulement si c'est un tap rapide (moins de 300ms)
-        if (touchDuration < 300) {
-            playSound();
-        }
-    };
-
-    // Gestion du lapin - Click (desktop uniquement)
-    const handleRabbitClick = (e) => {
-        // Empêcher le clic si c'est un événement tactile ou si on vient de faire un touch
-        if (e.detail === 0 || Date.now() - touchStartTimeRef.current < 500) return;
-
-        playSound();
-    };
 
     // === GESTION DES ICÔNES ===
 
@@ -400,15 +337,6 @@ export default function MobileBackground({ restoreApp, themeMode, showRabbit = t
         };
     }, [draggedIcon, dragOffset, mouseStartPos, mouseStartTime, isDragging]); // Ajout des dépendances manquantes
 
-    // Nettoyage à la destruction du composant
-    useEffect(() => {
-        return () => {
-            if (musicRef.current) {
-                musicRef.current.pause();
-                musicRef.current = null;
-            }
-        };
-    }, []);
 
     return (
         <div
@@ -447,32 +375,6 @@ export default function MobileBackground({ restoreApp, themeMode, showRabbit = t
                     />
                 </button>
             ))}
-
-            {/* Lapin flottant au centre */}
-            {showRabbit && (
-                <div
-                    className={`${styles.floatingRabbit} ${styles[themeMode]} ${isWiggling ? styles.wiggling : ''} noSelect`}
-                    onClick={handleRabbitClick}
-                    onTouchStart={handleRabbitTouchStart}
-                    onTouchEnd={handleRabbitTouchEnd}
-                    style={{ cursor: 'pointer' }}
-                >
-                    <Image
-                        src={themeMode === 'light' ? "/img/rabbit_angel.webp" : "/img/rabbit_angel_sleeping.webp"}
-                        alt="Rabbit angel"
-                        width={themeMode === 'light' ? 300 : 250}
-                        height={themeMode === 'light' ? 300 : 250}
-                        draggable={false}
-                    />
-
-                    {/* Note de musique */}
-                    {showMusicNote && (
-                        <div className={`${styles.musicNote} ${styles[themeMode]}`}>
-                            ♫
-                        </div>
-                    )}
-                </div>
-            )}
         </div>
     );
 }

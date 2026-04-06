@@ -1,9 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 
-function AudioPlayer({ src, volumePlayer }) {
+function AudioPlayer({ src, volumePlayer, autoPlayOnMount = false, fallbackSrc = null }) {
   const [isPlaying, setIsPlaying] = useState(false); // Commence en pause pour iOS
   const [userInteracted, setUserInteracted] = useState(false);
+  const [currentSrc, setCurrentSrc] = useState(src);
+  const [hasTriedFallback, setHasTriedFallback] = useState(false);
   const audioRef = useRef(null);
+
+  useEffect(() => {
+    setCurrentSrc(src);
+    setHasTriedFallback(false);
+  }, [src]);
 
   // Gestion du volume seulement (sans redémarrer la lecture)
   useEffect(() => {
@@ -63,12 +70,50 @@ function AudioPlayer({ src, volumePlayer }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!autoPlayOnMount) return;
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    audio.volume = volumePlayer;
+    let hasStarted = false;
+
+    const startPlayback = () => {
+      if (hasStarted) return;
+      hasStarted = true;
+      void audio.play()
+        .then(() => setIsPlaying(true))
+        .catch(() => {
+          setIsPlaying(false);
+          hasStarted = false;
+        });
+    };
+
+    startPlayback();
+
+    const resumeOnInteraction = () => startPlayback();
+    window.addEventListener('pointerdown', resumeOnInteraction, { passive: true });
+    window.addEventListener('touchstart', resumeOnInteraction, { passive: true });
+    window.addEventListener('keydown', resumeOnInteraction);
+
+    return () => {
+      window.removeEventListener('pointerdown', resumeOnInteraction);
+      window.removeEventListener('touchstart', resumeOnInteraction);
+      window.removeEventListener('keydown', resumeOnInteraction);
+    };
+  }, [autoPlayOnMount, currentSrc, volumePlayer]);
+
   return (
     <div>
       <audio
         ref={audioRef}
-        src={src}
+        src={currentSrc}
         preload="metadata" // Optimisation pour mobile
+        onError={() => {
+          if (!fallbackSrc || hasTriedFallback || currentSrc === fallbackSrc) return;
+          setHasTriedFallback(true);
+          setCurrentSrc(fallbackSrc);
+        }}
       />
 
       <div

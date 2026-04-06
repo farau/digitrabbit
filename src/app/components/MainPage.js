@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Image from "next/image";
 import styles from "./MainPage.module.css";
 import Icon, { FloatingHeadModel } from "./Icon";
@@ -23,6 +23,8 @@ import MobileBackground from "./MobileBackground";
 import Quests from "./Quests";
 import Linktree from "./Linktree";
 import { useChatMessages } from "../hooks/useChatMessages";
+import { useMainPageOnboarding } from "../hooks/useMainPageOnboarding";
+import { useQuestsStatus } from "../hooks/useQuestsStatus";
 
 import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, DIGIT_RABBITS_CHAT_ADDRESS, DIGIT_RABBITS_CHAT_ABI, publicClient, NUM_SLOTS, COOLDOWN_SECONDS } from '@/utils/chainConfig'
 import { usePreSignedPool } from "../hooks/usePreSignedPool";
@@ -32,28 +34,8 @@ import dynamic from 'next/dynamic';
 import { userData } from "three/src/nodes/accessors/UserDataNode";
 import { Canvas } from "@react-three/fiber";
 
-const ONBOARDING_STEPS = [
-  {
-    app: 'Game',
-    title: 'Step 1',
-    description: 'Game.exe is where you play to earn RabbitPoints and progress your account. To play, you need a Digit Rabbits NFT. You can find the purchase links in the Linktree section.'
-  },
-  {
-    app: 'RabbitChat',
-    title: 'Step 2',
-    description: 'RabbitChat is the social hub where you earn points by chatting and interacting with RabbitBot. A leaderboard is available and can be checked anytime in the Leaderboard tab.'
-  },
-  {
-    app: 'FAQ',
-    title: 'Step 3',
-    description: 'For more details about gameplay, points, chat, and rewards, refer to the FAQ section.'
-  }
-]
-const ONBOARDING_TX_HINT = "To perform transactions, open the Settings icon and send gas fee tokens (ETH) to your embedded wallet created via Privy."
-
 export default function MainPage() {
   const QUEST_REFRESH_INTERVAL_MS = 120000
-  const QUEST_MIN_FETCH_INTERVAL_MS = 30000
   const PLAYER_MIN_FETCH_INTERVAL_MS = 5000
 
   const [visibleApps, setVisibleApps] = useState([]);
@@ -103,29 +85,15 @@ export default function MainPage() {
 
   // Setter game
   const [isGameStarted, setIsGameStarted] = useState(false)
-  const [questNotifications, setQuestNotifications] = useState({
-    readyCount: 0,
-    nextReadyIn: null,
-    isLoading: true,
-    error: null,
-    lastUpdatedAt: 0
-  })
   const [chatNotifications, setChatNotifications] = useState({
     unreadNewMessages: 0,
     totalLoadedMessages: 0,
     lastMessageAt: 0
   })
-  const [onboardingStepIndex, setOnboardingStepIndex] = useState(0)
-  const [onboardingDismissed, setOnboardingDismissed] = useState(false)
-  const [onboardingTargetAppOverride, setOnboardingTargetAppOverride] = useState(null)
-  const [onboardingTargetPosition, setOnboardingTargetPosition] = useState(null)
-  const [onboardingBubblePosition, setOnboardingBubblePosition] = useState(null)
-  const [typedOnboardingDescription, setTypedOnboardingDescription] = useState('')
   const [hasLoadedPlayerData, setHasLoadedPlayerData] = useState(false)
   const [notificationNow, setNotificationNow] = useState(Date.now())
   const [gameCooldownSeconds, setGameCooldownSeconds] = useState(COOLDOWN_SECONDS)
   const previousMessagesLengthRef = useRef(0)
-  const questFetchStateRef = useRef({ inFlight: false, lastAt: 0 })
   const playerFetchStateRef = useRef({ inFlight: false, lastAt: 0, pendingForce: false })
 
   // Utilisation du hook usePreSignedPool
@@ -145,9 +113,94 @@ export default function MainPage() {
   const isRabbitChatOpen = visibleApps.includes('RabbitChat')
   const hasNoPoints = Number(playerData?.rabbitPoints || 0) <= 0
   const isAppInteractionLocked = Boolean(embeddedWallet?.address) && !hasLoadedPlayerData
-  const shouldRunOnboarding = Boolean(embeddedWallet?.address) && hasLoadedPlayerData && hasNoPoints && !onboardingDismissed
-  const activeOnboardingStep = shouldRunOnboarding ? ONBOARDING_STEPS[onboardingStepIndex] : null
-  const onboardingProgressText = `${Math.min(onboardingStepIndex + 1, ONBOARDING_STEPS.length)}/${ONBOARDING_STEPS.length}`
+  const questIds = useMemo(() => ['daily_messages', 'daily_streak', 'daily_hold', 'weekly_messages', 'weekly_games'], [])
+  const {
+    claimStatus: allQuestClaimStatus,
+    cooldowns: allQuestCooldowns,
+    isLoading: isQuestStatusLoading,
+    error: questStatusError,
+    refetch: refetchQuestStatus,
+    holdings: questHoldings
+  } = useQuestsStatus(hasLoadedPlayerData ? embeddedWallet?.address : null, questIds, 'all')
+
+  const questNotifications = useMemo(() => {
+    if (!embeddedWallet?.address) {
+      return {
+        readyCount: 0,
+        nextReadyIn: null,
+        isLoading: true,
+        error: null
+      }
+    }
+
+    if (!hasLoadedPlayerData) {
+      return {
+        readyCount: 0,
+        nextReadyIn: null,
+        isLoading: true,
+        error: null
+      }
+    }
+
+    const streak = Number(playerData?.streak || 0)
+    const dailyMessages = Number(playerData?.dailyMessages || 0)
+    const weeklyMessagesTotal = Array.isArray(playerData?.weeklyMessages)
+      ? playerData.weeklyMessages.reduce((sum, value) => sum + Number(value || 0), 0)
+      : Number(playerData?.weeklyMessages || 0)
+    const weeklyGames = Number(playerData?.gamePlayed || 0)
+    const holdings = Number(questHoldings || 0)
+
+    const targets = {
+      daily_messages: Math.max(10 + Math.max(streak - 1, 0) * 2, 10),
+      daily_streak: 1,
+      daily_hold: Math.max(streak, 1),
+      weekly_messages: 1000,
+      weekly_games: 14,
+    }
+
+    const progress = {
+      daily_messages: dailyMessages,
+      daily_streak: streak >= 1 ? 1 : 0,
+      daily_hold: holdings,
+      weekly_messages: weeklyMessagesTotal,
+      weekly_games: weeklyGames,
+    }
+
+    let readyCount = 0
+    let nextReadyIn = null
+
+    for (const questId of questIds) {
+      const isClaimed = allQuestClaimStatus?.[questId] === true
+      const cooldown = Number(allQuestCooldowns?.[questId] || 0)
+      const isCompleted = Number(progress?.[questId] || 0) >= Number(targets?.[questId] || 0)
+
+      if (!isClaimed && isCompleted && cooldown <= 0) {
+        readyCount += 1
+      } else if (!isClaimed && isCompleted && cooldown > 0) {
+        nextReadyIn = nextReadyIn === null ? cooldown : Math.min(nextReadyIn, cooldown)
+      }
+    }
+
+    return {
+      readyCount,
+      nextReadyIn,
+      isLoading: isQuestStatusLoading,
+      error: questStatusError || null
+    }
+  }, [
+    embeddedWallet?.address,
+    hasLoadedPlayerData,
+    playerData?.streak,
+    playerData?.dailyMessages,
+    playerData?.weeklyMessages,
+    playerData?.gamePlayed,
+    questHoldings,
+    questIds,
+    allQuestClaimStatus,
+    allQuestCooldowns,
+    isQuestStatusLoading,
+    questStatusError
+  ])
 
   const formatDuration = useCallback((seconds) => {
     const total = Math.max(0, Number(seconds) || 0)
@@ -200,237 +253,10 @@ export default function MainPage() {
   }, [embeddedWallet?.address])
 
   useEffect(() => {
-    if (!shouldRunOnboarding || isMobile) return
-    if (!show3DEffects) {
-      setShow3DEffects(true)
-      localStorage.setItem('show3DEffects', JSON.stringify(true))
-    }
-  }, [shouldRunOnboarding, isMobile, show3DEffects, setShow3DEffects])
-
-  useEffect(() => {
-    if (!embeddedWallet?.address) {
-      setOnboardingStepIndex(0)
-      setOnboardingTargetAppOverride(null)
-      return
-    }
-
-    if (!shouldRunOnboarding) {
-      setOnboardingStepIndex(0)
-      return
-    }
-
-  }, [
-    embeddedWallet?.address,
-    shouldRunOnboarding,
-    onboardingStepIndex
-  ])
-
-  useEffect(() => {
     if (embeddedWallet?.address && seasonId !== null) {
       setHasLoadedPlayerData(false)
     }
   }, [embeddedWallet?.address, seasonId])
-
-  useEffect(() => {
-    if (!activeOnboardingStep) {
-      setOnboardingTargetPosition(null)
-      setOnboardingBubblePosition(null)
-      return
-    }
-
-    const updateTargetPosition = () => {
-      const appKey = String(onboardingTargetAppOverride || activeOnboardingStep.app || '')
-      const selectors = Array.from(new Set([
-        `[data-app="${appKey}"]`,
-        `[data-app="${appKey.toLowerCase()}"]`,
-        `[data-app="${appKey.toUpperCase()}"]`
-      ]))
-
-      const targetElements = selectors.flatMap((selector) => Array.from(document.querySelectorAll(selector)))
-      const targetElement = targetElements.find((element) => {
-        const rect = element.getBoundingClientRect()
-        return rect.width > 0 && rect.height > 0
-      })
-
-      if (!targetElement) {
-        setOnboardingTargetPosition(null)
-        setOnboardingBubblePosition(null)
-        return
-      }
-
-      const rect = targetElement.getBoundingClientRect()
-      const centerLeft = rect.left + rect.width / 2
-      const centerTop = rect.top + rect.height / 2
-      const viewportWidth = window.innerWidth
-      const viewportHeight = window.innerHeight
-      const horizontalMargin = 12
-      const rabbitOffsetX = isMobile ? 0 : 52
-      const bubbleWidth = isMobile ? Math.min(viewportWidth - 24, 320) : 360
-      const minCenter = horizontalMargin + bubbleWidth / 2
-      const maxCenter = viewportWidth - horizontalMargin - bubbleWidth / 2
-      const bubbleLeft = Math.min(Math.max(centerLeft + rabbitOffsetX * 0.85, minCenter), Math.max(minCenter, maxCenter))
-      const bubbleHeight = isMobile ? 210 : 228
-      const topMin = 10
-      const topMax = Math.max(topMin, viewportHeight - bubbleHeight - 14)
-      const preferredTop = centerTop - (isMobile ? 245 : 270)
-      const bubbleTop = Math.min(Math.max(preferredTop, topMin), topMax)
-
-      setOnboardingTargetPosition({
-        left: centerLeft,
-        top: centerTop,
-      })
-
-      // During desktop return-to-origin animation, move only the rabbit head.
-      if (!(onboardingTargetAppOverride === 'digit-head' && !isMobile)) {
-        setOnboardingBubblePosition({
-          left: bubbleLeft,
-          top: bubbleTop,
-          width: bubbleWidth
-        })
-      }
-    }
-
-    updateTargetPosition()
-    const interval = setInterval(updateTargetPosition, 180)
-    window.addEventListener('resize', updateTargetPosition)
-    window.addEventListener('scroll', updateTargetPosition, true)
-
-    return () => {
-      clearInterval(interval)
-      window.removeEventListener('resize', updateTargetPosition)
-      window.removeEventListener('scroll', updateTargetPosition, true)
-    }
-  }, [activeOnboardingStep, onboardingTargetAppOverride, onboardingStepIndex, isMobile])
-
-  useEffect(() => {
-    const fullText = activeOnboardingStep?.description || ''
-    setTypedOnboardingDescription('')
-    if (!fullText) return
-
-    let index = 0
-    const interval = setInterval(() => {
-      index += 1
-      setTypedOnboardingDescription(fullText.slice(0, index))
-      if (index >= fullText.length) {
-        clearInterval(interval)
-      }
-    }, 16)
-
-    return () => clearInterval(interval)
-  }, [activeOnboardingStep?.title, activeOnboardingStep?.description])
-
-  const fetchQuestNotifications = useCallback(async ({ force = false } = {}) => {
-    if (!embeddedWallet?.address) {
-      setQuestNotifications((previous) => ({
-        ...previous,
-        readyCount: 0,
-        nextReadyIn: null,
-        isLoading: true,
-        error: null,
-      }))
-      return
-    }
-
-    if (!hasLoadedPlayerData) {
-      setQuestNotifications((previous) => ({
-        ...previous,
-        isLoading: true,
-        error: null,
-      }))
-      return
-    }
-
-    const now = Date.now()
-    if (questFetchStateRef.current.inFlight) {
-      return
-    }
-    if (!force && now - questFetchStateRef.current.lastAt < QUEST_MIN_FETCH_INTERVAL_MS) {
-      return
-    }
-
-    questFetchStateRef.current.inFlight = true
-    questFetchStateRef.current.lastAt = now
-
-    const questIds = ['daily_messages', 'daily_streak', 'daily_hold', 'weekly_messages', 'weekly_games']
-    setQuestNotifications((previous) => ({ ...previous, isLoading: true, error: null }))
-
-    try {
-      const response = await fetch(
-        `/api/quests/claim?playerAddress=${embeddedWallet.address}&questIds=${questIds.join(',')}&period=all`
-      )
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`)
-      }
-
-      const payload = await response.json()
-      const claimStatus = payload?.data?.claimStatus || {}
-      const cooldowns = payload?.data?.cooldowns || {}
-      const holdings = Number(payload?.data?.holdings || 0)
-
-      const streak = Number(playerData?.streak || 0)
-      const dailyMessages = Number(playerData?.dailyMessages || 0)
-      const weeklyMessagesTotal = Array.isArray(playerData?.weeklyMessages)
-        ? playerData.weeklyMessages.reduce((sum, value) => sum + Number(value || 0), 0)
-        : Number(playerData?.weeklyMessages || 0)
-      const weeklyGames = Number(playerData?.gamePlayed || 0)
-
-      const targets = {
-        daily_messages: Math.max(10 + Math.max(streak - 1, 0) * 2, 10),
-        daily_streak: 1,
-        daily_hold: Math.max(streak, 1),
-        weekly_messages: 1000,
-        weekly_games: 14,
-      }
-
-      const progress = {
-        daily_messages: dailyMessages,
-        daily_streak: streak >= 1 ? 1 : 0,
-        daily_hold: holdings,
-        weekly_messages: weeklyMessagesTotal,
-        weekly_games: weeklyGames,
-      }
-
-      let readyCount = 0
-      let nextReadyIn = null
-
-      for (const questId of questIds) {
-        const isClaimed = claimStatus?.[questId] === true
-        const cooldown = Number(cooldowns?.[questId] || 0)
-        const isCompleted = Number(progress?.[questId] || 0) >= Number(targets?.[questId] || 0)
-
-        if (!isClaimed && isCompleted && cooldown <= 0) {
-          readyCount += 1
-        } else if (!isClaimed && isCompleted && cooldown > 0) {
-          nextReadyIn = nextReadyIn === null ? cooldown : Math.min(nextReadyIn, cooldown)
-        }
-      }
-
-      setQuestNotifications({
-        readyCount,
-        nextReadyIn,
-        isLoading: false,
-        error: null,
-        lastUpdatedAt: Date.now()
-      })
-    } catch (questError) {
-      console.error('Failed to fetch quest notifications:', questError)
-      setQuestNotifications((previous) => ({
-        ...previous,
-        isLoading: false,
-        error: questError?.message || 'Failed to refresh quests',
-      }))
-    } finally {
-      questFetchStateRef.current.inFlight = false
-    }
-  }, [
-    embeddedWallet?.address,
-    hasLoadedPlayerData,
-    playerData?.dailyMessages,
-    playerData?.weeklyMessages,
-    playerData?.gamePlayed,
-    playerData?.streak
-  ])
 
   // Récupération de la liste des assets et des memes
   useEffect(() => {
@@ -630,7 +456,7 @@ export default function MainPage() {
         if (!isCurrentPlayerEvent(log)) return
         console.log('💰 Quest reward credited, refreshing player data...')
         void fetchPlayerData({ force: true })
-        void fetchQuestNotifications({ force: true })
+        void refetchQuestStatus()
       },
       onUserRoleChanged: (log) => {
         if (!isCurrentPlayerEvent(log)) return
@@ -641,21 +467,21 @@ export default function MainPage() {
         console.log('🔇 User muted')
       },
     })
-  }, [embeddedWallet?.address, fetchPlayerData, fetchQuestNotifications, registerCallbacks])
+  }, [embeddedWallet?.address, fetchPlayerData, refetchQuestStatus, registerCallbacks])
 
   // Notification center: refresh des quêtes même si la fenêtre Quests n'est pas ouverte
   useEffect(() => {
     if (!embeddedWallet?.address || !hasLoadedPlayerData) return
 
-    void fetchQuestNotifications({ force: true })
+    void refetchQuestStatus()
 
     const interval = setInterval(() => {
-      void fetchQuestNotifications()
+      void refetchQuestStatus()
     }, QUEST_REFRESH_INTERVAL_MS)
 
     const onFocus = () => {
       if (document.hidden) return
-      void fetchQuestNotifications({ force: true })
+      void refetchQuestStatus()
     }
 
     window.addEventListener('focus', onFocus)
@@ -666,7 +492,7 @@ export default function MainPage() {
       window.removeEventListener('focus', onFocus)
       document.removeEventListener('visibilitychange', onFocus)
     }
-  }, [embeddedWallet?.address, hasLoadedPlayerData, fetchQuestNotifications])
+  }, [embeddedWallet?.address, hasLoadedPlayerData, refetchQuestStatus])
 
   // Notification center: activité chat
   useEffect(() => {
@@ -762,36 +588,6 @@ export default function MainPage() {
 
   };
 
-  const advanceOnboardingStep = () => {
-    if (onboardingStepIndex >= ONBOARDING_STEPS.length - 1) {
-      if (!isMobile) {
-        setShow3DEffects(true)
-        localStorage.setItem('show3DEffects', JSON.stringify(true))
-        sessionStorage.removeItem('3d_temp_disabled')
-      }
-
-      // Close onboarding immediately on Finish (no return translation animation).
-      setShow3DEffects(true)
-      localStorage.setItem('show3DEffects', JSON.stringify(true))
-      sessionStorage.removeItem('3d_temp_disabled')
-      setOnboardingDismissed(true)
-      setOnboardingStepIndex(ONBOARDING_STEPS.length)
-      setOnboardingTargetAppOverride(null)
-      restoreApp('FAQ', { force: true })
-
-      // Ensure the state remains ON after the FAQ window mount cycle.
-      setTimeout(() => {
-        setShow3DEffects(true)
-        localStorage.setItem('show3DEffects', JSON.stringify(true))
-        sessionStorage.removeItem('3d_temp_disabled')
-      }, 0)
-      return
-    }
-
-    setOnboardingStepIndex((previousStep) => Math.min(previousStep + 1, ONBOARDING_STEPS.length))
-  }
-
-
   const bringToFront = (appName, visibleAppsRaw) => {
     const visibleApps = Array.isArray(visibleAppsRaw) ? visibleAppsRaw : [];
 
@@ -817,6 +613,49 @@ export default function MainPage() {
       return updated;
     });
   };
+
+  const closeAppWindow = useCallback((appName) => {
+    setVisibleApps((apps) => apps.filter((app) => app !== appName))
+    setMinimizedApps((apps) => apps.filter((app) => app !== appName))
+    setAppZIndices((previous) => {
+      if (!Object.prototype.hasOwnProperty.call(previous, appName)) return previous
+      const updated = { ...previous }
+      delete updated[appName]
+      return updated
+    })
+  }, [])
+
+  const {
+    activeOnboardingStep,
+    onboardingStepIndex,
+    onboardingBaseZ,
+    onboardingTargetPosition,
+    onboardingBubblePosition,
+    onboardingTargetRect,
+    typedOnboardingDescription,
+    onboardingProgressText,
+    onboardingDescriptionText,
+    fundingLinkWarningText,
+    isFundingStep,
+    isFundingCopySubStep,
+    isFundingLinkSubStep,
+    hasGasBalance,
+    hasClickedLinkWallet,
+    isFundingNextLocked,
+    onboardingTargetAppOverride,
+    advanceOnboardingStep,
+    onboardingStepsLength,
+  } = useMainPageOnboarding({
+    embeddedWalletAddress: embeddedWallet?.address,
+    hasLoadedPlayerData,
+    hasNoPoints,
+    appZIndices,
+    isMobile,
+    show3DEffects,
+    setShow3DEffects,
+    openApp: restoreApp,
+    closeApp: closeAppWindow,
+  })
 
   const onGameEnd = useCallback(async () => {
     setIsGameStarted(false)
@@ -858,12 +697,7 @@ export default function MainPage() {
           playerData={playerData}
           embeddedWallet={embeddedWallet}
           onQuestClaimed={() => {
-            // Immediate visual decrement for notification center, then sync from APIs.
-            setQuestNotifications((previous) => ({
-              ...previous,
-              readyCount: Math.max(Number(previous.readyCount || 0) - 1, 0)
-            }))
-            void fetchQuestNotifications({ force: true })
+            void refetchQuestStatus()
             void fetchPlayerData({ force: true })
           }}
         />;
@@ -912,63 +746,71 @@ export default function MainPage() {
 
   return (
     <div className={`${themeMode === 'light' ? styles.bgDay : styles.bgNight}`}>
-      <div
-        style={{
-          position: 'fixed',
-          bottom: isMobile ? '62px' : '52px',
-          right: isMobile ? '12px' : '16px',
-          zIndex: 1,
-          width: isMobile ? 'min(78vw, 220px)' : '230px',
-          maxWidth: '80vw',
-          background: themeMode === 'dark' ? 'rgba(26, 26, 26, 0.78)' : 'rgba(255, 255, 255, 0.8)',
-          border: `1px solid ${themeMode === 'dark' ? '#3f3f46' : '#d1d5db'}`,
-          borderRadius: '10px',
-          backdropFilter: 'blur(5px)',
-          boxShadow: themeMode === 'dark' ? '0 4px 12px rgba(0, 0, 0, 0.28)' : '0 4px 12px rgba(0, 0, 0, 0.1)',
-          padding: '8px 10px'
-        }}
-      >
-        <div style={{ fontSize: '11px', fontWeight: 700, marginBottom: '6px', color: themeMode === 'dark' ? '#e5e7eb' : '#111827', opacity: 0.92 }}>
-          Notification Center
-        </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '10px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: themeMode === 'dark' ? '#d1d5db' : '#1f2937', opacity: 0.88 }}>
-            <Image src="/img/icons/quests.png" alt="Quests" width={12} height={12} />
-            <span>{questNotifications.isLoading
-              ? 'checking...'
-              : questNotifications.readyCount > 0
-                ? `${questNotifications.readyCount} ready to claim`
-                : questNotifications.nextReadyIn !== null
-                  ? `next in ${formatDuration(questNotifications.nextReadyIn)}`
-                  : 'no quest claimable'}</span>
+      {embeddedWallet?.address && (
+        <>
+          <div
+            style={{
+              position: 'fixed',
+              bottom: isMobile ? '62px' : '52px',
+              right: isMobile ? '12px' : '16px',
+              zIndex: 1,
+              width: isMobile ? 'min(78vw, 220px)' : '230px',
+              maxWidth: '80vw',
+              background: themeMode === 'dark' ? 'rgba(26, 26, 26, 0.78)' : 'rgba(255, 255, 255, 0.8)',
+              border: `1px solid ${themeMode === 'dark' ? '#3f3f46' : '#d1d5db'}`,
+              borderRadius: '10px',
+              backdropFilter: 'blur(5px)',
+              boxShadow: themeMode === 'dark' ? '0 4px 12px rgba(0, 0, 0, 0.28)' : '0 4px 12px rgba(0, 0, 0, 0.1)',
+              padding: '8px 10px'
+            }}
+          >
+
+            <div style={{ fontSize: '11px', fontWeight: 700, marginBottom: '6px', color: themeMode === 'dark' ? '#e5e7eb' : '#111827', opacity: 0.92 }}>
+              Notification Center
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: themeMode === 'dark' ? '#d1d5db' : '#1f2937', opacity: 0.88 }}>
+                <Image src="/img/icons/quests.png" alt="Quests" width={12} height={12} />
+                <span>{questNotifications.isLoading
+                  ? 'checking...'
+                  : questNotifications.readyCount > 0
+                    ? <a onClick={() => { restoreApp("Quests") }} style={{ color: 'inherit' }}>
+                      {questNotifications.readyCount} ready to claim
+                    </a>
+                    : questNotifications.nextReadyIn !== null
+                      ? `next in ${formatDuration(questNotifications.nextReadyIn)}`
+                      : 'no quest claimable'}</span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: themeMode === 'dark' ? '#d1d5db' : '#1f2937', opacity: 0.88 }}>
+                <Image src="/img/icons/game.png" alt="Game" width={12} height={12} />
+                <span>{getGameStartCooldownRemaining() > 0
+                  ? `ready in ${formatDuration(getGameStartCooldownRemaining())}`
+                  : 'ready to start'}</span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: themeMode === 'dark' ? '#d1d5db' : '#1f2937', opacity: 0.88 }}>
+                <Image src="/img/icons/rabbitchat.png" alt="Chat" width={12} height={12} />
+                <span>{chatNotifications.unreadNewMessages > 0
+                  ? chatNotifications.unreadNewMessages > 10
+                    ? '+10 messages unseen'
+                    : `+${chatNotifications.unreadNewMessages} unseen message(s)`
+                  : '0 messages unseen'}</span>
+              </div>
+            </div>
           </div>
+        </>
+      )}
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: themeMode === 'dark' ? '#d1d5db' : '#1f2937', opacity: 0.88 }}>
-            <Image src="/img/icons/game.png" alt="Game" width={12} height={12} />
-            <span>{getGameStartCooldownRemaining() > 0
-              ? `ready in ${formatDuration(getGameStartCooldownRemaining())}`
-              : 'ready to start'}</span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: themeMode === 'dark' ? '#d1d5db' : '#1f2937', opacity: 0.88 }}>
-            <Image src="/img/icons/rabbitchat.png" alt="Chat" width={12} height={12} />
-            <span>{chatNotifications.unreadNewMessages > 0
-              ? chatNotifications.unreadNewMessages > 10
-                ? '+10 messages unseen'
-                : `+${chatNotifications.unreadNewMessages} unseen message(s)`
-              : '0 messages unseen'}</span>
-          </div>
-        </div>
-      </div>
-
-      {activeOnboardingStep && onboardingStepIndex < ONBOARDING_STEPS.length && (
+      {activeOnboardingStep && onboardingStepIndex < onboardingStepsLength && (
         <>
           <div
             style={{
               position: 'fixed',
               inset: 0,
-              zIndex: 1300,
+              zIndex: onboardingBaseZ,
               pointerEvents: 'auto',
               cursor: 'not-allowed',
               background: onboardingTargetPosition
@@ -982,10 +824,10 @@ export default function MainPage() {
             <div
               style={{
                 position: 'fixed',
-                left: onboardingTargetPosition.left + (onboardingTargetAppOverride === 'digit-head' ? 0 : 52),
-                top: onboardingTargetPosition.top - (onboardingTargetAppOverride === 'digit-head' ? 0 : 18),
+                left: onboardingTargetPosition.left + (onboardingTargetAppOverride === 'digit-head' ? 0 : 72),
+                top: onboardingTargetPosition.top - (onboardingTargetAppOverride === 'digit-head' ? 0 : 46) + (isFundingLinkSubStep ? 36 : 0),
                 transform: 'translate(-50%, -50%)',
-                zIndex: 1305,
+                zIndex: onboardingBaseZ + 5,
                 pointerEvents: 'none',
                 width: isMobile ? 56 : 90,
                 height: isMobile ? 56 : 120,
@@ -1015,7 +857,7 @@ export default function MainPage() {
                 top: onboardingBubblePosition.top,
                 left: onboardingBubblePosition.left,
                 transform: 'translateX(-50%)',
-                zIndex: 1306,
+                zIndex: onboardingBaseZ + 6,
                 width: onboardingBubblePosition.width,
                 background: themeMode === 'dark'
                   ? 'linear-gradient(160deg, rgba(245,245,245,0.96) 0%, rgba(231,231,231,0.94) 100%)'
@@ -1044,7 +886,7 @@ export default function MainPage() {
 
               <div style={{ fontSize: '11px', lineHeight: 1.4, color: '#111827' }}>
                 <strong>{activeOnboardingStep.title}:</strong> {typedOnboardingDescription}
-                {typedOnboardingDescription.length < (activeOnboardingStep?.description?.length || 0) && (
+                {typedOnboardingDescription.length < (onboardingDescriptionText?.length || 0) && (
                   <span
                     style={{
                       display: 'inline-block',
@@ -1061,28 +903,60 @@ export default function MainPage() {
                   marginTop: '8px',
                   fontSize: '10px',
                   lineHeight: 1.35,
-                  color: '#374151'
+                  color: isFundingLinkSubStep ? '#b91c1c' : '#374151',
+                  fontWeight: isFundingLinkSubStep ? 700 : 400
                 }}
               >
-                {ONBOARDING_TX_HINT}
+                {isFundingStep
+                  ? hasGasBalance
+                    ? isFundingLinkSubStep
+                      ? hasClickedLinkWallet
+                        ? 'Perfect. You clicked Link Wallet. Continue when you are ready.'
+                        : 'Click Link Wallet at least once to continue. You can still continue even if you choose not to link after opening it.'
+                      : 'Wallet funded. Continue to Link wallet.'
+                    : isFundingCopySubStep
+                      ? 'Use Copy first, then continue to Add funds.'
+                      : 'Click Add funds, fund your wallet, then wait for balance refresh.'
+                  : null}
               </div>
+              {isFundingLinkSubStep && fundingLinkWarningText && (
+                <div
+                  style={{
+                    marginTop: '6px',
+                    fontSize: '10px',
+                    lineHeight: 1.35,
+                    color: '#b91c1c',
+                    fontWeight: 700,
+                    whiteSpace: 'pre-line'
+                  }}
+                >
+                  {fundingLinkWarningText}
+                </div>
+              )}
 
               <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
                 <button
                   onClick={advanceOnboardingStep}
+                  disabled={isFundingNextLocked}
                   style={{
                     border: 'none',
                     borderRadius: '8px',
                     padding: '7px 12px',
                     fontSize: '11px',
                     fontWeight: 700,
-                    cursor: 'pointer',
-                    background: '#111827',
+                    cursor: isFundingNextLocked ? 'not-allowed' : 'pointer',
+                    background: isFundingNextLocked ? '#6b7280' : '#111827',
                     color: '#f9fafb',
                     border: '2px solid #111827'
                   }}
                 >
-                  {onboardingStepIndex >= ONBOARDING_STEPS.length - 1 ? 'Finish' : 'Next'}
+                  {isFundingStep && !hasGasBalance
+                    ? 'Waiting for ETH'
+                    : isFundingLinkSubStep && !hasClickedLinkWallet
+                      ? 'Click Link Wallet first'
+                    : onboardingStepIndex >= onboardingStepsLength - 1
+                      ? 'Finish'
+                      : 'Next'}
                 </button>
               </div>
               <div
@@ -1109,6 +983,44 @@ export default function MainPage() {
             </div>
           )}
         </>
+      )}
+
+      {activeOnboardingStep && isFundingStep && onboardingTargetRect && (
+        <button
+          type="button"
+          aria-label={
+            isFundingCopySubStep
+              ? 'Copy embedded wallet address'
+              : isFundingLinkSubStep
+                ? 'Open link wallet flow'
+                : 'Open faucet link from Add funds button'
+          }
+          onClick={(event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            const target = document.querySelector(
+              isFundingCopySubStep
+                ? '[data-app="settings-copy-wallet"]'
+                : isFundingLinkSubStep
+                  ? '[data-app="settings-link-wallet"]'
+                  : '[data-app="settings-send-funds"]'
+            )
+            if (target && typeof target.click === 'function') {
+              target.click()
+            }
+          }}
+          style={{
+            position: 'fixed',
+            left: onboardingTargetRect.left,
+            top: onboardingTargetRect.top,
+            width: onboardingTargetRect.width,
+            height: onboardingTargetRect.height,
+            zIndex: onboardingBaseZ + 10,
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+          }}
+        />
       )}
 
       {/* Icônes interactives */}
@@ -1145,7 +1057,7 @@ export default function MainPage() {
         src="/img/icons/leaderboard.png"
         label="Leaderboard"
         onClick={() => restoreApp("Leaderboard")}
-        position={{ x: 280, y: "60%" }}
+        position={{ x: 260, y: "32%" }}
       />
       <Icon
         name="Game"
@@ -1182,7 +1094,7 @@ export default function MainPage() {
         label={"Settings"}
         src="/img/icons/settings.png"
         onClick={() => restoreApp("Settings")}
-        position={{ x: "1%", y: "26%" }}
+        position={{ x: "1%", y: "16%" }}
       />
       <Icon
         name="assets"
@@ -1196,7 +1108,7 @@ export default function MainPage() {
         label={"FAQ"}
         src="/img/icons/faq.png"
         onClick={() => restoreApp("FAQ")}
-        position={{ x: "2%", y: "36%" }}
+        position={{ x: "2%", y: "30%" }}
       />
 
       <Icon
@@ -1211,7 +1123,7 @@ export default function MainPage() {
         label={"Links"}
         src="/img/icons/link.png"
         onClick={() => restoreApp("Linktree")}
-        position={{ x: "22%", y: "6%" }}
+        position={{ x: "15%", y: "16%" }}
       />
 
       {/* Affichage des memes plein écran*/}

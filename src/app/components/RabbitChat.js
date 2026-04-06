@@ -256,7 +256,7 @@ function MessageBubble({ message, messages, isNight, user, onReply }) {
                             <span style={{ fontSize: '11px', color: isNight ? '#666' : '#999' }}>
                                 {new Date(message.timestamp * 1000).toLocaleTimeString()}
                             </span>
-                            {!isSystemMessage && !isRabbitBotMessage && (
+                            {!isSystemMessage && !isRabbitBotMessage && Number(message?.score || 0) > 0 && (
                                 <>
                                     <Image src="/img/rabbitpoint.png" alt="RB" width={20} height={20} />
                                     <span style={{ fontSize: '11px', color: '#fbbf24', marginLeft: '-4px' }}>
@@ -642,7 +642,6 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
     const [isRabbitBotThinking, setIsRabbitBotThinking] = useState(false)
     const [rabbitBotThinkingDotCount, setRabbitBotThinkingDotCount] = useState(1)
     const [isMobileLayout, setIsMobileLayout] = useState(false)
-    const [keyboardInset, setKeyboardInset] = useState(0)
 
     const messagesEndRef = useRef(null)
     const inputRef = useRef(null)
@@ -674,16 +673,6 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
         const updateViewportState = () => {
             const isMobile = window.innerWidth < 768
             setIsMobileLayout(isMobile)
-
-            const vv = window.visualViewport
-            if (!vv || !isMobile) {
-                setKeyboardInset(0)
-                return
-            }
-
-            // Hauteur potentiellement masquée par le clavier virtuel
-            const hiddenByKeyboard = Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
-            setKeyboardInset(hiddenByKeyboard)
         }
 
         updateViewportState()
@@ -1315,9 +1304,9 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
             <div style={{
                 display: 'flex',
                 flexDirection: 'column',
-                height: isMobileLayout ? `calc(100dvh - ${keyboardInset}px)` : '80vh',
-                maxHeight: isMobileLayout ? `calc(100dvh - ${keyboardInset}px)` : '800px',
-                minHeight: '420px'
+                height: isMobileLayout ? '100dvh' : '80vh',
+                maxHeight: isMobileLayout ? '100dvh' : '800px',
+                minHeight: isMobileLayout ? 0 : '420px'
             }}>
                 <div style={{
                     flex: 1,
@@ -1445,146 +1434,153 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
                         </div>
                     )}
 
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: '8px',
-                        marginBottom: '10px',
-                        flexWrap: 'wrap'
-                    }}>
-                        <button
-                            type="button"
-                            onClick={() => setSendToRabbitBot((previous) => !previous)}
-                            disabled={sending}
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                background: sendToRabbitBot
-                                    ? (isNight ? 'rgba(16, 185, 129, 0.22)' : 'rgba(16, 185, 129, 0.12)')
-                                    : (isNight ? '#2b2b2b' : '#efefef'),
-                                color: sendToRabbitBot
-                                    ? (isNight ? '#6ee7b7' : '#047857')
-                                    : (isNight ? '#d1d5db' : '#374151'),
-                                border: `1px solid ${sendToRabbitBot
-                                    ? (isNight ? '#10b981' : '#34d399')
-                                    : borderColor}`,
-                                borderRadius: '999px',
-                                padding: '4px 10px',
-                                fontSize: '11px',
-                                fontWeight: '700',
-                                cursor: sending ? 'not-allowed' : 'pointer',
-                                opacity: sending ? 0.7 : 1
-                            }}
-                            title="Toggle RabbitBot mode"
-                        >
-                            <Bot size={12} />
-                            RabbitBot {sendToRabbitBot ? 'ON' : 'OFF'}
-                        </button>
-
-                        {sendToRabbitBot && (
-                            <span style={{ fontSize: '11px', color: isNight ? '#9ca3af' : '#6b7280' }}>
-                                Your next message will trigger an on-chain RabbitBot reply.
-                            </span>
-                        )}
-                    </div>
-
-                    <form
-                        onSubmit={(e) => {
-                            e.preventDefault()
-                            if (!sending && cooldownRemaining === 0 && inputMessage.trim()) {
-                                handleSendMessage()
-                            }
-                        }}
-                        style={{
-                            display: 'flex',
-                            gap: '12px',
-                            flexDirection: isMobileLayout ? 'column' : 'row'
-                        }}>
-                        <input
-                            ref={inputRef}
-                            type="text"
-                            value={inputMessage}
-                            onChange={(e) => setInputMessage(e.target.value)}
-                            onFocus={() => {
-                                setTimeout(() => {
-                                    inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                                }, 150)
-                            }}
-                            enterKeyHint="send"
-                            onKeyDown={(e) => {
-                                const isEnter = e.key === 'Enter' || e.keyCode === 13 || e.which === 13
-                                if (isEnter) {
-                                    e.preventDefault()
-                                    e.currentTarget.form?.requestSubmit()
-                                }
-                            }}
-                            placeholder={replyingTo
-                                ? `Reply to ${replyingTo.twitterUsername || 'Anonymous'}...`
-                                : sendToRabbitBot
-                                    ? 'Ask RabbitBot...'
-                                    : 'Type your message...'}
-                            maxLength={200}
-                            disabled={sending}
-                            style={{
-                                flex: 1,
-                                background: isNight ? '#2a2a2a' : '#fff',
-                                color: textColor,
-                                border: `1px solid ${borderColor}`,
-                                padding: '10px 14px',
-                                borderRadius: '8px',
-                                fontSize: '14px',
-                                outline: 'none',
-                                opacity: sending ? 0.6 : 1,
-                                width: '100%'
-                            }}
-                        />
-
-                        <button
-                            type="submit"
-                            disabled={sending || !inputMessage.trim() || cooldownRemaining > 0}
-                            style={{
-                                background: (sending || !inputMessage.trim() || cooldownRemaining > 0)
-                                    ? (isNight ? '#374151' : '#d1d5db')
-                                    : (isNight ? '#4f46e5' : '#6366f1'),
-                                color: 'white',
-                                border: 'none',
-                                padding: '10px 20px',
-                                borderRadius: '8px',
-                                fontSize: '14px',
-                                fontWeight: '600',
-                                cursor: (sending || !inputMessage.trim() || cooldownRemaining > 0) ? 'not-allowed' : 'pointer',
+                    {playerData?.gamePlayed > 0 ? (
+                        <>
+                            <div style={{
                                 display: 'flex',
                                 alignItems: 'center',
+                                justifyContent: 'space-between',
                                 gap: '8px',
-                                transition: 'all 0.2s ease',
-                                flexShrink: 0,
-                                width: isMobileLayout ? '100%' : 'auto',
-                                justifyContent: 'center'
-                            }}
-                        >
-                            {sending ? (
-                                <>
-                                    <Loader2 className="w-2 h-2 animate-spin" />
-                                    Sending...
-                                </>
-                            ) : (
-                                <>Send</>
-                            )}
-                        </button>
-                    </form>
+                                marginBottom: '10px',
+                                flexWrap: 'wrap'
+                            }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setSendToRabbitBot((previous) => !previous)}
+                                    disabled={sending}
+                                    style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        background: sendToRabbitBot
+                                            ? (isNight ? 'rgba(16, 185, 129, 0.22)' : 'rgba(16, 185, 129, 0.12)')
+                                            : (isNight ? '#2b2b2b' : '#efefef'),
+                                        color: sendToRabbitBot
+                                            ? (isNight ? '#6ee7b7' : '#047857')
+                                            : (isNight ? '#d1d5db' : '#374151'),
+                                        border: `1px solid ${sendToRabbitBot
+                                            ? (isNight ? '#10b981' : '#34d399')
+                                            : borderColor}`,
+                                        borderRadius: '999px',
+                                        padding: '4px 10px',
+                                        fontSize: '11px',
+                                        fontWeight: '700',
+                                        cursor: sending ? 'not-allowed' : 'pointer',
+                                        opacity: sending ? 0.7 : 1
+                                    }}
+                                    title="Toggle RabbitBot mode"
+                                >
+                                    <Bot size={12} />
+                                    RabbitBot {sendToRabbitBot ? 'ON' : 'OFF'}
+                                </button>
 
-                    <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        marginTop: '8px',
-                        fontSize: '11px',
-                        color: isNight ? '#666' : '#999'
-                    }}>
-                        <span>{inputMessage.length}/200 characters</span>
-                    </div>
+                                {sendToRabbitBot && (
+                                    <span style={{ fontSize: '11px', color: isNight ? '#9ca3af' : '#6b7280' }}>
+                                        Your next message will trigger an on-chain RabbitBot reply.
+                                    </span>
+                                )}
+                            </div>
+
+                            <form
+                                onSubmit={(e) => {
+                                    e.preventDefault()
+                                    if (!sending && cooldownRemaining === 0 && inputMessage.trim()) {
+                                        handleSendMessage()
+                                    }
+                                }}
+                                style={{
+                                    display: 'flex',
+                                    gap: '12px',
+                                    flexDirection: isMobileLayout ? 'column' : 'row'
+                                }}>
+                                <input
+                                    ref={inputRef}
+                                    type="text"
+                                    value={inputMessage}
+                                    onChange={(e) => setInputMessage(e.target.value)}
+                                    enterKeyHint="send"
+                                    onKeyDown={(e) => {
+                                        const isEnter = e.key === 'Enter' || e.keyCode === 13 || e.which === 13
+                                        if (isEnter) {
+                                            e.preventDefault()
+                                            e.currentTarget.form?.requestSubmit()
+                                        }
+                                    }}
+                                    placeholder={replyingTo
+                                        ? `Reply to ${replyingTo.twitterUsername || 'Anonymous'}...`
+                                        : sendToRabbitBot
+                                            ? 'Ask RabbitBot...'
+                                            : 'Type your message...'}
+                                    maxLength={200}
+                                    disabled={sending}
+                                    style={{
+                                        flex: 1,
+                                        background: isNight ? '#2a2a2a' : '#fff',
+                                        color: textColor,
+                                        border: `1px solid ${borderColor}`,
+                                        padding: '10px 14px',
+                                        borderRadius: '8px',
+                                        fontSize: isMobileLayout ? '16px' : '14px',
+                                        outline: 'none',
+                                        opacity: sending ? 0.6 : 1,
+                                        width: '100%'
+                                    }}
+                                />
+
+                                <button
+                                    type="submit"
+                                    disabled={sending || !inputMessage.trim() || cooldownRemaining > 0}
+                                    style={{
+                                        background: (sending || !inputMessage.trim() || cooldownRemaining > 0)
+                                            ? (isNight ? '#374151' : '#d1d5db')
+                                            : (isNight ? '#4f46e5' : '#6366f1'),
+                                        color: 'white',
+                                        border: 'none',
+                                        padding: '10px 20px',
+                                        borderRadius: '8px',
+                                        fontSize: '14px',
+                                        fontWeight: '600',
+                                        cursor: (sending || !inputMessage.trim() || cooldownRemaining > 0) ? 'not-allowed' : 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        transition: 'all 0.2s ease',
+                                        flexShrink: 0,
+                                        width: isMobileLayout ? '100%' : 'auto',
+                                        justifyContent: 'center'
+                                    }}
+                                >
+                                    {sending ? (
+                                        <>
+                                            <Loader2 className="w-2 h-2 animate-spin" />
+                                            Sending...
+                                        </>
+                                    ) : (
+                                        <>Send</>
+                                    )}
+                                </button>
+                            </form>
+
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                marginTop: '8px',
+                                fontSize: '11px',
+                                color: isNight ? '#666' : '#999'
+                            }}>
+                                <span>{inputMessage.length}/200 characters</span>
+                            </div>
+                        </>
+                    ) : (
+                        <div style={{
+                            textAlign: 'center',
+                            color: isNight ? '#666' : '#999',
+                            marginBottom: '12px'
+                        }}>
+                            Play at least one game to unlock the chat and start earning RabbitPoints!
+                        </div>
+                    )}
                 </div>
 
                 {/* Section User Stats et Modération */}

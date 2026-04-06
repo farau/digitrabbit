@@ -1,6 +1,6 @@
 // hooks/useQuestsStatus.js
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 
 /**
  * Hook pour récupérer le statut des quêtes depuis le smart contract
@@ -16,9 +16,14 @@ export function useQuestsStatus(playerAddress, questIds = [], period = 'daily') 
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [holdings, setHoldings] = useState(null); // Pour daily_hold
+    const questIdsKey = useMemo(() => questIds.join(','), [questIds]);
+    const stableQuestIds = useMemo(
+        () => (questIdsKey ? questIdsKey.split(',').filter(Boolean) : []),
+        [questIdsKey]
+    );
 
-    const fetchQuestsStatus = async () => {
-        if (!playerAddress || questIds.length === 0) {
+    const fetchQuestsStatus = useCallback(async () => {
+        if (!playerAddress || stableQuestIds.length === 0) {
             setIsLoading(false);
             return;
         }
@@ -28,7 +33,7 @@ export function useQuestsStatus(playerAddress, questIds = [], period = 'daily') 
             setError(null);
 
             const response = await fetch(
-                `/api/quests/claim?playerAddress=${playerAddress}&questIds=${questIds.join(',')}&period=${period}`
+                `/api/quests/claim?playerAddress=${playerAddress}&questIds=${questIdsKey}&period=${period}`
             );
 
             if (!response.ok) {
@@ -51,11 +56,11 @@ export function useQuestsStatus(playerAddress, questIds = [], period = 'daily') 
             setError(err.message);
 
             // ✅ Fallback: initialiser tous les quêtes comme unclaimed avec cooldown 0
-            const fallbackStatus = questIds.reduce((acc, questId) => {
+            const fallbackStatus = stableQuestIds.reduce((acc, questId) => {
                 acc[questId] = false;
                 return acc;
             }, {});
-            const fallbackCooldowns = questIds.reduce((acc, questId) => {
+            const fallbackCooldowns = stableQuestIds.reduce((acc, questId) => {
                 acc[questId] = 0;
                 return acc;
             }, {});
@@ -65,12 +70,12 @@ export function useQuestsStatus(playerAddress, questIds = [], period = 'daily') 
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [playerAddress, stableQuestIds, questIdsKey, period]);
 
     // Re-fetch quand playerAddress, questIds ou period change
     useEffect(() => {
         fetchQuestsStatus();
-    }, [playerAddress, questIds.join(','), period]);
+    }, [fetchQuestsStatus]);
 
 
     return {

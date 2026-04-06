@@ -155,7 +155,12 @@ export default function Footer({ visibleApps, setVisibleApps, appZIndices, setAp
             <Image src="/img/icons/megaeth.ico" alt="MegaETH" width={21} height={21} />
           </a>
         </div>
-        <AudioPlayer src="/sounds/soundtrack.mp3" volumePlayer={volumePlayer} />
+        <AudioPlayer
+          src="/sounds/background.mp3"
+          fallbackSrc="/sounds/soundtrack.mp3"
+          volumePlayer={volumePlayer}
+          autoPlayOnMount={true}
+        />
         <WalletButton />
         <span className={styles.clock}>{time}</span>
       </div>

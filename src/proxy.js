@@ -292,7 +292,7 @@ export async function proxy(req) {
         }
     }
 
-    const isPrivyProtectedRoute = ['/api/users/', '/api/validate-wallet', '/api/chat/', '/api/game', '/api/leaderboard',].some(route =>
+    const isPrivyProtectedRoute = ['/api/users/', '/api/validate-wallet', '/api/chat/', '/api/game',].some(route =>
         pathname.startsWith(route)
     );
 
@@ -301,7 +301,7 @@ export async function proxy(req) {
         const accessToken = cookieStore.get('privy-token')?.value;
 
         if (!accessToken) {
-            return new Response('Unauthorized', { status: 401 });
+            return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
         }
 
     }

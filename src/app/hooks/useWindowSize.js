@@ -4,16 +4,20 @@ import { useState, useEffect } from 'react'
 
 export function useWindowSize() {
   const [size, setSize] = useState({ width: 0 });
-
-  const isMobile = window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    // Ne s'exécute que côté client
+    const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i
+
     const handleResize = () => {
-      setSize({ width: window.innerWidth });
+      const width = window.innerWidth
+      setSize((previous) => (previous.width === width ? previous : { width }))
+
+      const nextIsMobile = width < 768 || mobileRegex.test(navigator.userAgent)
+      setIsMobile((previous) => (previous === nextIsMobile ? previous : nextIsMobile))
     };
 
-    handleResize(); // initialise la taille
+    handleResize();
 
     window.addEventListener("resize", handleResize, { passive: true });
     return () => window.removeEventListener("resize", handleResize);

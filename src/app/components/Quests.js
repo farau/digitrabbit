@@ -379,7 +379,7 @@ export default function Quests({ playerData, embeddedWallet, onQuestClaimed = nu
         {
             id: 'daily_messages',
             title: 'Message Marathon',
-            description: 'Send messages in chat',
+            description: `Send ${10 + (streak - 1) * 2} messages in chat`,
             type: 'messages',
             icon: '💬',
             targetBase: 10 + (streak - 1) * 2,
@@ -415,7 +415,7 @@ export default function Quests({ playerData, embeddedWallet, onQuestClaimed = nu
         {
             id: 'weekly_messages',
             title: 'Weekly Chatter',
-            description: 'Send messages throughout the week',
+            description: 'Send 1000 messages throughout the week',
             type: 'messages',
             icon: '📝',
             targetBase: 1000,
@@ -426,7 +426,7 @@ export default function Quests({ playerData, embeddedWallet, onQuestClaimed = nu
         {
             id: 'weekly_games',
             title: 'Game Master',
-            description: 'Play games to earn rewards',
+            description: 'Play 14 games to earn rewards',
             type: 'games',
             icon: '🎮',
             targetBase: 14,

@@ -26,7 +26,6 @@ function LoginButton() {
 
     const handleLogin = async () => login({
         loginMethods: ['twitter'],
-        walletChainType: 'ethereum',
         disableSignup: false,
         onError: (error) => {
             console.error('Login error:', error);
