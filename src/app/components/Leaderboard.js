@@ -1,11 +1,13 @@
 'use client';
 
 import Image from 'next/image';
-import { Trophy, RotateCcw, Users, Calendar, ChevronLeft, ChevronRight, Zap, Target, Flame } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Trophy, RotateCcw, Users, Calendar, ChevronLeft, ChevronRight, Zap, Target, Flame, ScrollText } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
 import { useLeaderboard } from '../hooks/useLeaderboard';
 import { useTheme, useGame } from '@/context';
 import Wrapper from '@/app/components/Wrapper';
+import { getLeagueFromMetrics, getLeagueCardBackground } from '@/utils/league';
+import { useShareCard } from '../hooks/useShareCard';
 
 export default function Leaderboard({ }) {
   const {
@@ -22,7 +24,6 @@ export default function Leaderboard({ }) {
 
   const { themeMode } = useTheme();
   const [currentPage, setCurrentPage] = useState(1);
-  const [viewMode, setViewMode] = useState('score');
   const [initialLoadTimeout, setInitialLoadTimeout] = useState(false);
   const itemsPerPage = 10;
 
@@ -32,6 +33,18 @@ export default function Leaderboard({ }) {
   const borderColor = isNight ? '#444' : '#ddd';
   const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)';
   const subTextColor = isNight ? '#999' : '#666';
+
+  const { shareOnTwitter, isGenerating } = useShareCard({
+    logoSrc: '/img/logo.png', // logo app
+  });
+
+  const [toast, setToast] = useState(null); // { message, type }
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 5000);
+  };
+
 
   const { embeddedWallet } = useGame();
 
@@ -62,27 +75,41 @@ export default function Leaderboard({ }) {
     return new Intl.NumberFormat('en-EN').format(number);
   };
 
-  const getTopStreakPlayers = (limit = null) => {
-    return [...leaderboard]
-      .filter(player => player.streak && player.streak > 0)
-      .sort((a, b) => (b.streak || 0) - (a.streak || 0))
-      .map((player, index) => ({
-        ...player,
-        rank: index + 1
-      }))
-      .slice(0, limit || leaderboard.length);
+  const leagueByWallet = useMemo(() => {
+    const map = new Map();
+    const totalPlayers = Number(metadata?.totalPlayers || leaderboard.length || 0);
+    for (const player of leaderboard) {
+      const wallet = player?.walletAddress?.toLowerCase?.();
+      if (!wallet) continue;
+      map.set(wallet, getLeagueFromMetrics({
+        rank: Number(player?.rank || 0),
+        totalPlayers
+      }));
+    }
+    return map;
+  }, [leaderboard, metadata?.totalPlayers]);
+
+  const getPlayerLeague = (player) => {
+    const wallet = player?.walletAddress?.toLowerCase?.();
+    if (!wallet) return getLeagueFromMetrics({ rank: 0, totalPlayers: Number(metadata?.totalPlayers || leaderboard.length || 0) });
+    return leagueByWallet.get(wallet) || getLeagueFromMetrics({});
   };
 
-  const getTopClickPlayers = (limit = null) => {
-    return [...leaderboard]
-      .filter(player => player.totalClicks && player.totalClicks > 0)
-      .sort((a, b) => (b.totalClicks || 0) - (a.totalClicks || 0))
-      .map((player, index) => ({
-        ...player,
-        rank: index + 1
-      }))
-      .slice(0, limit || leaderboard.length);
+  const shareRankOnTwitter = async (player) => {
+    if (!player || isGenerating) return;
+    const league = getPlayerLeague(player);
+
+    showToast('Generating your card…', 'loading');
+
+    const success = await shareOnTwitter({ player, league });
+
+    if (success) {
+      showToast(' Image downloaded! Attach it to your tweet 🐇', 'success');
+    } else {
+      showToast('Could not generate card', 'error');
+    }
   };
+
 
   const getRankStyle = (rank, isCurrentUser = false) => {
     if (isCurrentUser) {
@@ -122,169 +149,170 @@ export default function Leaderboard({ }) {
     };
   };
 
-  const renderPlayerCard = (player, isCurrentUser = false) => (
-    <div
-      key={player.walletAddress}
-      className="p-3 sm:p-4 md:p-6 hover:bg-opacity-50 transition-colors duration-200"
-      style={{
-        background: isCurrentUser
-          ? (isNight ? 'rgba(79, 70, 229, 0.15)' : 'rgba(79, 70, 229, 0.08)')
-          : player.rank <= 3 ? (isNight ? 'rgba(79, 70, 229, 0.1)' : 'rgba(79, 70, 229, 0.05)') : 'transparent'
-      }}
-    >
-      <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
-        {/* Rank */}
-        <div className="flex-shrink-0">
-          <div
-            className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-xs sm:text-sm"
-            style={getRankStyle(player.rank, isCurrentUser)}
-          >
-            {!isCurrentUser && player.rank === 1 && '🥇'}
-            {!isCurrentUser && player.rank === 2 && '🥈'}
-            {!isCurrentUser && player.rank === 3 && '🥉'}
-            {(isCurrentUser || player.rank > 3) && `#${player.rank}`}
-          </div>
-        </div>
+  const renderPlayerCard = (player, isCurrentUser = false) => {
+    const league = getPlayerLeague(player);
+    const hasLeague = league.id !== 'none';
 
-        {/* Avatar */}
-        <div className="flex-shrink-0">
-          {player.twitter?.avatar ? (
-            <Image
-              src={player.twitter.avatar}
-              alt={player.twitter.displayName || 'Avatar'}
-              width={96}
-              height={96}
-              className="rounded-full w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12"
-              sizes="(min-width: 768px) 48px, (min-width: 640px) 40px, 32px"
-            />
-          ) : (
+    return (
+      <div
+        key={player.walletAddress}
+        className="p-3 sm:p-4 md:p-6 hover:bg-opacity-50 transition-colors duration-200"
+        // Dans le style du div principal de renderPlayerCard
+        style={{
+          background: hasLeague
+            ? getLeagueCardBackground(league.id, isNight)
+            : isCurrentUser
+              ? (isNight ? 'rgba(79,70,229,0.15)' : 'rgba(79,70,229,0.08)')
+              : player.rank <= 3
+                ? (isNight ? 'rgba(79,70,229,0.1)' : 'rgba(79,70,229,0.05)')
+                : 'transparent',
+          borderLeft: hasLeague
+            ? `3px solid ${league.accent}`          // ← accent bar gauche
+            : isCurrentUser
+              ? '3px solid #4f46e5'
+              : '3px solid transparent',
+          borderTop: '1px solid transparent',
+          borderRight: '1px solid transparent',
+          borderBottom: `1px solid ${borderColor}`,
+          borderRadius: '0px',                      // ← retirer le radius pour les items de liste
+        }}
+      >
+        <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
+          {/* Rank */}
+          <div className="flex-shrink-0">
             <div
-              className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold"
-              style={{
-                background: isNight ? '#444' : '#e5e7eb',
-                color: isNight ? '#ccc' : '#666'
-              }}
+              className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-xs sm:text-sm"
+              style={getRankStyle(player.rank, isCurrentUser)}
             >
-              {player.twitter?.displayName?.[0] || '?'}
+              {!isCurrentUser && player.rank === 1 && '🥇'}
+              {!isCurrentUser && player.rank === 2 && '🥈'}
+              {!isCurrentUser && player.rank === 3 && '🥉'}
+              {(isCurrentUser || player.rank > 3) && `#${player.rank}`}
             </div>
-          )}
-        </div>
-
-        {/* Player Info */}
-        <div className="flex-1 min-w-0 overflow-hidden">
-          {/* Display Name avec badge "You" */}
-          <div className="flex items-center gap-1 min-w-0">
-            <p className="text-xs sm:text-sm md:text-base font-semibold truncate flex-shrink" style={{ color: textColor, margin: 0 }}>
-              {(() => {
-                const displayName = player.twitter?.displayName || 'Anonymous User';
-                const reservedSpace = isCurrentUser ? 35 : 0;
-                let maxLength;
-                if (window.innerWidth < 640) {
-                  maxLength = Math.max(8, 15 - (reservedSpace / 8));
-                } else if (window.innerWidth < 768) {
-                  maxLength = Math.max(10, 18 - (reservedSpace / 10));
-                } else if (window.innerWidth < 1024) {
-                  maxLength = Math.max(12, 22 - (reservedSpace / 12));
-                } else {
-                  maxLength = Math.max(15, 25 - (reservedSpace / 15));
-                }
-                return displayName.length > maxLength ?
-                  `${displayName.slice(0, maxLength)}...` :
-                  displayName;
-              })()}
-            </p>
-            {isCurrentUser && (
-              <span className="flex-shrink-0 text-xs font-normal px-1 py-0.5 rounded-full whitespace-nowrap" style={{
-                background: isNight ? '#4f46e5' : '#4f46e5',
-                color: 'white'
-              }}>
-                You
-              </span>
-            )}
           </div>
 
-          {/* Username */}
-          {player.twitter?.username && (
-            <div className="min-w-0 mt-0.5">
-              <span className="text-xs truncate block" style={{ color: subTextColor }}>
-                @{(() => {
-                  const username = player.twitter.username;
-                  let maxUsernameLength;
-                  if (window.innerWidth < 640) {
-                    maxUsernameLength = 10;
-                  } else if (window.innerWidth < 768) {
-                    maxUsernameLength = 12;
-                  } else if (window.innerWidth < 1024) {
-                    maxUsernameLength = 15;
-                  } else {
-                    maxUsernameLength = 18;
-                  }
-                  return username.length > maxUsernameLength ?
-                    `${username.slice(0, maxUsernameLength)}...` :
-                    username;
-                })()}
-              </span>
-            </div>
-          )}
-
-          {/* Wallet Address */}
-          <p className="text-xs truncate mt-0.5" style={{ color: subTextColor, margin: 0 }}>
-            {player.walletAddress.slice(0, 5)}...{player.walletAddress.slice(-4)}
-          </p>
-        </div>
-
-        {/* Stats */}
-        <div className="flex-shrink-0 text-right">
-          <div className="text-sm sm:text-lg md:text-xl font-bold" style={{ color: textColor }}>
-            {viewMode === 'score' ? (
-              <>
-                {formatScore(player.score)}
-                <span className="text-xs sm:text-sm font-normal ml-1" style={{ color: subTextColor }}>
-                  pts
-                </span>
-              </>
-            ) : viewMode === 'streak' ? (
-              <>
-                {formatNumber(player.streak || 0)}
-                <span className="text-xs sm:text-sm font-normal ml-1" style={{ color: subTextColor }}>
-                  🔥
-                </span>
-              </>
+          {/* Avatar */}
+          <div className="flex-shrink-0">
+            {player.twitter?.avatar ? (
+              <Image
+                src={player.twitter.avatar}
+                alt={player.twitter.displayName || 'Avatar'}
+                width={96}
+                height={96}
+                className="rounded-full w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12"
+                sizes="(min-width: 768px) 48px, (min-width: 640px) 40px, 32px"
+              />
             ) : (
-              <>
-                {formatNumber(player.totalClicks || 0)}
-                <span className="text-xs sm:text-sm font-normal ml-1" style={{ color: subTextColor }}>
-                  clicks
-                </span>
-              </>
+              <div
+                className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold"
+                style={{
+                  background: isNight ? '#444' : '#e5e7eb',
+                  color: isNight ? '#ccc' : '#666'
+                }}
+              >
+                {player.twitter?.displayName?.[0] || '?'}
+              </div>
             )}
           </div>
-          <div className="text-xs sm:text-sm mt-0.5 sm:mt-1" style={{ color: subTextColor }}>
-            <div className="flex flex-wrap gap-1 sm:gap-2 justify-end">
-              {viewMode !== 'clicks' && (
+
+          {/* Player Info */}
+          <div className="flex-1 min-w-0 overflow-hidden">
+            {/* Display Name avec badge "You" */}
+            <div className="flex items-center gap-1 min-w-0">
+              <p className="text-xs sm:text-sm md:text-base font-semibold truncate flex-shrink" style={{ color: textColor, margin: 0 }}>
+                {(() => {
+                  const displayName = player.twitter?.displayName || 'Anonymous User';
+                  const reservedSpace = isCurrentUser ? 35 : 0;
+                  let maxLength;
+                  if (window.innerWidth < 640) {
+                    maxLength = Math.max(8, 15 - (reservedSpace / 8));
+                  } else if (window.innerWidth < 768) {
+                    maxLength = Math.max(10, 18 - (reservedSpace / 10));
+                  } else if (window.innerWidth < 1024) {
+                    maxLength = Math.max(12, 22 - (reservedSpace / 12));
+                  } else {
+                    maxLength = Math.max(15, 25 - (reservedSpace / 15));
+                  }
+                  return displayName.length > maxLength ?
+                    `${displayName.slice(0, maxLength)}...` :
+                    displayName;
+                })()}
+              </p>
+              {isCurrentUser && (
+                <span className="flex-shrink-0 text-xs font-normal px-1 py-0.5 rounded-full whitespace-nowrap" style={{
+                  background: isNight ? '#4f46e5' : '#4f46e5',
+                  color: 'white'
+                }}>
+                  You
+                </span>
+              )}
+            </div>
+
+            {/* Username */}
+            {player.twitter?.username && (
+              <div className="min-w-0 mt-0.5">
+                <span className="text-xs truncate block" style={{ color: subTextColor }}>
+                  @{(() => {
+                    const username = player.twitter.username;
+                    let maxUsernameLength;
+                    if (window.innerWidth < 640) {
+                      maxUsernameLength = 10;
+                    } else if (window.innerWidth < 768) {
+                      maxUsernameLength = 12;
+                    } else if (window.innerWidth < 1024) {
+                      maxUsernameLength = 15;
+                    } else {
+                      maxUsernameLength = 18;
+                    }
+                    return username.length > maxUsernameLength ?
+                      `${username.slice(0, maxUsernameLength)}...` :
+                      username;
+                  })()}
+                </span>
+              </div>
+            )}
+
+            {/* Wallet Address */}
+            <p className="text-xs truncate mt-0.5" style={{ color: subTextColor, margin: 0 }}>
+              {player.walletAddress.slice(0, 5)}...{player.walletAddress.slice(-4)}
+            </p>
+          </div>
+
+          {/* Stats */}
+          <div className="flex-shrink-0 text-right">
+            <div className="text-sm sm:text-lg md:text-xl font-bold" style={{ color: textColor }}>
+              {formatScore(player.score)}
+              <span className="text-xs sm:text-sm font-normal ml-1" style={{ color: subTextColor }}>
+                pts
+              </span>
+            </div>
+            <div className="text-xs sm:text-sm mt-0.5 sm:mt-1" style={{ color: subTextColor }}>
+              <div className="flex flex-wrap gap-1 sm:gap-2 justify-end">
                 <span className="flex items-center gap-1 whitespace-nowrap">
                   <Target className="w-3 h-3 text-blue-500" />
                   {formatNumber(player.totalClicks || 0)}
                 </span>
-              )}
-              {player.maxClicks && (
-                <span className="flex items-center gap-1 whitespace-nowrap">
-                  <Zap className="w-3 h-3 text-yellow-500" />
-                  {formatNumber(player.maxClicks)}
-                </span>
-              )}
-              {viewMode !== 'streak' && (
+                {player.maxClicks && (
+                  <span className="flex items-center gap-1 whitespace-nowrap">
+                    <Zap className="w-3 h-3 text-yellow-500" />
+                    {formatNumber(player.maxClicks)}
+                  </span>
+                )}
                 <span className="flex items-center gap-1 whitespace-nowrap">
                   <Flame className="w-3 h-3 text-orange-500" />
                   {player.streak || 0}
                 </span>
-              )}
+                <span className="flex items-center gap-1 whitespace-nowrap">
+                  <ScrollText className="w-3 h-3 text-emerald-500" />
+                  {player.questsClaimed || 0}
+                </span>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // ===== FIX: Améliorer la condition de chargement =====
   if (loading) {
@@ -519,70 +547,10 @@ export default function Leaderboard({ }) {
   // Find current user in the leaderboard
   const currentUser = embeddedWallet?.address ? getUserData(embeddedWallet.address) : null;
 
-  // Get data based on view mode
-  let displayData = leaderboard;
-  let currentUserForView = currentUser;
-
-  if (viewMode === 'streak') {
-    displayData = getTopStreakPlayers(leaderboard.length);
-    if (currentUser && embeddedWallet?.address) {
-      const streakLeaderboard = getTopStreakPlayers(leaderboard.length);
-      const userInStreakLeaderboard = streakLeaderboard.find(p =>
-        p.walletAddress.toLowerCase() === embeddedWallet.address.toLowerCase()
-      );
-      currentUserForView = userInStreakLeaderboard || null;
-
-      if (!currentUserForView && currentUser.streak > 0) {
-        const allPlayers = [...leaderboard]
-          .filter(player => player.streak && player.streak > 0)
-          .sort((a, b) => (b.streak || 0) - (a.streak || 0));
-
-        const userRankInStreak = allPlayers.findIndex(p =>
-          p.walletAddress.toLowerCase() === embeddedWallet.address.toLowerCase()
-        ) + 1;
-
-        if (userRankInStreak > 0) {
-          currentUserForView = {
-            ...currentUser,
-            rank: userRankInStreak
-          };
-        }
-      }
-    }
-  } else if (viewMode === 'clicks') {
-    displayData = getTopClickPlayers(leaderboard.length);
-    if (currentUser && embeddedWallet?.address) {
-      const clicksLeaderboard = getTopClickPlayers(leaderboard.length);
-      const userInClicksLeaderboard = clicksLeaderboard.find(p =>
-        p.walletAddress.toLowerCase() === embeddedWallet.address.toLowerCase()
-      );
-      currentUserForView = userInClicksLeaderboard || null;
-
-      if (!currentUserForView && currentUser.totalClicks > 0) {
-        const allClickers = [...leaderboard]
-          .filter(player => player.totalClicks && player.totalClicks > 0)
-          .sort((a, b) => (b.totalClicks || 0) - (a.totalClicks || 0));
-
-        const userRankInClicks = allClickers.findIndex(p =>
-          p.walletAddress.toLowerCase() === embeddedWallet.address.toLowerCase()
-        ) + 1;
-
-        if (userRankInClicks > 0) {
-          currentUserForView = {
-            ...currentUser,
-            rank: userRankInClicks
-          };
-        }
-      }
-    }
-  } else if (viewMode === 'score') {
-    if (currentUser && embeddedWallet?.address) {
-      const userInScoreLeaderboard = leaderboard.find(p =>
-        p.walletAddress.toLowerCase() === embeddedWallet.address.toLowerCase()
-      );
-      currentUserForView = userInScoreLeaderboard || currentUser;
-    }
-  }
+  const displayData = leaderboard;
+  const currentUserForView = currentUser && embeddedWallet?.address
+    ? leaderboard.find(p => p.walletAddress.toLowerCase() === embeddedWallet.address.toLowerCase()) || currentUser
+    : currentUser;
 
   // Filter out current user from top players
   const topPlayersWithoutCurrentUser = currentUserForView ?
@@ -613,27 +581,7 @@ export default function Leaderboard({ }) {
     }
   };
 
-  // Switch view mode and reset pagination
-  const switchViewMode = (mode) => {
-    setViewMode(mode);
-    setCurrentPage(1);
-  };
-
-  // Statistiques pour GAME
-  const streakStats = {
-    highestStreak: Math.max(...leaderboard.map(p => p.streak || 0), 0),
-    avgStreak: leaderboard.length > 0 ?
-      leaderboard.reduce((sum, p) => sum + (p.streak || 0), 0) / leaderboard.length : 0,
-    playersWithStreak: leaderboard.filter(player => (player.streak || 0) > 0).length
-  };
-
-  const clicksStats = {
-    totalClicks: leaderboard.reduce((sum, p) => sum + (parseInt(p.totalClicks) || 0), 0),
-    playersWithClicks: leaderboard.filter(player => parseInt(player.totalClicks) > 0).length,
-    averageClicks: leaderboard.length > 0 ?
-      leaderboard.reduce((sum, p) => sum + (parseInt(p.totalClicks) || 0), 0) / leaderboard.length : 0,
-    topClicker: displayData[0] || null
-  };
+  const totalQuestsClaimed = leaderboard.reduce((sum, p) => sum + (parseInt(p.questsClaimed, 10) || 0), 0);
 
   return (
     <Wrapper>
@@ -676,114 +624,6 @@ export default function Leaderboard({ }) {
         </div>
       </div>
 
-      {/* View Mode Toggle */}
-      <div
-        style={{
-          background: cardBg,
-          padding: '12px 16px',
-          borderRadius: '12px',
-          border: `1px solid ${borderColor}`,
-          boxShadow,
-          marginBottom: '16px'
-        }}
-      >
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium whitespace-nowrap" style={{ color: textColor }}>
-            View by:
-          </span>
-          <div className="flex gap-1">
-            <button
-              onClick={() => switchViewMode('score')}
-              title="Sort by total score points"
-              style={{
-                background: viewMode === 'score' ? (isNight ? '#4f46e5' : '#4f46e5') : 'transparent',
-                color: viewMode === 'score' ? 'white' : textColor,
-                border: `1px solid ${viewMode === 'score' ? (isNight ? '#4f46e5' : '#4f46e5') : borderColor}`,
-                padding: '4px 8px',
-                borderRadius: '6px',
-                fontSize: '11px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '3px',
-                transition: 'all 0.2s ease',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              <Trophy className="w-3 h-3" />
-              <span>Score</span>
-            </button>
-            <button
-              onClick={() => switchViewMode('streak')}
-              title="Sort by current streak"
-              style={{
-                background: viewMode === 'streak' ? (isNight ? '#4f46e5' : '#4f46e5') : 'transparent',
-                color: viewMode === 'streak' ? 'white' : textColor,
-                border: `1px solid ${viewMode === 'streak' ? (isNight ? '#4f46e5' : '#4f46e5') : borderColor}`,
-                padding: '4px 8px',
-                borderRadius: '6px',
-                fontSize: '11px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '3px',
-                transition: 'all 0.2s ease',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              <Flame className="w-3 h-3" />
-              <span>Streak</span>
-            </button>
-            <button
-              onClick={() => switchViewMode('clicks')}
-              title="Sort by total clicks made"
-              style={{
-                background: viewMode === 'clicks' ? (isNight ? '#4f46e5' : '#4f46e5') : 'transparent',
-                color: viewMode === 'clicks' ? 'white' : textColor,
-                border: `1px solid ${viewMode === 'clicks' ? (isNight ? '#4f46e5' : '#4f46e5') : borderColor}`,
-                padding: '4px 8px',
-                borderRadius: '6px',
-                fontSize: '11px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '3px',
-                transition: 'all 0.2s ease',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              <Target className="w-3 h-3" />
-              <span>Clicks</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Légende des icônes - Adaptée pour METH */}
-        <div className="mt-2 pt-2 border-t text-xs flex flex-wrap gap-4 justify-center" style={{
-          borderColor: borderColor,
-          color: subTextColor
-        }}>
-          <div className="flex items-center gap-1">
-            <Target className="w-3 h-3 text-blue-500" />
-            <span>Total clicks</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Zap className="w-3 h-3 text-yellow-500" />
-            <span>Best clicks/session</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Flame className="w-3 h-3 text-orange-500" />
-            <span>Current streak</span>
-          </div>
-        </div>
-      </div>
-
       {/* Current User Rank */}
       {currentUserForView && embeddedWallet?.address && (
         <div
@@ -797,14 +637,63 @@ export default function Leaderboard({ }) {
           }}
         >
           <div
-            className="px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium border-b"
+            className="px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium border-b flex items-center justify-between gap-2"
             style={{
               background: isNight ? '#1a1a1a' : '#f9f9f9',
               color: textColor,
               borderColor: borderColor
             }}
           >
-            My Rank
+            <span>My Rank</span>
+            <button
+              type="button"
+              onClick={() => shareRankOnTwitter(currentUserForView)}
+              disabled={isGenerating}
+              style={{
+                background: isGenerating
+                  ? (isNight ? '#374151' : '#d1d5db')
+                  : 'linear-gradient(135deg, #0f1117 0%, #1a1d27 100%)',
+                color: isGenerating ? (isNight ? '#6b7280' : '#9ca3af') : '#fff',
+                border: `1px solid ${isGenerating ? 'transparent' : '#ffffff22'}`,
+                borderRadius: '8px',
+                fontSize: '12px',
+                fontWeight: '700',
+                padding: '6px 12px',
+                cursor: isGenerating ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s ease',
+                letterSpacing: '0.02em',
+                whiteSpace: 'nowrap',
+                boxShadow: isGenerating ? 'none' : '0 0 0 1px rgba(255,255,255,0.08)',
+              }}
+            >
+              {isGenerating ? (
+                <>
+                  <span
+                    style={{
+                      width: '10px',
+                      height: '10px',
+                      border: '2px solid #6b7280',
+                      borderTop: '2px solid #fff',
+                      borderRadius: '50%',
+                      display: 'inline-block',
+                      animation: 'spin 0.7s linear infinite',
+                    }}
+                  />
+                  Generating…
+                </>
+              ) : (
+                <>
+                  {/* X logo SVG */}
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622 5.911-5.622Zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                  </svg>
+                  Share on X
+                </>
+              )}
+            </button>
           </div>
           {renderPlayerCard(currentUserForView, true)}
         </div>
@@ -828,11 +717,7 @@ export default function Leaderboard({ }) {
             borderColor: borderColor
           }}
         >
-          <span>
-            {viewMode === 'score' && 'Top Scorers'}
-            {viewMode === 'streak' && 'Top Streakers'}
-            {viewMode === 'clicks' && 'Top Clickers'}
-          </span>
+          <span>Top Players</span>
           <span style={{ color: subTextColor }}>
             Page {currentPage} of {totalPages || 1}
           </span>
@@ -842,7 +727,7 @@ export default function Leaderboard({ }) {
             currentPagePlayers.map((player) => renderPlayerCard(player, false))
           ) : (
             <div className="p-6 text-center" style={{ color: subTextColor }}>
-              <p>No players found in this category</p>
+              <p>No players found</p>
             </div>
           )}
         </div>
@@ -959,35 +844,68 @@ export default function Leaderboard({ }) {
                 Last update: {stats.lastUpdate ? new Date(stats.lastUpdate).toLocaleString('en-EN') : 'N/A'}
               </div>
               <div className="flex flex-wrap gap-3 text-xs justify-center">
-                {viewMode === 'streak' && (
-                  <>
-                    <span>🔥 {formatNumber(streakStats.highestStreak)} highest</span>
-                    <span>📈 {formatScore(streakStats.avgStreak)} avg streak</span>
-                    <span>👥 {streakStats.playersWithStreak} streakers</span>
-                  </>
+                <span>🏆 {stats.totalPlayers} competitors</span>
+                {leaderboard[0] && (
+                  <span>👑 Top: {formatScore(leaderboard[0].score)} pts</span>
                 )}
-                {viewMode === 'clicks' && clicksStats.totalClicks > 0 && (
-                  <>
-                    <span>🎯 {clicksStats.playersWithClicks} clickers</span>
-                    <span>📊 {formatNumber(clicksStats.averageClicks)} avg clicks</span>
-                    {clicksStats.topClicker && (
-                      <span>👑 Top: {formatNumber(clicksStats.topClicker.totalClicks)}</span>
-                    )}
-                  </>
-                )}
-                {viewMode === 'score' && (
-                  <>
-                    <span>🏆 {stats.totalPlayers} competitors</span>
-                    {leaderboard[0] && (
-                      <span>👑 Top: {formatScore(leaderboard[0].score)} pts</span>
-                    )}
-                  </>
-                )}
+                <span>📜 {formatNumber(totalQuestsClaimed)} quests claimed</span>
               </div>
             </div>
           </div>
         )}
       </div>
+
+      {/* Toast Notification */}
+      {toast && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 9999,
+            padding: '12px 20px',
+            borderRadius: '10px',
+            fontSize: '14px',
+            fontWeight: '500',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.35)',
+            animation: 'fadeInUp 0.25s ease',
+            background:
+              toast.type === 'error'
+                ? '#ef4444'
+                : toast.type === 'loading'
+                  ? (isNight ? '#1e293b' : '#f1f5f9')
+                  : (isNight ? '#14532d' : '#dcfce7'),
+            color:
+              toast.type === 'loading' && !isNight ? '#0f172a' : '#fff',
+            border:
+              toast.type === 'loading'
+                ? `1px solid ${isNight ? '#334155' : '#cbd5e1'}`
+                : 'none',
+          }}
+        >
+          {toast.type === 'loading' && (
+            <span
+              style={{
+                width: '12px',
+                height: '12px',
+                border: '2px solid rgba(255,255,255,0.3)',
+                borderTop: '2px solid currentColor',
+                borderRadius: '50%',
+                display: 'inline-block',
+                animation: 'spin 0.7s linear infinite',
+                flexShrink: 0,
+              }}
+            />
+          )}
+          {toast.type === 'success' && '✅'}
+          {toast.type === 'error' && '❌'}
+          {toast.message}
+        </div>
+      )}
     </Wrapper>
   );
 }

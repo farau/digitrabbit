@@ -4,18 +4,25 @@ import styles from "./Footer.module.css";
 import { useState } from "react";
 import { useEffect } from "react";
 import { useRef } from "react";
+import { useMemo } from "react";
 import WalletButton from "./WalletButton";
 import AudioPlayer from "./AudioPlayer";
-import { useTheme } from "@/context"; // Ajout de l'import pour le thème
+import { useTheme } from "@/context";
 
 export default function Footer({ visibleApps, setVisibleApps, appZIndices, setAppZIndices, openApp, volumePlayer }) {
 
   const [startOpen, setStartOpen] = useState(false);
   const menuRef = useRef(null);
-  const { themeMode } = useTheme(); // Récupération du thème
+  const buttonRef = useRef(null);
+  const { themeMode } = useTheme();
 
-  // Met à jour l'heure toutes les secondes
   const [time, setTime] = useState("");
+
+  const audioSrc = useMemo(() => {
+    const tracks = ['/sounds/soundtrack1.mp3', '/sounds/soundtrack2.mp3'];
+    const randomIndex = Math.floor(Math.random() * tracks.length);
+    return tracks[randomIndex];
+  }, []);
 
   useEffect(() => {
     const updateClock = () => {
@@ -23,21 +30,20 @@ export default function Footer({ visibleApps, setVisibleApps, appZIndices, setAp
       setTime(now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
     };
 
-    updateClock(); // initialise immédiatement
-    const interval = setInterval(updateClock, 60000); // met à jour chaque minute
-
-    return () => clearInterval(interval); // Nettoyage de l'interval
-
+    updateClock();
+    const interval = setInterval(updateClock, 60000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
     function handleClickOutside(event) {
+      // Ignorer les clics sur le bouton lui-même — il gère son propre toggle
+      if (buttonRef.current && buttonRef.current.contains(event.target)) return;
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setStartOpen(false);
       }
     }
-    // Ajoute un écouteur d'événement pour détecter les clics en dehors du menu
-    // et fermer le menu si c'est le cas
+
     if (startOpen) {
       document.addEventListener("mousedown", handleClickOutside, { passive: true });
     } else {
@@ -53,7 +59,7 @@ export default function Footer({ visibleApps, setVisibleApps, appZIndices, setAp
     <div className={styles.Footer} data-theme={themeMode}>
       <div className={styles.taskbarLeft}>
         {/* Logo sur la gauche */}
-        <button className={styles.startButton} onClick={() => setStartOpen(!startOpen)}>
+        <button ref={buttonRef} className={styles.startButton} onClick={() => setStartOpen((prev) => !prev)}>
           <Image
             src={themeMode === 'light' ? "/img/logo.png" : "/img/logo_grey.png"}
             alt="Nav Logo"
@@ -142,6 +148,7 @@ export default function Footer({ visibleApps, setVisibleApps, appZIndices, setAp
           </div>
         )}
       </div>
+
       {/* Icônes de réseaux sociaux sur la droite */}
       <div className={styles.taskbarRight}>
         <div className={styles.socialIcons}>
@@ -156,8 +163,8 @@ export default function Footer({ visibleApps, setVisibleApps, appZIndices, setAp
           </a>
         </div>
         <AudioPlayer
-          src="/sounds/background.mp3"
-          fallbackSrc="/sounds/soundtrack.mp3"
+          src={audioSrc}
+          fallbackSrc="/sounds/soundtrack1.mp3"
           volumePlayer={volumePlayer}
           autoPlayOnMount={true}
         />

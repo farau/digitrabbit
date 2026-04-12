@@ -41,7 +41,7 @@ export async function GET(request) {
 
         // Gestion du paramètre user pour obtenir le rang d'un utilisateur spécifique
         if (user) {
-            const userRank = await getUserRank(user);
+            const { userRank, totalPlayers } = await getUserRank(user, { includeContext: true });
             const processingTime = Date.now() - startTime;
 
             return jsonResponse({
@@ -49,7 +49,8 @@ export async function GET(request) {
                 metadata: {
                     processingTimeMs: processingTime,
                     lastUpdate: new Date().toISOString(),
-                    found: !!userRank
+                    found: !!userRank,
+                    totalPlayers
                 }
             });
         }

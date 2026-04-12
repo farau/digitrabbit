@@ -89,3 +89,13 @@ body {
     min-width: 44px; /* Largeur minimale recommandée pour le touch */
   }
 }
+
+/* Animations pour la card Rank Share on X */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+ 
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}

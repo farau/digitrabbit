@@ -274,7 +274,7 @@ function MessageBubble({ message, messages, isNight, user, onReply }) {
                             {isBotAwardSystemMessage ? (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                     <span>
-                                        +{Number(message?.rewardPoints || 0)} Rabbit Points awarded
+                                        +{Number(message?.rewardPoints || 0)} RabbitPoints awarded
                                     </span>
                                     {txUrl && shortTxHash && (
                                         <a
@@ -689,6 +689,7 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
             window.visualViewport?.removeEventListener('scroll', updateViewportState)
         }
     }, [])
+
 
     useEffect(() => {
         if (cooldownRemaining == 0) {
@@ -1453,24 +1454,29 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
                                         alignItems: 'center',
                                         gap: '6px',
                                         background: sendToRabbitBot
-                                            ? (isNight ? 'rgba(16, 185, 129, 0.22)' : 'rgba(16, 185, 129, 0.12)')
-                                            : (isNight ? '#2b2b2b' : '#efefef'),
+                                            ? (isNight ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.35), rgba(5, 150, 105, 0.3))' : 'linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(5, 150, 105, 0.16))')
+                                            : (isNight ? 'linear-gradient(135deg, #3b3b3b, #2b2b2b)' : 'linear-gradient(135deg, #f7f7f7, #ebebeb)'),
                                         color: sendToRabbitBot
-                                            ? (isNight ? '#6ee7b7' : '#047857')
-                                            : (isNight ? '#d1d5db' : '#374151'),
-                                        border: `1px solid ${sendToRabbitBot
-                                            ? (isNight ? '#10b981' : '#34d399')
+                                            ? (isNight ? '#a7f3d0' : '#065f46')
+                                            : (isNight ? '#f3f4f6' : '#1f2937'),
+                                        border: `2px solid ${sendToRabbitBot
+                                            ? (isNight ? '#34d399' : '#10b981')
                                             : borderColor}`,
                                         borderRadius: '999px',
-                                        padding: '4px 10px',
-                                        fontSize: '11px',
-                                        fontWeight: '700',
+                                        padding: '6px 12px',
+                                        fontSize: '12px',
+                                        fontWeight: '800',
+                                        letterSpacing: '0.02em',
                                         cursor: sending ? 'not-allowed' : 'pointer',
-                                        opacity: sending ? 0.7 : 1
+                                        opacity: sending ? 0.7 : 1,
+                                        boxShadow: sendToRabbitBot
+                                            ? (isNight ? '0 0 0 2px rgba(16, 185, 129, 0.24), 0 6px 14px rgba(16, 185, 129, 0.2)' : '0 0 0 2px rgba(16, 185, 129, 0.18), 0 6px 14px rgba(16, 185, 129, 0.16)')
+                                            : (isNight ? '0 2px 8px rgba(0, 0, 0, 0.35)' : '0 2px 8px rgba(0, 0, 0, 0.12)'),
+                                        transition: 'all 0.2s ease'
                                     }}
                                     title="Toggle RabbitBot mode"
                                 >
-                                    <Bot size={12} />
+                                    <Bot size={14} />
                                     RabbitBot {sendToRabbitBot ? 'ON' : 'OFF'}
                                 </button>
 

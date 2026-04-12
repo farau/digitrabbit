@@ -292,7 +292,7 @@ export async function proxy(req) {
         }
     }
 
-    const isPrivyProtectedRoute = ['/api/users/', '/api/validate-wallet', '/api/chat/', '/api/game',].some(route =>
+    const isPrivyProtectedRoute = ['/api/users/', '/api/users/profile/', '/api/validate-wallet', '/api/chat/', '/api/game',].some(route =>
         pathname.startsWith(route)
     );
 

@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 
 ## Changelog
 
+## [12/04/2026]
+
+Add League & Profile section league styling; refactor RabbitChat and WalletButton components; update styling and improve user experience
+
+- Updated RabbitChat component to change "Rabbit Points" to "RabbitPoints" for consistency.
+- Enhanced button styles in RabbitChat for better visibility and interaction.
+- Modified WalletButton to ensure login is only enabled when Privy is ready and user is authenticated.
+- Added new API route for user profile stats, including error handling and response formatting.
+- Introduced a new hook for generating share cards with improved visuals and functionality.
+- Created utility functions for league management, including score calculation and league cutoffs.
+- Added CSS animations for improved UI transitions.
+
 ## [06/04/2026]
 
 ### Onboarding / MainPage
@@ -128,6 +140,8 @@ All notable changes to this project will be documented in this file.
   - Onboarding now frames chat interactions as part of the point-earning flow.
 - Updated LLM behavior:
   - RabbitBot `systemPrompt` now enforces English-only responses.
+- Added target address input improvements in `RabbitChat`:
+  - Clear button and reset controls simplify recipient selection and message targeting.
 
 ### Mobile Background
 - Added `data-app` attributes on mobile floating icons to support onboarding targeting logic.
@@ -201,6 +215,12 @@ feat: enhance chat moderation features and user experience
 - Restored classic OS-like cascade offset between multiple open windows.
 - Passed explicit window ordering metadata from `MainPage` to `DraggableWindow` (`windowIndex`, `totalWindows`) for deterministic stacking offsets.
 
+### Linktree / Mobile UX
+- Added `Linktree` window for external link sharing and resource access.
+- Improved mobile chat composer visibility so text input remains accessible during keyboard interaction.
+- Updated chat/game/leaderboard/quests UX flows for better stability and consistency.
+- Updated `public/img/icons/link.png` asset for improved visuals.
+
 ### React / Lint Fixes
 - Removed synchronous `setState` initialization pattern for screen size in effect:
   - `screenSize` now uses lazy `useState` initialization.
@@ -216,6 +236,17 @@ feat: enhance chat moderation features and user experience
   - Added immediate "transaction submitted / confirming" state after `txHash` is returned.
   - Kept timer start strictly after `waitForTransactionReceipt` confirmation.
   - Exposed pending start tx hash in UI while waiting for receipt.
+
+## [29/03/2026]
+
+### Framework / Performance
+- Upgraded to Next.js 16 and improved cache/API optimization.
+- Renamed `src/middleware.js` to `src/proxy.js` and centralized shared WebSocket/chain configuration in `src/utils/chainConfig.js`.
+- Removed legacy `Wardrobe` component and assets as part of interface simplification.
+
+### Assets
+- Compressed and updated image assets for `light`, `night`, and `overlay` themes to reduce bundle size.
+- Normalized overlay asset filenames for production compatibility and removed outdated files.
 
 ### WebSocket / Live Sync
 - Added `GameStarted` callback support in `WebSocketProvider`.

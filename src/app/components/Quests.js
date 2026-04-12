@@ -40,220 +40,224 @@ function QuestCard({ quest, progress, streak, isNight, claimed, onClaim, isClaim
     const isClaiming = isClaimingQuest === quest.id;
 
     return (
-        <div
-            style={{
-                background: cardBg,
-                border: `1px solid ${isNight ? '#444' : '#ddd'}`,
-                borderRadius: '12px',
-                padding: '16px',
-                marginBottom: '12px',
-                boxShadow: isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)',
-                position: 'relative',
-                overflow: 'hidden'
-            }}
-        >
-            {/* Gradient Background */}
-            <div
-                style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: `linear-gradient(135deg, ${accentColor}15 0%, ${accentColor}05 100%)`,
-                    pointerEvents: 'none',
-                }}
-            />
+        <>
+            {!claimed && (
+                <div
+                    style={{
+                        background: cardBg,
+                        border: `1px solid ${isNight ? '#444' : '#ddd'}`,
+                        borderRadius: '12px',
+                        padding: '16px',
+                        marginBottom: '12px',
+                        boxShadow: isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)',
+                        position: 'relative',
+                        overflow: 'hidden'
+                    }}
+                >
+                    {/* Gradient Background */}
+                    <div
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            background: `linear-gradient(135deg, ${accentColor}15 0%, ${accentColor}05 100%)`,
+                            pointerEvents: 'none',
+                        }}
+                    />
 
-            {/* Content */}
-            <div style={{ position: 'relative', zIndex: 1 }}>
-                {/* Header */}
-                <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                    marginBottom: '12px'
-                }}>
-                    <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                        <span style={{ fontSize: '24px' }}>{quest.icon}</span>
-                        <div>
-                            <h4 style={{
-                                margin: 0,
-                                fontSize: '15px',
-                                fontWeight: '600',
-                                color: textColor
-                            }}>
-                                {quest.title}
-                            </h4>
-                            <p style={{
-                                margin: '4px 0 0 0',
-                                fontSize: '12px',
-                                color: subTextColor
-                            }}>
-                                {quest.description}
-                            </p>
-                        </div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                        <div style={{
-                            fontSize: '16px',
-                            fontWeight: '600',
-                            color: accentColor,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'flex-end'
-                        }}>
-                            +{getReward()}
-                            <Image src="/img/rabbitpoint.png" alt="Coin" width={24} height={24} style={{ display: 'inline-block', marginLeft: '4px' }} />
-                        </div>
-                        <div style={{
-                            fontSize: '11px',
-                            color: subTextColor
-                        }}>
-                            Reward
-                        </div>
-                    </div>
-                </div>
-
-                {/* Progress Bar */}
-                {quest.type === 'messages' || quest.type === 'games' ? (
-                    <div style={{ marginBottom: '12px' }}>
+                    {/* Content */}
+                    <div style={{ position: 'relative', zIndex: 1 }}>
+                        {/* Header */}
                         <div style={{
                             display: 'flex',
                             justifyContent: 'space-between',
-                            alignItems: 'center',
-                            marginBottom: '6px'
+                            alignItems: 'flex-start',
+                            marginBottom: '12px'
                         }}>
-                            <span style={{
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                                <span style={{ fontSize: '24px' }}>{quest.icon}</span>
+                                <div>
+                                    <h4 style={{
+                                        margin: 0,
+                                        fontSize: '15px',
+                                        fontWeight: '600',
+                                        color: textColor
+                                    }}>
+                                        {quest.title}
+                                    </h4>
+                                    <p style={{
+                                        margin: '4px 0 0 0',
+                                        fontSize: '12px',
+                                        color: subTextColor
+                                    }}>
+                                        {quest.description}
+                                    </p>
+                                </div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                                <div style={{
+                                    fontSize: '16px',
+                                    fontWeight: '600',
+                                    color: accentColor,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'flex-end'
+                                }}>
+                                    +{getReward()}
+                                    <Image src="/img/rabbitpoint.png" alt="Coin" width={24} height={24} style={{ display: 'inline-block', marginLeft: '4px' }} />
+                                </div>
+                                <div style={{
+                                    fontSize: '11px',
+                                    color: subTextColor
+                                }}>
+                                    Reward
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Progress Bar */}
+                        {quest.type === 'messages' || quest.type === 'games' ? (
+                            <div style={{ marginBottom: '12px' }}>
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    marginBottom: '6px'
+                                }}>
+                                    <span style={{
+                                        fontSize: '12px',
+                                        color: subTextColor
+                                    }}>
+                                        Progress
+                                    </span>
+                                    <span style={{
+                                        fontSize: '12px',
+                                        fontWeight: '600',
+                                        color: accentColor
+                                    }}>
+                                        {Math.floor(progressPercent)}%
+                                    </span>
+                                </div>
+                                <div style={{
+                                    width: '100%',
+                                    height: '6px',
+                                    background: isNight ? '#2a2a2a' : '#e0e0e0',
+                                    borderRadius: '3px',
+                                    overflow: 'hidden'
+                                }}>
+                                    <div
+                                        style={{
+                                            height: '100%',
+                                            background: accentColor,
+                                            width: `${progressPercent}%`,
+                                            transition: 'width 0.3s ease'
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        ) : null}
+
+                        {/* Progress & Status */}
+                        {quest.type !== 'streak' ? (
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
                                 fontSize: '12px',
                                 color: subTextColor
                             }}>
-                                Progress
-                            </span>
-                            <span style={{
+                                <span>Progress: {getProgressValue()}/{getTargetValue()}</span>
+
+                                {canClaim ? (
+                                    <button
+                                        onClick={() => onClaim(quest)}
+                                        disabled={isClaiming}
+                                        style={{
+                                            padding: '6px 16px',
+                                            borderRadius: '20px',
+                                            background: isClaiming ? (isNight ? '#555' : '#e0e0e0') : '#3b82f6',
+                                            color: isClaiming ? (isNight ? '#aaa' : '#666') : 'white',
+                                            fontWeight: '600',
+                                            fontSize: '11px',
+                                            border: 'none',
+                                            cursor: isClaiming ? 'not-allowed' : 'pointer',
+                                            transition: 'all 0.2s',
+                                            opacity: isClaiming ? 0.6 : 1
+                                        }}
+                                    >
+                                        {isClaiming ? '⏳ Claiming...' : '🎁 Claim Reward'}
+                                    </button>
+                                ) : (
+                                    <span style={{
+                                        padding: '4px 12px',
+                                        borderRadius: '20px',
+                                        background: claimed
+                                            ? (isNight ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)')
+                                            : (isNight ? '#333' : '#f0f0f0'),
+                                        color: claimed ? '#10b981' : textColor,
+                                        fontWeight: '500',
+                                        fontSize: '11px'
+                                    }}>
+                                        {claimed
+                                            ? `✓ Claimed`
+                                            : !cooldownElapsed
+                                                ? `⏳ Next quest in: ${formatRemainingTime(cooldowns?.[cooldownKey])}`
+                                                : 'In Progress'}
+                                    </span>
+                                )}
+                            </div>
+                        ) : (
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'flex-end',
+                                alignItems: 'center',
                                 fontSize: '12px',
-                                fontWeight: '600',
-                                color: accentColor
+                                color: subTextColor
                             }}>
-                                {Math.floor(progressPercent)}%
-                            </span>
-                        </div>
-                        <div style={{
-                            width: '100%',
-                            height: '6px',
-                            background: isNight ? '#2a2a2a' : '#e0e0e0',
-                            borderRadius: '3px',
-                            overflow: 'hidden'
-                        }}>
-                            <div
-                                style={{
-                                    height: '100%',
-                                    background: accentColor,
-                                    width: `${progressPercent}%`,
-                                    transition: 'width 0.3s ease'
-                                }}
-                            />
-                        </div>
-                    </div>
-                ) : null}
-
-                {/* Progress & Status */}
-                {quest.type !== 'streak' ? (
-                    <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        fontSize: '12px',
-                        color: subTextColor
-                    }}>
-                        <span>Progress: {getProgressValue()}/{getTargetValue()}</span>
-
-                        {canClaim ? (
-                            <button
-                                onClick={() => onClaim(quest)}
-                                disabled={isClaiming}
-                                style={{
-                                    padding: '6px 16px',
-                                    borderRadius: '20px',
-                                    background: isClaiming ? (isNight ? '#555' : '#e0e0e0') : '#3b82f6',
-                                    color: isClaiming ? (isNight ? '#aaa' : '#666') : 'white',
-                                    fontWeight: '600',
-                                    fontSize: '11px',
-                                    border: 'none',
-                                    cursor: isClaiming ? 'not-allowed' : 'pointer',
-                                    transition: 'all 0.2s',
-                                    opacity: isClaiming ? 0.6 : 1
-                                }}
-                            >
-                                {isClaiming ? '⏳ Claiming...' : '🎁 Claim Reward'}
-                            </button>
-                        ) : (
-                            <span style={{
-                                padding: '4px 12px',
-                                borderRadius: '20px',
-                                background: claimed
-                                    ? (isNight ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)')
-                                    : (isNight ? '#333' : '#f0f0f0'),
-                                color: claimed ? '#10b981' : textColor,
-                                fontWeight: '500',
-                                fontSize: '11px'
-                            }}>
-                                {claimed
-                                    ? `✓ Claimed`
-                                    : !cooldownElapsed
-                                        ? `⏳ Next quest in: ${formatRemainingTime(cooldowns?.[cooldownKey])}`
-                                        : 'In Progress'}
-                            </span>
+                                {canClaim ? (
+                                    <button
+                                        onClick={() => onClaim(quest)}
+                                        disabled={isClaiming}
+                                        style={{
+                                            padding: '6px 16px',
+                                            borderRadius: '20px',
+                                            background: isClaiming ? (isNight ? '#555' : '#e0e0e0') : '#f59e0b',
+                                            color: isClaiming ? (isNight ? '#aaa' : '#666') : 'white',
+                                            fontWeight: '600',
+                                            fontSize: '11px',
+                                            border: 'none',
+                                            cursor: isClaiming ? 'not-allowed' : 'pointer',
+                                            transition: 'all 0.2s',
+                                            opacity: isClaiming ? 0.6 : 1
+                                        }}
+                                    >
+                                        {isClaiming ? '⏳ Claiming...' : '🎁 Claim Reward'}
+                                    </button>
+                                ) : (
+                                    <span style={{
+                                        padding: '4px 12px',
+                                        borderRadius: '20px',
+                                        background: claimed
+                                            ? (isNight ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)')
+                                            : (isNight ? '#333' : '#f0f0f0'),
+                                        color: claimed ? '#10b981' : textColor,
+                                        fontWeight: '500',
+                                        fontSize: '11px'
+                                    }}>
+                                        {claimed
+                                            ? `✓ Claimed`
+                                            : !cooldownElapsed
+                                                ? `⏳ Next quest in: ${formatRemainingTime(cooldowns?.[cooldownKey])}`
+                                                : '✅ Ready to Claim'}                            </span>
+                                )}
+                            </div>
                         )}
                     </div>
-                ) : (
-                    <div style={{
-                        display: 'flex',
-                        justifyContent: 'flex-end',
-                        alignItems: 'center',
-                        fontSize: '12px',
-                        color: subTextColor
-                    }}>
-                        {canClaim ? (
-                            <button
-                                onClick={() => onClaim(quest)}
-                                disabled={isClaiming}
-                                style={{
-                                    padding: '6px 16px',
-                                    borderRadius: '20px',
-                                    background: isClaiming ? (isNight ? '#555' : '#e0e0e0') : '#f59e0b',
-                                    color: isClaiming ? (isNight ? '#aaa' : '#666') : 'white',
-                                    fontWeight: '600',
-                                    fontSize: '11px',
-                                    border: 'none',
-                                    cursor: isClaiming ? 'not-allowed' : 'pointer',
-                                    transition: 'all 0.2s',
-                                    opacity: isClaiming ? 0.6 : 1
-                                }}
-                            >
-                                {isClaiming ? '⏳ Claiming...' : '🎁 Claim Reward'}
-                            </button>
-                        ) : (
-                            <span style={{
-                                padding: '4px 12px',
-                                borderRadius: '20px',
-                                background: claimed
-                                    ? (isNight ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)')
-                                    : (isNight ? '#333' : '#f0f0f0'),
-                                color: claimed ? '#10b981' : textColor,
-                                fontWeight: '500',
-                                fontSize: '11px'
-                            }}>
-                                {claimed
-                                    ? `✓ Claimed`
-                                    : !cooldownElapsed
-                                        ? `⏳ Next quest in: ${formatRemainingTime(cooldowns?.[cooldownKey])}`
-                                        : '✅ Ready to Claim'}                            </span>
-                        )}
-                    </div>
-                )}
-            </div>
-        </div>
+
+                </div>)}
+        </>
     );
 }
 

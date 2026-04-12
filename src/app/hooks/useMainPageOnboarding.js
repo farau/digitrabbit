@@ -30,7 +30,7 @@ const ONBOARDING_STEPS = [
   {
     app: 'FAQ',
     title: 'Step 6',
-    description: 'For more details about gameplay, points, chat, and rewards, refer to the FAQ section.'
+    description: 'For more details about gameplay, points, chat, league and rewards, refer to the FAQ section.'
   }
 ];
 

@@ -2,7 +2,7 @@
 import { getUserRank } from '@/lib/leaderboard';
 
 export async function GET(request, { params }) {
-    const { wallet } = params;
+    const { wallet } = await params;
 
     try {
         const result = await getUserRank(wallet);

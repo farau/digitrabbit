@@ -110,7 +110,6 @@ export default function MainPage() {
 
   // ✅ Hook WebSocket
   const { messages, isConnected, isSyncing, resync, registerCallbacks } = useChatMessages()
-  const isRabbitChatOpen = visibleApps.includes('RabbitChat')
   const hasNoPoints = Number(playerData?.rabbitPoints || 0) <= 0
   const isAppInteractionLocked = Boolean(embeddedWallet?.address) && !hasLoadedPlayerData
   const questIds = useMemo(() => ['daily_messages', 'daily_streak', 'daily_hold', 'weekly_messages', 'weekly_games'], [])
@@ -497,23 +496,18 @@ export default function MainPage() {
   // Notification center: activité chat
   useEffect(() => {
     const currentLength = Array.isArray(messages) ? messages.length : 0
-    const previousLength = previousMessagesLengthRef.current
-    const delta = Math.max(0, currentLength - previousLength)
-
     const newestTimestamp = currentLength > 0
       ? Number(messages[currentLength - 1]?.timestamp || 0)
       : 0
 
     setChatNotifications((previous) => ({
-      unreadNewMessages: (delta > 0 && !isRabbitChatOpen)
-        ? Math.min(previous.unreadNewMessages + delta, 99)
-        : previous.unreadNewMessages,
+      ...previous,
       totalLoadedMessages: currentLength,
       lastMessageAt: newestTimestamp || previous.lastMessageAt
     }))
 
     previousMessagesLengthRef.current = currentLength
-  }, [isRabbitChatOpen, messages])
+  }, [messages])
 
   // Fonction pour recharger uniquement les clics totaux (pour le bouton reload)
   const reloadTotalClicks = async () => {
@@ -539,12 +533,6 @@ export default function MainPage() {
   const restoreApp = (appName, options = {}) => {
     const { force = false } = options
     if (isAppInteractionLocked && !force) return
-
-    if (appName === 'RabbitChat') {
-      // Mark chat notifications as read when user opens RabbitChat
-      previousMessagesLengthRef.current = Array.isArray(messages) ? messages.length : 0
-      setChatNotifications((previous) => ({ ...previous, unreadNewMessages: 0 }))
-    }
 
     setVisibleApps((apps) => {
       if (apps.includes(appName)) {
@@ -793,11 +781,7 @@ export default function MainPage() {
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: themeMode === 'dark' ? '#d1d5db' : '#1f2937', opacity: 0.88 }}>
                 <Image src="/img/icons/rabbitchat.png" alt="Chat" width={12} height={12} />
-                <span>{chatNotifications.unreadNewMessages > 0
-                  ? chatNotifications.unreadNewMessages > 10
-                    ? '+10 messages unseen'
-                    : `+${chatNotifications.unreadNewMessages} unseen message(s)`
-                  : '0 messages unseen'}</span>
+                <span>{Number(chatNotifications.totalLoadedMessages || 0)} messages in chat</span>
               </div>
             </div>
           </div>

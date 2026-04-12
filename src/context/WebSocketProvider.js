@@ -204,7 +204,7 @@ export function WebSocketProvider({ children }) {
                         next.push({
                             messageId: syntheticId,
                             sender: rewardedUser,
-                            content: `Reward +${amount} Rabbit Points`,
+                            content: `Reward +${amount} RabbitPoints`,
                             score: 0,
                             senderRole: 0,
                             twitterUsername: 'System',
@@ -512,7 +512,7 @@ export function WebSocketProvider({ children }) {
                         next.push({
                             messageId: syntheticId,
                             sender: rewardedUser,
-                            content: `Reward +${amount} Rabbit Points`,
+                            content: `Reward +${amount} RabbitPoints`,
                             score: 0,
                             senderRole: 0,
                             twitterUsername: 'System',

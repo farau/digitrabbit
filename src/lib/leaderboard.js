@@ -119,6 +119,7 @@ async function getLeaderboardFromGraphQL(seasonId = "1") {
                         gamesPlayed
                         currentStreak
                         bestClicksInGame
+                        questsClaimed
                         pointsClaimed
                         lastUpdatedTimestamp
                     }
@@ -307,6 +308,7 @@ async function calculateLeaderboard() {
                 gameClicks: parseInt(playerData.gamesPlayed || 0, 10),
                 streak: parseInt(playerData.currentStreak || 0, 10),
                 maxClicks: parseInt(playerData.bestClicksInGame || 0, 10),
+                questsClaimed: parseInt(playerData.questsClaimed || 0, 10),
                 hasClaimedPoints: parseInt(playerData.pointsClaimed || 0, 10) > 0,
                 totalPointsAllTime: parseInt(playerData.player?.totalPointsClaimed || 0, 10) / 1000000,
                 firstGameAt: parseInt(playerData.player?.firstGameTimestamp || 0, 10),
@@ -353,17 +355,31 @@ export async function getLeaderboard() {
 /**
  * Obtient le classement d'un utilisateur spécifique
  */
-export async function getUserRank(walletAddress) {
+export async function getUserRank(walletAddress, options = {}) {
     try {
         const { leaderboard } = await getLeaderboard();
+        const includeContext = options?.includeContext === true;
 
         const userEntry = leaderboard.find(
             entry => entry.walletAddress.toLowerCase() === walletAddress.toLowerCase()
         );
 
-        return userEntry || null;
+        if (!includeContext) {
+            return userEntry || null;
+        }
+
+        return {
+            userRank: userEntry || null,
+            totalPlayers: leaderboard.length
+        };
     } catch (error) {
         console.error('Error fetching user rank:', error);
+        if (options?.includeContext === true) {
+            return {
+                userRank: null,
+                totalPlayers: 0
+            };
+        }
         return null;
     }
 }

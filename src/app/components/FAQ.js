@@ -220,6 +220,56 @@ export default function FAQ() {
                     </div>
                 </div>
 
+                {/* ========== IMPORTANT: Leagues & Progress Sharing ========== */}
+                <div
+                    style={{
+                        background: isNight
+                            ? 'linear-gradient(135deg, #111827 0%, #1f2937 100%)'
+                            : 'linear-gradient(135deg, #fff7ed 0%, #fffbeb 100%)',
+                        padding: '20px',
+                        borderRadius: '12px',
+                        border: `2px solid ${isNight ? '#f59e0b' : '#d97706'}`,
+                        boxShadow: isNight
+                            ? '0 4px 16px rgba(245, 158, 11, 0.18)'
+                            : '0 4px 16px rgba(217, 119, 6, 0.12)',
+                    }}
+                >
+                    <h4
+                        style={{
+                            fontSize: '18px',
+                            fontWeight: 700,
+                            color: isNight ? '#fef3c7' : '#7c2d12',
+                            margin: '0 0 10px 0',
+                            textAlign: 'center',
+                        }}
+                    >
+                        Important: Leagues Define Your Competitive Tier
+                    </h4>
+                    <p
+                        style={{
+                            fontSize: '13px',
+                            color: isNight ? '#e5e7eb' : '#7c2d12',
+                            lineHeight: 1.6,
+                            margin: '0 0 8px 0',
+                        }}
+                    >
+                        Your league is based on your current leaderboard rank: top 10% are Gold,
+                        next 20% are Silver, next 20% are Bronze, and the remaining 50% are Unranked.
+                        Leagues are a quick signal of your season performance.
+                    </p>
+                    <p
+                        style={{
+                            fontSize: '13px',
+                            color: isNight ? '#e5e7eb' : '#7c2d12',
+                            lineHeight: 1.6,
+                            margin: 0,
+                        }}
+                    >
+                        You can share your progress directly on X from the Leaderboard Share button,
+                        including rank, league, score, and quests claimed.
+                    </p>
+                </div>
+
                 {/* ========== NEW FEATURE: Daily & Weekly Quests ========== */}
                 <div
                     style={{

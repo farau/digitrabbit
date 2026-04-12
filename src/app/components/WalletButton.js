@@ -1,7 +1,6 @@
 "use client";
 import { usePrivy, Captcha } from '@privy-io/react-auth'
 import { useLogin } from '@privy-io/react-auth';
-import { useGame } from '@/context'
 
 function LogoutButton() {
     const { ready, authenticated, logout } = usePrivy();
@@ -46,14 +45,11 @@ function LoginButton() {
 const WalletButton = () => {
 
     const { ready, authenticated } = usePrivy();
-    // Disable login when Privy is not ready or the user is already authenticated
-    const disableLogin = !ready || (ready && !authenticated);
-    const { embeddedWallet } = useGame();
 
     return (
         <div>
             <div>
-                {authenticated ? (
+                {ready && authenticated ? (
                     <LogoutButton />
                 ) : (
                     <LoginButton />
