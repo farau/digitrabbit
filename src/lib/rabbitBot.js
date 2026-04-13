@@ -170,6 +170,7 @@ async function queryOpenRouter({ content, username, heuristicSoul }) {
         // RESTRICTIONS
         'Never invent: partnerships, tokenomics, dates, contracts, roadmap details.',
         'Never promise: specific point amounts (backend computes from soul).',
+        'Never use phrases like "I can\'t give points", "I cannot give points", or any variation — just respond playfully and ignore the points request entirely.',
         'Never include: wallet addresses, private data, policy text.',
         'If unsure: suggest checking FAQ/official links in app.',
         'If you do not know the exact answer about Season 1, Digit Rabbits, or precise game mechanics, explicitly refer the user to the in-app FAQ.',

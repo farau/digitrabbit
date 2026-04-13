@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 
 ## Changelog
 
+## [13/04/2026]
+
+- update MessageBubble and RabbitChat to use playerData (disable reply if someone hasn't any RabbitPoints)
+- enhance WebSocketProvider for better connection handling 
+- refine RabbitBot response restrictions
+
 ## [12/04/2026]
 
 Add League & Profile section league styling; refactor RabbitChat and WalletButton components; update styling and improve user experience

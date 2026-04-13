@@ -31,8 +31,7 @@ export function WebSocketProvider({ children }) {
     const unwatchChatBotAwardsRef = useRef(null)
     const unwatchRabbitsRef = useRef(null)
     const lastSyncedBlockRef = useRef(null)
-    const initializedRef = useRef(false)
-    const isMountedRef = useRef(true)
+    const isMountedRef = useRef(false)
     const reconnectTimeoutRef = useRef(null)
     const isReconnectingRef = useRef(false)
     const syncQueueRef = useRef([])
@@ -46,6 +45,9 @@ export function WebSocketProvider({ children }) {
     const onGamePlayedCallbackRef = useRef(null)
     const onQuestRewardCreditedCallbackRef = useRef(null)
     const onChatStatsRefreshCallbackRef = useRef(null)
+
+    // FIX 2 — ref vers les dernières versions des fonctions setup (évite closures stales dans onClose)
+    const setupFnsRef = useRef({})
 
     const triggerChatStatsRefresh = useCallback((payload = {}) => {
         if (!isMountedRef.current) return
@@ -81,7 +83,6 @@ export function WebSocketProvider({ children }) {
         return Object.fromEntries(entries)
     }, [])
 
-    // Fonction pour enregistrer les callbacks
     const registerCallbacks = useCallback((callbacks) => {
         if ('onPointsClaimed' in callbacks) {
             onPointsClaimedCallbackRef.current = callbacks.onPointsClaimed
@@ -109,7 +110,7 @@ export function WebSocketProvider({ children }) {
     // 🔄 Resync HTTP (récupère les événements manqués)
     const resync = useCallback(async () => {
         if (!isMountedRef.current || !DIGIT_RABBITS_CHAT_ADDRESS) {
-            console.log('⚠️ Provider unmounted, skipping resync')
+            console.log('⚠️ Provider unmounted or no address, skipping resync')
             return
         }
 
@@ -124,14 +125,16 @@ export function WebSocketProvider({ children }) {
             setIsSyncing(true)
 
             const currentBlock = await publicClient.getBlockNumber()
+
+            // FIX — vérifier après chaque await que le provider est toujours monté
+            if (!isMountedRef.current) return
+
             const fromBlock = lastSyncedBlockRef.current
                 ? lastSyncedBlockRef.current + 1n
                 : currentBlock - 10000n
 
             if (fromBlock > currentBlock) {
                 console.log('✅ Already synced')
-                setIsSyncing(false)
-                activeResyncRef.current = false
                 return
             }
 
@@ -161,6 +164,8 @@ export function WebSocketProvider({ children }) {
 
             if (messageLogs.length || botAwardLogs.length) {
                 const botAwardTimestampsByBlock = await resolveBlockTimestamps(botAwardLogs)
+
+                if (!isMountedRef.current) return
 
                 setMessages(prev => {
                     const existing = new Set(prev.map(m => m.messageId))
@@ -249,21 +254,20 @@ export function WebSocketProvider({ children }) {
             if (syncQueueRef.current.length > 0) {
                 syncQueueRef.current = []
                 console.log('📋 Processing queued resync...')
-                setTimeout(() => resync(), 500)
+                setTimeout(() => {
+                    if (isMountedRef.current) resync()
+                }, 500)
             }
         }
     }, [resolveBlockTimestamps])
 
-    // 🔗 Établir la connexion WebSocket pour les messages du chat
+    // 🔗 Chat — MessageSent
     const setupChatWebSocket = useCallback(() => {
-        if (!isMountedRef.current) {
-            console.log('⚠️ Provider unmounted, skipping Chat WebSocket setup')
-            return
-        }
+        if (!isMountedRef.current) return
 
-        // Unsubscribe previous if any
         if (unwatchChatRef.current) {
             unwatchChatRef.current()
+            unwatchChatRef.current = null
         }
 
         console.log('🌐 Setting up Chat WebSocket...')
@@ -335,9 +339,9 @@ export function WebSocketProvider({ children }) {
                     isReconnectingRef.current = true
                     reconnectTimeoutRef.current = setTimeout(() => {
                         if (isMountedRef.current) {
-                            console.log('🔄 Attempting to reconnect...')
+                            console.log('🔄 Attempting to reconnect Chat...')
                             resync()
-                            setupChatWebSocket()
+                            setupFnsRef.current.setupChatWebSocket?.()
                         }
                     }, 3000)
                 }
@@ -353,15 +357,13 @@ export function WebSocketProvider({ children }) {
         return [hrs, mins, secs].map((value) => String(value).padStart(2, '0')).join(':')
     }
 
-    // 🔗 Événements de modération RabbitChat (messages système)
+    // 🔗 Chat — UserMuted (modération)
     const setupChatModerationWebSocket = useCallback(() => {
-        if (!isMountedRef.current) {
-            console.log('⚠️ Provider unmounted, skipping Chat moderation WebSocket setup')
-            return
-        }
+        if (!isMountedRef.current) return
 
         if (unwatchChatModerationRef.current) {
             unwatchChatModerationRef.current()
+            unwatchChatModerationRef.current = null
         }
 
         console.log('🌐 Setting up Chat moderation WebSocket...')
@@ -431,15 +433,13 @@ export function WebSocketProvider({ children }) {
         })
     }, [triggerChatStatsRefresh])
 
-    // 🔗 Événements de points RabbitChat
+    // 🔗 Chat — PointsAwarded
     const setupChatPointsWebSocket = useCallback(() => {
-        if (!isMountedRef.current) {
-            console.log('⚠️ Provider unmounted, skipping Chat points WebSocket setup')
-            return
-        }
+        if (!isMountedRef.current) return
 
         if (unwatchChatPointsRef.current) {
             unwatchChatPointsRef.current()
+            unwatchChatPointsRef.current = null
         }
 
         console.log('🌐 Setting up Chat points WebSocket...')
@@ -465,15 +465,13 @@ export function WebSocketProvider({ children }) {
         })
     }, [triggerChatStatsRefresh])
 
-    // 🔗 Événements de récompense RabbitBot (notification système légère)
+    // 🔗 Chat — BotPointsAwarded
     const setupChatBotAwardsWebSocket = useCallback(() => {
-        if (!isMountedRef.current) {
-            console.log('⚠️ Provider unmounted, skipping Chat bot awards WebSocket setup')
-            return
-        }
+        if (!isMountedRef.current) return
 
         if (unwatchChatBotAwardsRef.current) {
             unwatchChatBotAwardsRef.current()
+            unwatchChatBotAwardsRef.current = null
         }
 
         console.log('🌐 Setting up Chat bot awards WebSocket...')
@@ -488,6 +486,7 @@ export function WebSocketProvider({ children }) {
                 setIsConnected(true)
 
                 if (!Array.isArray(logs) || logs.length === 0) return
+
                 const botAwardTimestampsByBlock = await resolveBlockTimestamps(logs)
                 if (!isMountedRef.current) return
 
@@ -544,17 +543,13 @@ export function WebSocketProvider({ children }) {
         })
     }, [resolveBlockTimestamps, triggerChatStatsRefresh])
 
-
-    // 🔗 Établir la connexion WebSocket pour les événements de DIGIT_RABBITS
+    // 🔗 DIGIT_RABBITS — tous événements
     const setupRabbitsWebSocket = useCallback(() => {
-        if (!isMountedRef.current) {
-            console.log('⚠️ Provider unmounted, skipping Rabbits WebSocket setup')
-            return
-        }
+        if (!isMountedRef.current) return
 
-        // Unsubscribe previous if any
         if (unwatchRabbitsRef.current) {
             unwatchRabbitsRef.current()
+            unwatchRabbitsRef.current = null
         }
 
         console.log('🌐 Setting up Rabbits WebSocket...')
@@ -572,7 +567,6 @@ export function WebSocketProvider({ children }) {
                 for (const log of logs) {
                     console.log(`📡 Event from DIGIT_RABBITS: ${log.eventName}`, log)
 
-                    // Appelle le callback approprié selon l'événement
                     if (log.eventName === 'PointsClaimed') {
                         console.log('💰 PointsClaimed event detected')
                         if (onPointsClaimedCallbackRef.current) {
@@ -623,7 +617,8 @@ export function WebSocketProvider({ children }) {
                     reconnectTimeoutRef.current = setTimeout(() => {
                         if (isMountedRef.current) {
                             console.log('🔄 Attempting to reconnect Rabbits...')
-                            setupRabbitsWebSocket()
+                            // FIX 2 — utilise le ref pour éviter la closure stale
+                            setupFnsRef.current.setupRabbitsWebSocket?.()
                         }
                     }, 3000)
                 }
@@ -631,7 +626,24 @@ export function WebSocketProvider({ children }) {
         })
     }, [triggerChatStatsRefresh])
 
-    // 📱 Détecter visibilité de l'onglet
+    // FIX 2 — synchroniser setupFnsRef à chaque changement des fonctions
+    useEffect(() => {
+        setupFnsRef.current = {
+            setupChatWebSocket,
+            setupChatModerationWebSocket,
+            setupChatPointsWebSocket,
+            setupChatBotAwardsWebSocket,
+            setupRabbitsWebSocket,
+        }
+    }, [
+        setupChatWebSocket,
+        setupChatModerationWebSocket,
+        setupChatPointsWebSocket,
+        setupChatBotAwardsWebSocket,
+        setupRabbitsWebSocket,
+    ])
+
+    // 📱 Visibilité de l'onglet
     useEffect(() => {
         const handleVisibilityChange = () => {
             if (!isMountedRef.current) return
@@ -658,37 +670,45 @@ export function WebSocketProvider({ children }) {
         }
     }, [resync, triggerChatStatsRefresh])
 
-    // 🚀 Initialisation (une seule fois)
+    // 🚀 Initialisation
+    // FIX 1 — suppression de initializedRef, on utilise un flag local `active`
+    // Cela corrige le bug StrictMode (double montage) et les remontages réels
     useEffect(() => {
-        if (initializedRef.current) return
-        initializedRef.current = true
+        let active = true
+        isMountedRef.current = true
 
         console.log('🌐 WebSocketProvider mounted')
-        isMountedRef.current = true
 
         let intervalId = null
         let socketRpcClient = null
 
+        // FIX 3 — heartbeat vérifie isMountedRef avant toute requête
         const heartbeat = async () => {
+            if (!isMountedRef.current) return
             console.log('⏰ ping ->')
             wsPublicClient.request({ method: 'eth_chainId' })
-                .then(() => console.log('⏰ <- pong'))
-                .catch((e) => console.error('⚠️ Heartbeat failed:', e))
+                .then(() => {
+                    if (isMountedRef.current) console.log('⏰ <- pong')
+                })
+                .catch((e) => {
+                    if (isMountedRef.current) console.error('⚠️ Heartbeat failed:', e)
+                })
         }
 
         const setupSocketListeners = async () => {
+            if (!active) return
+
             try {
                 socketRpcClient = await wsPublicClient.transport.getRpcClient()
+
+                if (!active) return
 
                 const onClose = async () => {
                     console.warn('⚠️ WebSocket closed, reconnecting...')
 
-                    // Cleanup listeners
                     socketRpcClient.socket.removeEventListener('close', onClose)
                     socketRpcClient.socket.removeEventListener('error', onError)
 
-                    // IMPORTANT : invalide le cache viem pour forcer une nouvelle connexion
-                    // Viem peut déjà avoir fermé le socket, on ignore l'erreur
                     try {
                         socketRpcClient.close()
                     } catch (e) {
@@ -697,20 +717,20 @@ export function WebSocketProvider({ children }) {
 
                     clearInterval(intervalId)
 
-                    if (!isMountedRef.current) return
+                    if (!active) return
 
-                    // Reconnexion
+                    // FIX 2 — utilise setupFnsRef pour avoir les dernières versions
+                    const fns = setupFnsRef.current
                     await resync()
-                    setupChatWebSocket()
-                    setupChatModerationWebSocket()
-                    setupChatPointsWebSocket()
-                    setupChatBotAwardsWebSocket()
-                    setupRabbitsWebSocket()
+                    if (!active) return
+                    fns.setupChatWebSocket?.()
+                    fns.setupChatModerationWebSocket?.()
+                    fns.setupChatPointsWebSocket?.()
+                    fns.setupChatBotAwardsWebSocket?.()
+                    fns.setupRabbitsWebSocket?.()
 
-                    // Re-établit les listeners sur le nouveau socket
                     setupSocketListeners()
 
-                    // Relance le heartbeat
                     intervalId = setInterval(heartbeat, 5 * 60 * 1000)
                 }
 
@@ -729,6 +749,7 @@ export function WebSocketProvider({ children }) {
         intervalId = setInterval(heartbeat, 5 * 60 * 1000)
 
         resync().then(() => {
+            if (!active) return
             setupChatWebSocket()
             setupChatModerationWebSocket()
             setupChatPointsWebSocket()
@@ -741,12 +762,14 @@ export function WebSocketProvider({ children }) {
 
         return () => {
             console.log('❌ WebSocketProvider unmounting')
+            active = false
             isMountedRef.current = false
 
             clearInterval(intervalId)
 
             if (socketRpcClient) {
-                socketRpcClient.close()
+                try { socketRpcClient.close() } catch (e) { /* déjà fermé */ }
+                socketRpcClient = null
             }
 
             if (unwatchChatRef.current) {
@@ -778,8 +801,20 @@ export function WebSocketProvider({ children }) {
                 clearTimeout(reconnectTimeoutRef.current)
                 reconnectTimeoutRef.current = null
             }
+
+            // Reset des états internes
+            activeResyncRef.current = false
+            isReconnectingRef.current = false
+            syncQueueRef.current = []
         }
-    }, [resync, setupChatWebSocket, setupChatModerationWebSocket, setupChatPointsWebSocket, setupChatBotAwardsWebSocket, setupRabbitsWebSocket])
+    }, [
+        resync,
+        setupChatWebSocket,
+        setupChatModerationWebSocket,
+        setupChatPointsWebSocket,
+        setupChatBotAwardsWebSocket,
+        setupRabbitsWebSocket
+    ])
 
     return (
         <WebSocketContext.Provider

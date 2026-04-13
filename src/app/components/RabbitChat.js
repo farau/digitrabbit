@@ -24,7 +24,7 @@ import {
 import { XLogo } from '@/utils/constants'
 
 // Composant MessageBubble avec thème amélioré
-function MessageBubble({ message, messages, isNight, user, onReply }) {
+function MessageBubble({ message, messages, isNight, playerData, onReply }) {
     const [copiedAddress, setCopiedAddress] = useState(false)
     const resolveRoleIndex = (chatMessage) => {
         if (!chatMessage) return 0
@@ -300,7 +300,7 @@ function MessageBubble({ message, messages, isNight, user, onReply }) {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
                             <button
                                 onClick={() => hasOnChainMessageId && onReply(message)}
-                                disabled={!hasOnChainMessageId}
+                                disabled={!hasOnChainMessageId || playerData?.gamePlayed === 0}
                                 style={{
                                     background: 'transparent',
                                     border: 'none',
@@ -1331,7 +1331,7 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
                                 message={msg}
                                 messages={messages}
                                 isNight={isNight}
-                                user={user}
+                                playerData={playerData}
                                 onReply={(message) => {
                                     setReplyingTo(message)
                                     if (inputRef.current) inputRef.current.focus()

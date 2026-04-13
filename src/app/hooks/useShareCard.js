@@ -413,13 +413,13 @@ export function useShareCard({ logoSrc = null } = {}) {
                     ``,
                     `⭐ ${new Intl.NumberFormat('en-EN', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(player.score)} RabbitPoints`,
                     `🎯 ${new Intl.NumberFormat('en-EN').format(player.totalClicks || 0)} clicks  ⚡ ${new Intl.NumberFormat('en-EN').format(player.maxClicks || 0)} best`,
-                    `🔥 ${player.streak || 0} streak  📜 ${new Intl.NumberFormat('en-EN').format(player.questsClaimed || 0)} quests`,
+                    `🔥 ${player.streak || 0} streak  📜 ${new Intl.NumberFormat('en-EN').format(player.questsClaimed || 0)} quests claimed`,
                     ``,
                     `Join the race 👇`,
                     `https://digitrabbits.com`,
                 ].join('\n');
 
-                // 4. Open Twitter after 1s (let download settle)
+                // 4. Open Twitter after 2s (let download settle)
                 setTimeout(() => {
                     const w = 600, h = 560;
                     const left = Math.round(window.screenX + (window.outerWidth - w) / 2);
@@ -429,7 +429,7 @@ export function useShareCard({ logoSrc = null } = {}) {
                         'share-twitter',
                         `width=${w},height=${h},left=${left},top=${top},toolbar=0,menubar=0,location=0,status=0,scrollbars=1,resizable=1`
                     );
-                }, 1000);
+                }, 2000);
 
                 return true; // signal success for toast
             } catch (err) {
