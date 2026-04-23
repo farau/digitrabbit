@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 
 ## Changelog
 
+## [22/04/2026]
+
+### Privy / Wallet Funding
+- Fixed `useFundWallet` integration in `Settings`:
+  - Updated call signature to `fundWallet(address, config)` instead of passing a single object.
+  - Wired funding to the authenticated embedded wallet address.
+- Improved funding modal readability in dark mode:
+  - Added targeted Privy CSS variable overrides for warning/info banner contrast in `globals.css`.
+
+### Server/Client Separation
+- Fixed `server-only` import error by removing an invalid client-side dependency path to server auth utilities.
+
+### CSS Isolation / UI Stability
+- Scoped legacy `98.css` styling to app UI only:
+  - Replaced global `98.css` import with local scoped stylesheet `src/app/styles/98-scoped.css`.
+  - Wrapped app content in `.app-shell` in `layout.js`.
+  - Added required 98.css font assets under `public/98/`.
+- Refined global CSS targeting in `globals.css` to avoid style bleed into third-party portals (including Privy).
+
+### HomeIntro
+- Restored and stabilized `enterButton` custom sizing/style against global button rules.
+- Cleaned and simplified `HomeIntro.module.css` formatting (removed redundant declarations).
+
 ## [13/04/2026]
 
 - update MessageBubble and RabbitChat to use playerData (disable reply if someone hasn't any RabbitPoints)

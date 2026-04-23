@@ -13,6 +13,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { wagmiConfig } from '@/wagmi-config';
 import { useWallets, usePrivy, getEmbeddedConnectedWallet } from '@privy-io/react-auth';
 import { WebSocketProvider } from './WebSocketProvider';
+import { megaeth } from 'viem/chains';
 
 if (!appId) throw new Error('App ID is not defined');
 
@@ -193,34 +194,37 @@ export function ContextProvider({ children }) {
 
   const theme = themeMode === 'light' ? lightTheme : darkTheme;
 
-  return (
-    <ThemeContext.Provider value={{
-      themeMode,
-      toggleTheme,
-      show3DEffects,
-      toggle3DEffects,
-      setShow3DEffects,
-      hasEntered,
-      setHasEntered
-    }}>
-      <StyledThemeProvider theme={theme}>
-        <PrivyProvider
-          appId={appId}
-          {...(clientId && { clientId })}
-          config={
-            {
-              // Create embedded wallets for users who don't have a wallet
-              defaultChain: customMegaethTestnet, // Use the first network as default
-              supportedChains: [customMegaethTestnet],
-              embeddedWallets: {
-                ethereum: {
-                  createOnLogin: 'users-without-wallets', // Create embedded wallets for all users
-                }
-              },
-              ...(themeMode === 'dark' ? darkModeConfig : lightModeConfig),
+  const privyConfig = {
+    // Create embedded wallets for users who don't have a wallet
+    defaultChain: customMegaethTestnet,
+    supportedChains: [customMegaethTestnet, megaeth],
+    embeddedWallets: {
+      ethereum: {
+        createOnLogin: 'users-without-wallets', // Create embedded wallets for all users
+      }
+    },
+    ...(themeMode === 'dark' ? darkModeConfig : lightModeConfig),
 
-            }}
-        >
+  }
+
+  return (
+    <PrivyProvider
+      appId={appId}
+      {...(clientId && { clientId })}
+      config={privyConfig}
+    >
+      <ThemeContext.Provider value={{
+        themeMode,
+        toggleTheme,
+        show3DEffects,
+        toggle3DEffects,
+        setShow3DEffects,
+        hasEntered,
+        setHasEntered
+      }}>
+
+
+        <StyledThemeProvider theme={theme}>
           <QueryClientProvider client={queryClient}>
             <WagmiProvider config={wagmiConfig}>
               <GameProvider>
@@ -230,8 +234,8 @@ export function ContextProvider({ children }) {
               </GameProvider>
             </WagmiProvider>
           </QueryClientProvider>
-        </PrivyProvider>
-      </StyledThemeProvider>
-    </ThemeContext.Provider>
+        </StyledThemeProvider>
+      </ThemeContext.Provider >
+    </PrivyProvider>
   );
 }

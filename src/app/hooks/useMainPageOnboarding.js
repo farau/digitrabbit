@@ -15,7 +15,7 @@ const ONBOARDING_STEPS = [
   {
     app: 'settings-send-funds',
     title: 'Step 3',
-    description: 'Open Settings, click Add funds, and fund your embedded wallet with a small amount of ETH for gas fees.'
+    description: 'Open Settings, click Fund wallet to fund your embedded wallet with a small amount of ETH for gas fees.'
   },
   {
     app: 'Game',

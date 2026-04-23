@@ -1,4 +1,4 @@
-import "98.css";
+import "./styles/98-scoped.css";
 import "./globals.css";
 import { ContextProvider } from '@/context'
 import { Analytics } from "@vercel/analytics/next"
@@ -18,10 +18,12 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className="dark">
       <body className="antialiased">
-        <ContextProvider>
-          {children}
-          <Analytics />
-        </ContextProvider>
+        <div className="app-shell">
+          <ContextProvider>
+            {children}
+            <Analytics />
+          </ContextProvider>
+        </div>
       </body>
     </html>
   );

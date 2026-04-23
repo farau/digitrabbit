@@ -8,7 +8,34 @@ import { useTheme, useGame } from '@/context';
 import Wrapper from './Wrapper';
 import { useLinkAccount, usePrivy } from '@privy-io/react-auth';
 import { useBalance } from 'wagmi';
+import { useFundWallet } from '@privy-io/react-auth';
+import { megaeth } from 'viem/chains';
 
+function FundButton({ embeddedWallet }) {
+
+  const {  fundWallet } = useFundWallet();
+  const walletAddress = embeddedWallet?.address;
+
+  return (
+    <button
+      data-app="settings-add-funds"
+      onClick={async () => {
+        if (!walletAddress) return;
+        await fundWallet(walletAddress, {
+          chain: megaeth,
+          amount: '0.0001', // Amount in ETH to fund
+          options: {
+            // You can add options here if needed, such as a callback URL after funding
+            themeMode: 'dark', // Force dark mode for the funding interface
+          },
+        });
+      }}
+      disabled={!walletAddress}
+    >
+      Fund wallet
+    </button >
+  );
+};
 
 function ExportWalletButton() {
   const { ready, authenticated, user, exportWallet } = usePrivy();
@@ -238,7 +265,7 @@ function WalletBalance({ embeddedWallet, themeMode }) {
       )}
 
       <div className="space-y-2">
-        <a
+        {/*<a
           data-app="settings-send-funds"
           href="https://docs.megaeth.com/faucet"
           target="_blank"
@@ -248,6 +275,8 @@ function WalletBalance({ embeddedWallet, themeMode }) {
         >
           Add funds
         </a>
+        */}
+        < FundButton embeddedWallet={embeddedWallet} />
       </div>
     </div>
   );

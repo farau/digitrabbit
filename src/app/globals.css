@@ -3,15 +3,15 @@
 
 
 /* Comportements globaux sur la taille de la police en fonction de l'écran */
-p {
+.app-shell p {
   @apply text-base sm:text-sm md:text-xs;
 }
 
-h5 {
+.app-shell h5 {
   @apply text-base sm:text-sm md:text-xs;
 }
 
-h4 {
+.app-shell h4 {
   @apply text-base sm:text-sm md:text-xs;
 }
 
@@ -37,12 +37,16 @@ h4 {
 
 body {
   background: var(--background);
-  font-family: 'Press Start 2P','sans-serif', cursive;
   overflow: hidden;
 }
 
+.app-shell {
+  font-family: 'Press Start 2P','sans-serif', cursive;
+}
+
 html,
-body {
+body,
+.app-shell {
   margin: 0;
   width: 100%;
   height: 100%;
@@ -83,11 +87,19 @@ body {
 
 /* Agrandir tous les boutons en mode mobile */
 @media (max-width: 768px) {
-  button {
+  .app-shell button {
     font-size: 1rem !important; /* Texte plus gros */
     min-height: 30px; /* Hauteur minimale recommandée pour le touch */
     min-width: 44px; /* Largeur minimale recommandée pour le touch */
   }
+}
+
+/* Privy dark mode tweak: keep "Receive Funds" info banner readable */
+html.dark #privy-dialog,
+html.dark #privy-modal-content {
+  --privy-color-warn-lightest: #2b2f36;
+  --privy-color-warn-light: #2b2f36;
+  --privy-color-warn: #cfd8ff;
 }
 
 /* Animations pour la card Rank Share on X */
