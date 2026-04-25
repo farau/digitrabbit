@@ -987,7 +987,7 @@ export default function MainPage() {
                 ? '[data-app="settings-copy-wallet"]'
                 : isFundingLinkSubStep
                   ? '[data-app="settings-link-wallet"]'
-                  : '[data-app="settings-send-funds"]'
+                  : '[data-app="settings-send-funds"], [data-app="settings-add-funds"]'
             )
             if (target && typeof target.click === 'function') {
               target.click()

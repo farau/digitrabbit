@@ -34,7 +34,7 @@ const ONBOARDING_STEPS = [
   }
 ];
 
-const ONBOARDING_GAS_WEI_THRESHOLD = 1000000000000000n; // 0.001 ETH (test threshold)
+const ONBOARDING_GAS_WEI_THRESHOLD = 0n; // 0.001 ETH (threshold mainnet)
 const FUNDING_SUBSTEP_COPY = 0;
 const FUNDING_SUBSTEP_ADD_FUNDS = 1;
 const FUNDING_SUBSTEP_LINK_WALLET = 2;
@@ -119,11 +119,11 @@ export function useMainPageOnboarding({
 
   const hasGasBalance = typeof walletBalance?.value === 'bigint'
     ? walletBalance.value > ONBOARDING_GAS_WEI_THRESHOLD
-    : Number(walletBalance?.formatted || 0) > 1;
+    : Number(walletBalance?.formatted || 0) > 0.001;
 
   const onboardingProgressText = `${Math.min(onboardingStepIndex + 1, ONBOARDING_STEPS.length)}/${ONBOARDING_STEPS.length}`;
   const onboardingDescriptionText = isFundingCopySubStep
-    ? 'Copy the adress of your embedded wallet now.'
+    ? 'Copy the address of your embedded wallet now.'
     : isFundingSendSubStep
       ? 'Click here to add funds on your embedded wallet.\nMake sure to have some ETH for gas fees to play the game.'
       : isFundingLinkSubStep
@@ -279,6 +279,7 @@ export function useMainPageOnboarding({
   useEffect(() => {
     if (!shouldRunOnboarding || !isFundingStep) return;
     if (!hasGasBalance) return;
+    if (onboardingFundingSubStep < FUNDING_SUBSTEP_ADD_FUNDS) return;
     if (onboardingFundingSubStep >= FUNDING_SUBSTEP_LINK_WALLET) return;
 
     setOnboardingFundingSubStep(FUNDING_SUBSTEP_LINK_WALLET);

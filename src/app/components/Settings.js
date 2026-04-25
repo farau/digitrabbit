@@ -18,7 +18,7 @@ function FundButton({ embeddedWallet }) {
 
   return (
     <button
-      data-app="settings-add-funds"
+      data-app="settings-send-funds"
       onClick={async () => {
         if (!walletAddress) return;
         await fundWallet(walletAddress, {
@@ -302,7 +302,10 @@ export default function Settings({ sound, setSound, volume, setVolume, volumePla
         window.dispatchEvent(new CustomEvent('embedded-wallet-address-copied'));
       }
     }).catch(() => {
-      // Keep UI behavior unchanged even if clipboard access is denied.
+      // Keep onboarding progression and UI behavior even if clipboard access is denied.
+      if (type === 'embedded' && typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('embedded-wallet-address-copied'));
+      }
     });
     setCopied(type);
     setTimeout(() => setCopied(null), 2000);

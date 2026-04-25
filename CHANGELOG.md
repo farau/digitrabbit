@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 
 ## Changelog
 
+## [25/04/2026]
+
+### Onboarding / Funding Flow
+- Fixed funding sub-step progression in `useMainPageOnboarding`:
+  - Prevented direct auto-skip from `Copy embedded wallet` to `Link Wallet` when the embedded wallet already has enough ETH.
+  - `Link Wallet` now unlocks only after reaching the `Add funds` sub-step, preserving the intended sequence:
+    `Copy embedded wallet` -> `Add funds` -> `Link Wallet`.
+- Fixed onboarding gas-balance fallback check:
+  - Aligned formatted-balance fallback threshold from `> 1` ETH to `> 0.001` ETH to match onboarding gas requirement logic.
+  - Prevents false `Waiting for ETH` lock when `walletBalance.value` is temporarily unavailable.
+- Testnet temporary unblock:
+  - Set onboarding gas threshold constant to `0n` to avoid funding-step deadlock while Privy `fundWallet` flow is mainnet-only.
+  - This is a temporary testnet workaround and should be restored to a real gas threshold when funding flow is available on target network.
+
 ## [22/04/2026]
 
 ### Privy / Wallet Funding
