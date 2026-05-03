@@ -2,7 +2,7 @@
 'use client'
 
 import styles from './Game.module.css'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, COOLDOWN_SECONDS, customMegaethTestnet, publicClient } from '@/utils/chainConfig'
 import { XLogo } from '@/utils/constants'
@@ -215,7 +215,7 @@ function TwitterShareButton({ score, gameClicks, themeMode, onClose }) {
 }
 
 
-export default function Game({ playerData, preSignedPool, isInitializing, error, initializePool, executeTransaction, getAvailableTransactions, isGameStarted, setIsGameStarted, onGameEnd }) {
+export default function Game({ playerData, preSignedPool, isInitializing, error, initializePool, executeTransaction, getAvailableTransactions, isGameStarted, setIsGameStarted, onGameEnd, onPlayerDataRefresh }) {
   const [result, setResult] = useState('')
   const [errorStartGame, setErrorStartGame] = useState('')
   const [isExecuting, setIsExecuting] = useState(false)
@@ -478,6 +478,7 @@ export default function Game({ playerData, preSignedPool, isInitializing, error,
       setIsGameStarted(true);
       setTimer(30);
       setResult(`Hash: ${txHash}`);
+      void onPlayerDataRefresh?.({ reason: 'game-started', transactionHash: txHash });
 
     } catch (err) {
       // Log l'erreur dans Sentry avec contexte
@@ -619,6 +620,7 @@ export default function Game({ playerData, preSignedPool, isInitializing, error,
         setResult(`Hash: ${txResult.hash}\nTime: ${txResult.timeTaken}ms`)
         setCurrentTransactionHash(txResult.hash)
         setShowSuccess(!!txResult.hash)
+        void onPlayerDataRefresh?.({ reason: 'game-played', transactionHash: txResult.hash })
       }
     } catch (err) {
       Sentry.captureException(err, {

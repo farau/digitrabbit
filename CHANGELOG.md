@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 
 ## Changelog
 
+## [03/05/2026]
+
+### Game / Player Data
+- Replaced websocket-driven game refreshes with explicit JSON-RPC player-data refreshes:
+  - `Game` now asks `MainPage` to refresh player data after `startGame` is mined.
+  - `Game` also refreshes player data after each successful `play` transaction.
+  - Removed `GameStarted` / `GamePlayed` websocket callbacks from `MainPage`.
+
+### RabbitChat / WebSocket Control
+- Simplified websocket connection handling:
+  - Removed automatic websocket reconnect / heartbeat behavior from `WebSocketProvider`.
+  - Added manual `checkConnection()` and `restartWebSocket()` controls to the websocket context.
+  - RabbitChat now shows websocket status with a `Check status` / `Reconnect` button.
+  - Manual reconnect performs an HTTP resync before reinstalling websocket subscriptions.
+  - Fixed RabbitChat notifications so timed success/error banners dismiss reliably.
+
+### Onboarding / Mobile
+- Improved `Link Wallet` onboarding step scrolling:
+  - Detects the real scrollable Settings window instead of relying on page-level scrolling.
+  - Automatically scrolls the `Link Wallet` button into view on mobile-sized layouts.
+  - Retries briefly while the Settings content is mounting.
+
+### Mobile UI
+- Fixed mobile desktop icons rendering as squares:
+  - Strengthened mobile icon CSS against global Windows 98 button styles.
+  - Preserved circular icon shape and touch-friendly sizing.
+
 ## [25/04/2026]
 
 ### Onboarding / Funding Flow

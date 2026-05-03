@@ -580,14 +580,20 @@ function ModerationModal({ isOpen, onClose, onConfirm, isNight, type, targetAddr
 
 // Notification (succès/erreur)
 function SuccessNotification({ message, isVisible, onClose, isNight, type = 'success', durationMs = 4000 }) {
+    const onCloseRef = useRef(onClose)
+
+    useEffect(() => {
+        onCloseRef.current = onClose
+    }, [onClose])
+
     useEffect(() => {
         if (isVisible) {
             const timer = setTimeout(() => {
-                onClose()
+                onCloseRef.current?.()
             }, durationMs)
             return () => clearTimeout(timer)
         }
-    }, [isVisible, onClose, durationMs])
+    }, [isVisible, durationMs, message, type])
 
     if (!isVisible) return null
 
@@ -622,10 +628,10 @@ function SuccessNotification({ message, isVisible, onClose, isNight, type = 'suc
 }
 
 // Composant principal
-export default function RabbitChat({ playerData, messages, isConnected, resyncMessages }) {
+export default function RabbitChat({ playerData, messages, isConnected }) {
     const { user } = usePrivy()
     const { embeddedWallet, isValidating, validationError } = useGame()
-    const { registerCallbacks } = useChatMessages()
+    const { registerCallbacks, checkConnection, restartWebSocket, isSyncing } = useChatMessages()
     const { themeMode } = useTheme()
     const { walletClient } = useWalletClient(embeddedWallet)
 
@@ -642,6 +648,7 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
     const [isRabbitBotThinking, setIsRabbitBotThinking] = useState(false)
     const [rabbitBotThinkingDotCount, setRabbitBotThinkingDotCount] = useState(1)
     const [isMobileLayout, setIsMobileLayout] = useState(false)
+    const [connectionAction, setConnectionAction] = useState('')
 
     const messagesEndRef = useRef(null)
     const inputRef = useRef(null)
@@ -852,6 +859,34 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
 
     const showErrorNotification = (message) => {
         showNotification(message, { type: 'error', durationMs: 10000 })
+    }
+
+    const handleWebSocketStatusClick = async () => {
+        if (connectionAction || isSyncing) return
+
+        try {
+            setConnectionAction('checking')
+            const isAlive = await checkConnection?.()
+
+            if (isAlive) {
+                showNotification('WebSocket connection is active.', { durationMs: 5000 })
+                return
+            }
+
+            setConnectionAction('restarting')
+            const restarted = await restartWebSocket?.()
+
+            if (restarted) {
+                showNotification('WebSocket restarted successfully.', { durationMs: 3500 })
+            } else {
+                showErrorNotification('WebSocket is still disconnected. Please try again in a moment.')
+            }
+        } catch (error) {
+            console.error('Manual WebSocket check failed:', error)
+            showErrorNotification(error?.message || 'WebSocket check failed.')
+        } finally {
+            setConnectionAction('')
+        }
     }
 
     const extractOwnMessageIdFromReceipt = (receipt) => {
@@ -1310,6 +1345,79 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
                 minHeight: isMobileLayout ? 0 : '420px'
             }}>
                 <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '10px',
+                    flexWrap: 'wrap',
+                    background: isNight ? '#141414' : '#f8fafc',
+                    border: `1px solid ${borderColor}`,
+                    borderBottom: 'none',
+                    borderRadius: '10px 10px 0 0',
+                    padding: '10px 12px',
+                    color: textColor
+                }}>
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontSize: '12px',
+                        fontWeight: 700
+                    }}>
+                        <span
+                            aria-hidden="true"
+                            style={{
+                                width: '9px',
+                                height: '9px',
+                                borderRadius: '999px',
+                                background: isConnected ? '#10b981' : '#ef4444',
+                                boxShadow: isConnected
+                                    ? '0 0 8px rgba(16, 185, 129, 0.75)'
+                                    : '0 0 8px rgba(239, 68, 68, 0.6)',
+                                display: 'inline-block'
+                            }}
+                        />
+                        WebSocket {isConnected ? 'connected' : 'disconnected'}
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={handleWebSocketStatusClick}
+                        disabled={Boolean(connectionAction) || isSyncing}
+                        style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                            background: isConnected
+                                ? (isNight ? '#252525' : '#ffffff')
+                                : (isNight ? '#3f1d1d' : '#fee2e2'),
+                            color: isConnected
+                                ? (isNight ? '#e5e7eb' : '#1f2937')
+                                : (isNight ? '#fecaca' : '#991b1b'),
+                            border: `1px solid ${isConnected ? borderColor : (isNight ? '#7f1d1d' : '#fecaca')}`,
+                            borderRadius: '8px',
+                            padding: '7px 10px',
+                            fontSize: '12px',
+                            fontWeight: 800,
+                            cursor: (connectionAction || isSyncing) ? 'not-allowed' : 'pointer',
+                            opacity: (connectionAction || isSyncing) ? 0.7 : 1,
+                            minHeight: '30px'
+                        }}
+                        title={isConnected ? 'Check WebSocket state' : 'Check and restart WebSocket'}
+                    >
+                        {(connectionAction || isSyncing) && <Loader2 className="w-3 h-3 animate-spin" />}
+                        {connectionAction === 'checking'
+                            ? 'Checking...'
+                            : connectionAction === 'restarting' || isSyncing
+                                ? 'Restarting...'
+                                : isConnected
+                                    ? 'Check status'
+                                    : 'Reconnect'}
+                    </button>
+                </div>
+
+                <div style={{
                     flex: 1,
                     overflowY: 'auto',
                     scrollbarGutter: 'stable',
@@ -1318,7 +1426,7 @@ export default function RabbitChat({ playerData, messages, isConnected, resyncMe
                     background: isNight ? '#1a1a1a' : '#fafafa',
                     padding: '16px',
                     border: `1px solid ${borderColor}`,
-                    borderRadius: '10px 10px 0 0'
+                    borderRadius: '0'
                 }}>
                     {messages.length === 0 ? (
                         <div style={{ textAlign: 'center', color: isNight ? '#666' : '#999', marginTop: '40px' }}>

@@ -301,16 +301,61 @@ export function useMainPageOnboarding({
   useEffect(() => {
     if (!shouldRunOnboarding || !isFundingLinkSubStep) return;
 
-    const scrollLinkWalletIntoView = () => {
-      const linkWalletButton = document.querySelector('[data-app="settings-link-wallet"]');
-      if (!linkWalletButton || typeof linkWalletButton.scrollIntoView !== 'function') return;
-      linkWalletButton.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    const findScrollableParent = (element) => {
+      let current = element?.parentElement;
+
+      while (current && current !== document.body) {
+        const style = window.getComputedStyle(current);
+        const overflowY = style.overflowY;
+        const canScroll = /(auto|scroll|overlay)/.test(overflowY) && current.scrollHeight > current.clientHeight;
+
+        if (canScroll) {
+          return current;
+        }
+
+        current = current.parentElement;
+      }
+
+      return document.scrollingElement || document.documentElement;
     };
 
-    scrollLinkWalletIntoView();
-    const timeout = setTimeout(scrollLinkWalletIntoView, 180);
+    const scrollLinkWalletIntoView = () => {
+      const linkWalletButton = document.querySelector('[data-app="settings-link-wallet"]');
+      if (!linkWalletButton) return false;
 
-    return () => clearTimeout(timeout);
+      const scrollParent = findScrollableParent(linkWalletButton);
+      const parentRect = scrollParent.getBoundingClientRect();
+      const targetRect = linkWalletButton.getBoundingClientRect();
+      const targetCenterInParent = targetRect.top - parentRect.top + scrollParent.scrollTop + targetRect.height / 2;
+      const nextScrollTop = Math.max(0, targetCenterInParent - scrollParent.clientHeight / 2);
+
+      scrollParent.scrollTo({
+        top: nextScrollTop,
+        behavior: 'smooth',
+      });
+
+      return true;
+    };
+
+    let attempts = 0;
+    let retryTimeout = null;
+    const scrollUntilReady = () => {
+      attempts += 1;
+      const didScroll = scrollLinkWalletIntoView();
+
+      if (didScroll || attempts >= 12) return;
+      retryTimeout = window.setTimeout(scrollUntilReady, 120);
+    };
+
+    scrollUntilReady();
+    const timeouts = [240, 600, 1000].map((delay) => setTimeout(scrollLinkWalletIntoView, delay));
+
+    return () => {
+      if (retryTimeout) {
+        clearTimeout(retryTimeout);
+      }
+      timeouts.forEach(clearTimeout);
+    };
   }, [shouldRunOnboarding, isFundingLinkSubStep]);
 
   useEffect(() => {

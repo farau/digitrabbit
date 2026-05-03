@@ -109,7 +109,7 @@ export default function MainPage() {
   } = usePreSignedPool({ embeddedWallet })
 
   // ✅ Hook WebSocket
-  const { messages, isConnected, isSyncing, resync, registerCallbacks } = useChatMessages()
+  const { messages, isConnected, resync, registerCallbacks } = useChatMessages()
   const hasNoPoints = Number(playerData?.rabbitPoints || 0) <= 0
   const isAppInteractionLocked = Boolean(embeddedWallet?.address) && !hasLoadedPlayerData
   const questIds = useMemo(() => ['daily_messages', 'daily_streak', 'daily_hold', 'weekly_messages', 'weekly_games'], [])
@@ -441,16 +441,6 @@ export default function MainPage() {
         console.log('💰 Points claimed, refreshing player data...')
         void fetchPlayerData({ force: true })
       },
-      onGameStarted: (log) => {
-        if (!isCurrentPlayerEvent(log)) return
-        console.log('🚀 Game started, refreshing player data...')
-        void fetchPlayerData({ force: true })
-      },
-      onGamePlayed: (log) => {
-        if (!isCurrentPlayerEvent(log)) return
-        console.log('🎮 Game played, refreshing player data...')
-        void fetchPlayerData({ force: true })
-      },
       onQuestRewardCredited: (log) => {
         if (!isCurrentPlayerEvent(log)) return
         console.log('💰 Quest reward credited, refreshing player data...')
@@ -671,6 +661,7 @@ export default function MainPage() {
           isGameStarted={isGameStarted}
           setIsGameStarted={setIsGameStarted}
           onGameEnd={onGameEnd}
+          onPlayerDataRefresh={() => fetchPlayerData({ force: true })}
           getAvailableTransactions={getAvailableTransactions}
         />;
       case "RabbitChat":
@@ -678,7 +669,6 @@ export default function MainPage() {
           playerData={playerData}
           messages={messages}
           isConnected={isConnected}
-          resyncMessages={resync}
         />;
       case "Quests":
         return <Quests
