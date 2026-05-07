@@ -20,6 +20,7 @@ All notable changes to this project will be documented in this file.
 ### Quests / Funding
 - Reduced the weekly message quest target from `1000` to `500` across backend claim logic, main-page quest targets, and quest UI copy.
 - Increased the embedded wallet funding amount from `0.0001` ETH to `0.002` ETH.
+- Added empty-state messages when all daily or weekly quests have already been completed, inviting players to come back later.
 
 ## [03/05/2026]
 

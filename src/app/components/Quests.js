@@ -261,6 +261,22 @@ function QuestCard({ quest, progress, streak, isNight, claimed, onClaim, isClaim
     );
 }
 
+function EmptyQuestsMessage({ type, isNight }) {
+    const textColor = isNight ? '#ddd' : '#333';
+    const subTextColor = isNight ? '#aaa' : '#666';
+
+    return (
+        <div style={{ textAlign: 'center', padding: '24px 16px', color: textColor }}>
+            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>
+                All {type} quests are complete.
+            </p>
+            <p style={{ margin: '6px 0 0', fontSize: '13px', color: subTextColor }}>
+                Come back later for new quests.
+            </p>
+        </div>
+    );
+}
+
 export default function Quests({ playerData, embeddedWallet, onQuestClaimed = null }) {
     // ✅ Utilise themeMode comme dans Settings.js
     const { themeMode } = useTheme();
@@ -440,6 +456,9 @@ export default function Quests({ playerData, embeddedWallet, onQuestClaimed = nu
         }
     ];
 
+    const visibleDailyQuests = DAILY_QUESTS.filter(quest => !isQuestClaimed(quest.id, dailyClaimStatus));
+    const visibleWeeklyQuests = WEEKLY_QUESTS.filter(quest => !isQuestClaimed(quest.id, weeklyClaimStatus));
+
     // Handle quest claim
     const handleClaimQuest = async (quest) => {
         if (!embeddedWallet?.address) {
@@ -551,8 +570,10 @@ export default function Quests({ playerData, embeddedWallet, onQuestClaimed = nu
                         <div style={{ textAlign: 'center', padding: '20px', color: '#ef4444' }}>
                             Error loading daily quests: {questsError}
                         </div>
+                    ) : visibleDailyQuests.length === 0 ? (
+                        <EmptyQuestsMessage type="daily" isNight={isNight} />
                     ) : (
-                        DAILY_QUESTS.map(quest => (
+                        visibleDailyQuests.map(quest => (
                             <QuestCard
                                 key={quest.id}
                                 quest={quest}
@@ -608,8 +629,10 @@ export default function Quests({ playerData, embeddedWallet, onQuestClaimed = nu
                         <div style={{ textAlign: 'center', padding: '20px', color: '#ef4444' }}>
                             Error loading weekly quests: {questsError}
                         </div>
+                    ) : visibleWeeklyQuests.length === 0 ? (
+                        <EmptyQuestsMessage type="weekly" isNight={isNight} />
                     ) : (
-                        WEEKLY_QUESTS.map(quest => (
+                        visibleWeeklyQuests.map(quest => (
                             <QuestCard
                                 key={quest.id}
                                 quest={quest}
