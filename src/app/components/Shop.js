@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, NUM_SLOTS, MAX_LEVEL } from '@/utils/chainConfig'
-import { megaethTestnet } from 'viem/chains'
+import { megaeth } from 'viem/chains'
 import { Loader2, ArrowLeft, ArrowRight } from 'lucide-react'
 import Wrapper from './Wrapper'
 import styles from './Shop.module.css'
@@ -147,7 +147,7 @@ export default function Shop({ playerData, isGameStarted }) {
         abi: DIGIT_RABBITS_ABI,
         functionName: 'buyItem',
         args: [slot, level],
-        chain: megaethTestnet,
+        chain: megaeth,
       })
       console.log({ hash })
       setTxResult(hash)

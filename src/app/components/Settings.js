@@ -13,7 +13,7 @@ import { megaeth } from 'viem/chains';
 
 function FundButton({ embeddedWallet }) {
 
-  const {  fundWallet } = useFundWallet();
+  const { fundWallet } = useFundWallet();
   const walletAddress = embeddedWallet?.address;
 
   return (
@@ -23,7 +23,7 @@ function FundButton({ embeddedWallet }) {
         if (!walletAddress) return;
         await fundWallet(walletAddress, {
           chain: megaeth,
-          amount: '0.0001', // Amount in ETH to fund
+          amount: '0.002', // Amount in ETH to fund
           options: {
             // You can add options here if needed, such as a callback URL after funding
             themeMode: 'dark', // Force dark mode for the funding interface

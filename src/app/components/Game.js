@@ -4,7 +4,8 @@
 import styles from './Game.module.css'
 import { useState, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
-import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, COOLDOWN_SECONDS, customMegaethTestnet, publicClient } from '@/utils/chainConfig'
+import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS, COOLDOWN_SECONDS, publicClient } from '@/utils/chainConfig'
+import { megaeth } from 'viem/chains'
 import { XLogo } from '@/utils/constants'
 import React from 'react'
 import Wrapper from './Wrapper'
@@ -415,7 +416,7 @@ export default function Game({ playerData, preSignedPool, isInitializing, error,
         abi: DIGIT_RABBITS_ABI,
         functionName: 'startGame',
         args: [nonce, signature],
-        chain: customMegaethTestnet,
+        chain: megaeth,
         gas: 30000000n
       });
 

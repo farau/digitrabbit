@@ -1,30 +1,16 @@
 import { createPublicClient, http, webSocket, parseAbi } from "viem"
-import { megaethTestnet, megaeth } from "viem/chains"
-// Configuration customisée du Megaeth Testnet avec une URL RPC spécifique
-export const customMegaethTestnet = {
-  ...megaethTestnet,
-  id: 6343, // Viem utilise 'id' plutôt que 'chainId'
-  chainId: 6343, // Garder aussi chainId pour compatibilité
-  name: 'MegaETH Testnet v2', // Optionnel mais recommandé
-  rpcUrls: {
-    default: {
-      http: ['https://carrot.megaeth.com/rpc'],
-    },
-    public: {
-      http: ['https://carrot.megaeth.com/rpc'],
-    },
-  },
-};
+import { megaeth } from "viem/chains"
+
 
 export const publicClient = createPublicClient({
-  chain: customMegaethTestnet,
-  transport: http('https://carrot.megaeth.com/rpc'),
+  chain: megaeth,
+  transport: http('https://mainnet.megaeth.com/rpc'),
 })
 
 export const wsPublicClient = createPublicClient({
-  chain: customMegaethTestnet,
+  chain: megaeth,
   transport: webSocket(
-    'wss://carrot.megaeth.com/ws',
+    'wss://mainnet.megaeth.com/ws',
     {
       reconnect: { attempts: 10, delay: 3000 },
     }
@@ -44,7 +30,7 @@ export const defineGasPrice = async (walletClient) => {
       abi: DIGIT_RABBITS_ABI,
       functionName: 'play',
       args: [],
-      chain: customMegaethTestnet
+      chain: megaeth
     });
 
     // Ajouter une marge de sécurité de 20%

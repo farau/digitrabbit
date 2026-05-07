@@ -1,7 +1,6 @@
 'use client';
 
 import { appId, clientId } from '@/config';
-import { customMegaethTestnet } from '@/utils/chainConfig';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
@@ -196,8 +195,8 @@ export function ContextProvider({ children }) {
 
   const privyConfig = {
     // Create embedded wallets for users who don't have a wallet
-    defaultChain: customMegaethTestnet,
-    supportedChains: [customMegaethTestnet, megaeth],
+    defaultChain: megaeth,
+    supportedChains: [megaeth],
     embeddedWallets: {
       ethereum: {
         createOnLogin: 'users-without-wallets', // Create embedded wallets for all users

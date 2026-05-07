@@ -419,10 +419,10 @@ export default function Quests({ playerData, embeddedWallet, onQuestClaimed = nu
         {
             id: 'weekly_messages',
             title: 'Weekly Chatter',
-            description: 'Send 1000 messages throughout the week',
+            description: 'Send 500 messages throughout the week',
             type: 'messages',
             icon: '📝',
-            targetBase: 1000,
+            targetBase: 500,
             rewardBase: 500,
             progress: questProgress.weekly_messages || 0,
             period: 'weekly'

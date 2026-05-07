@@ -2,8 +2,7 @@
 import { createWalletClient, createPublicClient, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts'
 import { encodePacked, keccak256, hashMessage } from 'viem';
-import { recoverAddress } from 'viem'
-import { customMegaethTestnet } from '@/utils/chainConfig'
+import { megaeth } from 'viem/chains';
 import {
   DIGIT_RABBITS_ABI,
   DIGIT_RABBITS_ADDRESS,
@@ -21,9 +20,9 @@ let rabbitBotAccount = null;
 function getBackendRpcUrl() {
   const vipKey = process.env.NEXT_VIP_RPC_KEY
   if (vipKey) {
-    return `https://carrot.megaeth.com/rpc?vip=1&u=digitrabbits%20v2&v=5184000&s=mafia&verify=${vipKey}`
+    return `https://mainnet.megaeth.com/rpc?vip=1&u=digitrabbits%20v2&v=5184000&s=mafia&verify=${vipKey}`
   }
-  return 'https://carrot.megaeth.com/rpc'
+  return 'https://mainnet.megaeth.com/rpc'
 }
 
 function buildClientsFromPrivateKey(privateKey) {
@@ -32,12 +31,12 @@ function buildClientsFromPrivateKey(privateKey) {
 
   const walletClient = createWalletClient({
     account,
-    chain: customMegaethTestnet,
+    chain: megaeth,
     transport,
   })
 
   const publicClient = createPublicClient({
-    chain: customMegaethTestnet,
+    chain: megaeth,
     transport,
   })
 
@@ -282,7 +281,7 @@ export async function sendRabbitBotChatMessage({
       signature,
       finalReplyToMessageId
     ],
-    chain: customMegaethTestnet,
+    chain: megaeth,
     gas: BigInt(process.env.RABBITBOT_CHAT_GAS_LIMIT || '30000000')
   })
 
@@ -317,7 +316,7 @@ export async function sendRabbitBotAwardPoints({
     abi: DIGIT_RABBITS_CHAT_ABI,
     functionName: 'awardPoints',
     args: [userAddress, rewardAmount, reason],
-    chain: customMegaethTestnet,
+    chain: megaeth,
     gas: BigInt(process.env.RABBITBOT_AWARD_GAS_LIMIT || '300000')
   })
 

@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Trophy, RotateCcw, Users, Calendar, ChevronLeft, ChevronRight, Zap, Target, Flame, ScrollText } from 'lucide-react';
+import { Trophy, RotateCcw, Users, Calendar, ChevronLeft, ChevronRight, Zap, Target, Flame, ScrollText, Copy, Download, X } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { useLeaderboard } from '../hooks/useLeaderboard';
 import { useTheme, useGame } from '@/context';
@@ -34,7 +34,15 @@ export default function Leaderboard({ }) {
   const boxShadow = isNight ? '0 0 8px rgba(255,255,255,0.05)' : '0 2px 6px rgba(0,0,0,0.1)';
   const subTextColor = isNight ? '#999' : '#666';
 
-  const { shareOnTwitter, isGenerating } = useShareCard({
+  const {
+    prepareShareCard,
+    closeShareCard,
+    copyShareCard,
+    saveShareCard,
+    openShareOnTwitter,
+    shareCard,
+    isGenerating
+  } = useShareCard({
     logoSrc: '/img/logo.png', // logo app
   });
 
@@ -101,13 +109,31 @@ export default function Leaderboard({ }) {
 
     showToast('Generating your card…', 'loading');
 
-    const success = await shareOnTwitter({ player, league });
+    const card = await prepareShareCard({ player, league });
 
-    if (success) {
-      showToast(' Image downloaded! Attach it to your tweet 🐇', 'success');
+    if (card) {
+      showToast('Share card ready', 'success');
     } else {
       showToast('Could not generate card', 'error');
     }
+  };
+
+  const handleCopyShareCard = async () => {
+    const success = await copyShareCard();
+    showToast(
+      success ? 'Image copied. Paste it into your post.' : 'Copy is not available in this browser',
+      success ? 'success' : 'error'
+    );
+  };
+
+  const handleSaveShareCard = () => {
+    const success = saveShareCard();
+    showToast(success ? 'Image saved' : 'Could not save image', success ? 'success' : 'error');
+  };
+
+  const handleOpenShareOnTwitter = () => {
+    const success = openShareOnTwitter();
+    if (success) showToast('X share window opened', 'success');
   };
 
 
@@ -690,7 +716,7 @@ export default function Leaderboard({ }) {
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622 5.911-5.622Zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                   </svg>
-                  Share on X
+                  Show Card
                 </>
               )}
             </button>
@@ -854,6 +880,185 @@ export default function Leaderboard({ }) {
           </div>
         )}
       </div>
+
+      {/* Share Preview Modal */}
+      {shareCard && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="leaderboard-share-title"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9998,
+            background: isNight ? 'rgba(0, 0, 0, 0.72)' : 'rgba(17, 24, 39, 0.36)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+          }}
+          onClick={closeShareCard}
+        >
+          <div
+            style={{
+              width: 'min(920px, 100%)',
+              maxHeight: 'min(92vh, 760px)',
+              overflow: 'auto',
+              background: cardBg,
+              border: `1px solid ${borderColor}`,
+              borderRadius: '12px',
+              boxShadow,
+              color: textColor,
+            }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '16px',
+                padding: '18px 20px',
+                background: isNight ? '#1a1a1a' : '#f9f9f9',
+                borderBottom: `1px solid ${borderColor}`,
+              }}
+            >
+              <h3
+                id="leaderboard-share-title"
+                style={{
+                  margin: 0,
+                  fontSize: '22px',
+                  lineHeight: 1.2,
+                  fontWeight: 800,
+                  color: textColor,
+                }}
+              >
+                Share Rank
+              </h3>
+              <button
+                type="button"
+                aria-label="Close share preview"
+                onClick={closeShareCard}
+                style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '8px',
+                  border: `1px solid ${borderColor}`,
+                  background: isNight ? '#222' : '#f3f3f3',
+                  color: subTextColor,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                }}
+              >
+                <X className="w-7 h-7" />
+              </button>
+            </div>
+
+            <div style={{ padding: '20px' }}>
+              <div
+                style={{
+                  border: `1px solid ${borderColor}`,
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  background: isNight ? '#111' : '#fff',
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={shareCard.previewUrl}
+                  alt={`Digit Rabbits leaderboard rank ${shareCard.player?.rank || ''} share card`}
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    height: 'auto',
+                    aspectRatio: '1200 / 630',
+                  }}
+                />
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                gap: '12px',
+                padding: '16px 20px 20px',
+                background: isNight ? '#1a1a1a' : '#f9f9f9',
+                borderTop: `1px solid ${borderColor}`,
+              }}
+              className="leaderboard-share-actions"
+            >
+              <button
+                type="button"
+                onClick={handleCopyShareCard}
+                style={{
+                  height: '52px',
+                  borderRadius: '8px',
+                  border: `1px solid ${borderColor}`,
+                  background: isNight ? '#222' : '#f3f3f3',
+                  color: textColor,
+                  fontSize: '15px',
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px',
+                  cursor: 'pointer',
+                }}
+              >
+                <Copy className="w-5 h-5" />
+                Copy
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveShareCard}
+                style={{
+                  height: '52px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
+                  color: '#fff',
+                  fontSize: '15px',
+                  fontWeight: 900,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px',
+                  cursor: 'pointer',
+                }}
+              >
+                <Download className="w-5 h-5" />
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={handleOpenShareOnTwitter}
+                style={{
+                  height: '52px',
+                  borderRadius: '8px',
+                  border: '1px solid #ffffff22',
+                  background: 'linear-gradient(135deg, #0f1117 0%, #1a1d27 100%)',
+                  color: '#fff',
+                  fontSize: '15px',
+                  fontWeight: 900,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px',
+                  cursor: 'pointer',
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622 5.911-5.622Zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                </svg>
+                Share on X
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toast Notification */}
       {toast && (

@@ -11,7 +11,7 @@ import WalletButton from './WalletButton'
 import * as Sentry from '@sentry/nextjs'
 import Image from 'next/image'
 import { decodeEventLog } from 'viem'
-import { customMegaethTestnet } from '@/utils/chainConfig'
+import { megaeth } from 'viem/chains'
 
 import {
     DIGIT_RABBITS_CHAT_ABI,
@@ -1178,7 +1178,7 @@ export default function RabbitChat({ playerData, messages, isConnected }) {
                 abi: DIGIT_RABBITS_ABI,
                 functionName: 'sendChatMessage',
                 args: [contentToSend, score, nonce, twitterUsername, twitterProfilePictureUrl, signature, replyToMessageId],
-                chain: customMegaethTestnet,
+                chain: megaeth,
                 gas: 30000000n
             })
 

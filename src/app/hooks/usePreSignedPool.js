@@ -3,7 +3,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { encodeFunctionData } from 'viem'
-import { customMegaethTestnet, defineGasPrice } from '@/utils/chainConfig'
+import { defineGasPrice } from '@/utils/chainConfig'
 import { DIGIT_RABBITS_ABI, DIGIT_RABBITS_ADDRESS } from '@/utils/chainConfig'
 import { useWalletClient } from './useWalletClient'
 import { InternalRpcError } from 'viem';

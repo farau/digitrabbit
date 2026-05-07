@@ -1,6 +1,6 @@
 // lib/walletClient.js
 import { createWalletClient, custom, publicActions, http } from 'viem';
-import { customMegaethTestnet } from '@/utils/chainConfig';
+import { megaeth } from 'viem/chains';
 
 let client = null;
 
@@ -14,7 +14,7 @@ export const initWalletClient = async (embeddedWallet) => {
   client = createWalletClient({
     //@ts-ignore
     account: embeddedWallet.address,
-    chain: customMegaethTestnet,
+    chain: megaeth,
     transport: custom(provider, { retryCount: 1 }), //nb de retry quand une tx fail
   }).extend(publicActions);
 

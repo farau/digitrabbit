@@ -40,7 +40,7 @@ const QUEST_CONFIG = {
     },
     weekly_messages: {
         type: 'weekly',
-        calculateTarget: (streak) => 1000,
+        calculateTarget: (streak) => 500,
         calculateReward: (streak) => 500 * 10 ** 6,
     },
     weekly_games: {

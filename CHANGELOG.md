@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 
 ## Changelog
 
+## [07/05/2026]
+
+### MegaETH Mainnet Migration
+- Switched app, wallet, Privy, Wagmi, public RPC, websocket, and RabbitBot clients from MegaETH testnet/custom carrot endpoints to MegaETH mainnet.
+- Updated game, chat, shop, presigned transaction, and gas-estimation flows to use the `megaeth` chain from `viem/chains`.
+- Updated VIP/backend RPC URLs to `mainnet.megaeth.com`.
+
+### Leaderboard Sharing
+- Reworked leaderboard rank sharing into a share-card preview modal.
+- Added actions to copy the generated image, save it locally, or open an X share intent from the preview.
+- Added mobile responsive stacking for share-card actions.
+
+### Quests / Funding
+- Reduced the weekly message quest target from `1000` to `500` across backend claim logic, main-page quest targets, and quest UI copy.
+- Increased the embedded wallet funding amount from `0.0001` ETH to `0.002` ETH.
+
 ## [03/05/2026]
 
 ### Game / Player Data

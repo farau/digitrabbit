@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 // ─── Brand color (from logo) ───────────────────────────────────────────────────
 const BRAND_PINK = '#ec4899';
@@ -382,9 +382,122 @@ async function generateShareCard({ player, league, logoSrc = null }) {
     return canvas;
 }
 
+function createTweetText({ player, league }) {
+    return [
+        `🐇 I'm ranked #${player.rank} on @DigitRabbits`,
+        `${league?.badge || ''} ${league?.label || ''}`.trim(),
+        ``,
+        `⭐ ${new Intl.NumberFormat('en-EN', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(player.score)} RabbitPoints`,
+        `🎯 ${new Intl.NumberFormat('en-EN').format(player.totalClicks || 0)} clicks  ⚡ ${new Intl.NumberFormat('en-EN').format(player.maxClicks || 0)} best`,
+        `🔥 ${player.streak || 0} streak  📜 ${new Intl.NumberFormat('en-EN').format(player.questsClaimed || 0)} quests claimed`,
+        ``,
+        `Join the race 👇`,
+        `https://digitrabbits.com`,
+    ].join('\n');
+}
+
+function openTwitterIntent(tweetText) {
+    const w = 600, h = 560;
+    const left = Math.round(window.screenX + (window.outerWidth - w) / 2);
+    const top = Math.round(window.screenY + (window.outerHeight - h) / 2);
+    window.open(
+        `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`,
+        'share-twitter',
+        `width=${w},height=${h},left=${left},top=${top},toolbar=0,menubar=0,location=0,status=0,scrollbars=1,resizable=1`
+    );
+}
+
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 export function useShareCard({ logoSrc = null } = {}) {
     const [isGenerating, setIsGenerating] = useState(false);
+    const [shareCard, setShareCard] = useState(null);
+    const objectUrlRef = useRef(null);
+
+    const revokePreviewUrl = useCallback(() => {
+        if (objectUrlRef.current) {
+            URL.revokeObjectURL(objectUrlRef.current);
+            objectUrlRef.current = null;
+        }
+    }, []);
+
+    useEffect(() => revokePreviewUrl, [revokePreviewUrl]);
+
+    const prepareShareCard = useCallback(
+        async ({ player, league }) => {
+            if (!player || isGenerating) return null;
+            setIsGenerating(true);
+
+            try {
+                const canvas = await generateShareCard({ player, league, logoSrc });
+                const blob = await new Promise((res) => canvas.toBlob(res, 'image/png'));
+                if (!blob) throw new Error('Could not create share image');
+
+                revokePreviewUrl();
+
+                const previewUrl = URL.createObjectURL(blob);
+                objectUrlRef.current = previewUrl;
+
+                const nextShareCard = {
+                    blob,
+                    previewUrl,
+                    tweetText: createTweetText({ player, league }),
+                    fileName: `digitrabbits-rank-${player.rank}.png`,
+                    player,
+                    league,
+                };
+
+                setShareCard(nextShareCard);
+                return nextShareCard;
+            } catch (err) {
+                console.error('Share card error:', err);
+                return null;
+            } finally {
+                setIsGenerating(false);
+            }
+        },
+        [logoSrc, isGenerating, revokePreviewUrl]
+    );
+
+    const closeShareCard = useCallback(() => {
+        setShareCard(null);
+        revokePreviewUrl();
+    }, [revokePreviewUrl]);
+
+    const saveShareCard = useCallback(() => {
+        if (!shareCard) return false;
+
+        const a = document.createElement('a');
+        a.href = shareCard.previewUrl;
+        a.download = shareCard.fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        return true;
+    }, [shareCard]);
+
+    const copyShareCard = useCallback(async () => {
+        if (!shareCard) return false;
+
+        try {
+            if (!navigator.clipboard || !window.ClipboardItem) {
+                throw new Error('Image clipboard is not supported');
+            }
+
+            await navigator.clipboard.write([
+                new ClipboardItem({ [shareCard.blob.type]: shareCard.blob })
+            ]);
+            return true;
+        } catch (err) {
+            console.error('Copy share card error:', err);
+            return false;
+        }
+    }, [shareCard]);
+
+    const openShareOnTwitter = useCallback(() => {
+        if (!shareCard) return false;
+        openTwitterIntent(shareCard.tweetText);
+        return true;
+    }, [shareCard]);
 
     const shareOnTwitter = useCallback(
         async ({ player, league, formatScore: _fs, formatNumber: _fn }) => {
@@ -406,29 +519,9 @@ export function useShareCard({ logoSrc = null } = {}) {
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
 
-                // 3. Tweet text
-                const tweetText = [
-                    `🐇 I'm ranked #${player.rank} on @DigitRabbits`,
-                    `${league?.badge || ''} ${league?.label || ''}`.trim(),
-                    ``,
-                    `⭐ ${new Intl.NumberFormat('en-EN', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(player.score)} RabbitPoints`,
-                    `🎯 ${new Intl.NumberFormat('en-EN').format(player.totalClicks || 0)} clicks  ⚡ ${new Intl.NumberFormat('en-EN').format(player.maxClicks || 0)} best`,
-                    `🔥 ${player.streak || 0} streak  📜 ${new Intl.NumberFormat('en-EN').format(player.questsClaimed || 0)} quests claimed`,
-                    ``,
-                    `Join the race 👇`,
-                    `https://digitrabbits.com`,
-                ].join('\n');
-
                 // 4. Open Twitter after 2s (let download settle)
                 setTimeout(() => {
-                    const w = 600, h = 560;
-                    const left = Math.round(window.screenX + (window.outerWidth - w) / 2);
-                    const top = Math.round(window.screenY + (window.outerHeight - h) / 2);
-                    window.open(
-                        `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`,
-                        'share-twitter',
-                        `width=${w},height=${h},left=${left},top=${top},toolbar=0,menubar=0,location=0,status=0,scrollbars=1,resizable=1`
-                    );
+                    openTwitterIntent(createTweetText({ player, league }));
                 }, 2000);
 
                 return true; // signal success for toast
@@ -442,5 +535,14 @@ export function useShareCard({ logoSrc = null } = {}) {
         [logoSrc, isGenerating]
     );
 
-    return { shareOnTwitter, isGenerating };
+    return {
+        shareOnTwitter,
+        prepareShareCard,
+        closeShareCard,
+        copyShareCard,
+        saveShareCard,
+        openShareOnTwitter,
+        shareCard,
+        isGenerating,
+    };
 }
