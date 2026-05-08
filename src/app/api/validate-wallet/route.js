@@ -1,12 +1,17 @@
 // /api/validate-wallet/route.js (Next.js 13+ App Router)
 import { NextResponse } from 'next/server';
-import { privy, verifyAndGetUser } from '@/lib/privyClient';
+import { Redis } from '@upstash/redis';
+import { verifyAndGetUser } from '@/lib/privyClient';
 import { cookies } from 'next/headers';
 import { consumeUserRateLimit } from '@/lib/upstashRateLimit';
 
-// Cache pour éviter les appels répétés (optionnel)
-const validationCache = new Map();
-const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
+const redis = Redis.fromEnv();
+const WALLET_VALIDATION_CACHE_TTL_SECONDS = 24 * 60 * 60;
+const WALLET_VALIDATION_CACHE_PREFIX = 'validate-wallet:v1';
+
+function buildWalletValidationCacheKey(walletAddress) {
+    return `${WALLET_VALIDATION_CACHE_PREFIX}:${walletAddress.toLowerCase()}`;
+}
 
 export async function POST(request) {
     try {
@@ -36,13 +41,15 @@ export async function POST(request) {
             );
         }
 
-        // 4. Vérifier le cache (optionnel)
-        const cacheKey = `${idToken}-${walletAddress}`;
-        const cached = validationCache.get(cacheKey);
-        if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        // 4. Vérifier le cache Upstash avant de relancer la validation Privy
+        const normalizedWalletAddress = walletAddress.toLowerCase();
+        const cacheKey = buildWalletValidationCacheKey(normalizedWalletAddress);
+        const cached = await redis.get(cacheKey);
+        if (cached?.isValid === true) {
             return NextResponse.json({
                 isValid: cached.isValid,
-                message: 'Validation from cache'
+                message: 'Validation from cache',
+                walletType: cached.walletType || null
             });
         }
 
@@ -51,7 +58,7 @@ export async function POST(request) {
         const walletMatch = user.linkedAccounts.find(
             (account) => account.type === 'wallet' &&
                 account.walletClientType === 'privy' &&
-                account.address.toLowerCase() === walletAddress.toLowerCase() // Le coeur de la vérification
+                account.address.toLowerCase() === normalizedWalletAddress // Le coeur de la vérification
         );
 
         const isValid = !!walletMatch;
@@ -77,11 +84,18 @@ export async function POST(request) {
             }
         }
 
-        // 7. Mettre en cache le résultat
-        validationCache.set(cacheKey, {
-            isValid,
-            timestamp: Date.now()
-        });
+        // 7. Mettre en cache uniquement les validations réussies pendant 24h
+        if (isValid) {
+            await redis.set(
+                cacheKey,
+                {
+                    isValid: true,
+                    walletType: walletMatch?.walletClientType || null,
+                    validatedAt: Date.now()
+                },
+                { ex: WALLET_VALIDATION_CACHE_TTL_SECONDS }
+            );
+        }
 
         // 8. Logger pour la sécurité
         console.log(`Wallet validation: ${walletAddress} for user ${user.id} - ${isValid ? 'SUCCESS' : 'FAILED'}`);
@@ -90,7 +104,7 @@ export async function POST(request) {
         return NextResponse.json({
             isValid,
             message: isValid ? 'Wallet successfully validated!' : 'Wallet not associated with user',
-            walletType: walletMatch?.walletClient || null
+            walletType: walletMatch?.walletClientType || null
         });
 
     } catch (error) {
@@ -157,14 +171,3 @@ async function getBlacklistedWallets() {
         '0x0000000000000000000000000000000000000000'
     ];
 }
-
-
-// Nettoyage du cache périodiquement
-setInterval(() => {
-    const now = Date.now();
-    for (const [key, value] of validationCache.entries()) {
-        if (now - value.timestamp > CACHE_DURATION) {
-            validationCache.delete(key);
-        }
-    }
-}, CACHE_DURATION);

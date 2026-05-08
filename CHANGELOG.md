@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 
 ## Changelog
 
+## [08/05/2026]
+
+### API / Wallet Validation
+- Replaced the in-memory `Map()` cache in `/api/validate-wallet` with Upstash Redis.
+- Cached successful wallet validations for 24 hours using lowercase wallet-address keys.
+- Reused cached wallet validation results to avoid unnecessary Privy validation calls.
+
+### RabbitChat
+- Collapsed moderator tools behind a compact `Moderation` toggle so moderator controls no longer shrink the chat area by default.
+
+### Game Sharing
+- Updated the X share copy to reflect the 30-second game duration.
+
 ## [07/05/2026]
 
 ### MegaETH Mainnet Migration

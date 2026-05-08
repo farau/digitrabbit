@@ -649,6 +649,7 @@ export default function RabbitChat({ playerData, messages, isConnected }) {
     const [rabbitBotThinkingDotCount, setRabbitBotThinkingDotCount] = useState(1)
     const [isMobileLayout, setIsMobileLayout] = useState(false)
     const [connectionAction, setConnectionAction] = useState('')
+    const [isModerationPanelOpen, setIsModerationPanelOpen] = useState(false)
 
     const messagesEndRef = useRef(null)
     const inputRef = useRef(null)
@@ -1705,42 +1706,79 @@ export default function RabbitChat({ playerData, messages, isConnected }) {
                         borderRadius: '10px',
                         border: `1px solid ${borderColor}`,
                         marginTop: '12px',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        flexWrap: 'wrap',
+                        display: 'grid',
+                        gridTemplateColumns: '1fr',
                         gap: '12px'
                     }}>
                         <div style={{
                             display: 'flex',
-                            gap: '16px',
+                            justifyContent: 'space-between',
                             flexWrap: 'wrap',
                             alignItems: 'center',
-                            fontSize: '13px',
-                            color: isNight ? '#9ca3af' : '#6b7280'
+                            gap: '12px'
                         }}>
-                            <span>
-                                Role: <span className={`font-semibold ${userData.roleIndex === 3 ? 'text-emerald-500' :
-                                    userData.roleIndex === 2 ? 'text-red-500' :
-                                        userData.roleIndex === 1 ? 'text-blue-500' :
-                                            'text-gray-500'
-                                    }`}>
-                                    {userData.role}
-                                    {userData.roleIndex === 3 && <Bot size={14} className="inline ml-1" />}
-                                    {userData.roleIndex === 2 && <Shield size={14} className="inline ml-1" />}
-                                </span>
-                                {userData.isMuted && muteRemaining > 0 && (
-                                    <span className="font-semibold ml-2" style={{ color: isNight ? '#f59e0b' : '#b45309' }}>
-                                        🔇 Unmute in {formatDuration(muteRemaining)}
+                            <div style={{
+                                display: 'flex',
+                                gap: '16px',
+                                flexWrap: 'wrap',
+                                alignItems: 'center',
+                                fontSize: '13px',
+                                color: isNight ? '#9ca3af' : '#6b7280'
+                            }}>
+                                <span>
+                                    Role: <span className={`font-semibold ${userData.roleIndex === 3 ? 'text-emerald-500' :
+                                        userData.roleIndex === 2 ? 'text-red-500' :
+                                            userData.roleIndex === 1 ? 'text-blue-500' :
+                                                'text-gray-500'
+                                        }`}>
+                                        {userData.role}
+                                        {userData.roleIndex === 3 && <Bot size={14} className="inline ml-1" />}
+                                        {userData.roleIndex === 2 && <Shield size={14} className="inline ml-1" />}
                                     </span>
-                                )}
-                            </span>
-                            <span>Messages: <span className="font-semibold">{userData.messageCount}</span></span>
-                            <span>RabbitPoints: <span className="font-semibold">{userData.totalScore}</span></span>
+                                    {userData.isMuted && muteRemaining > 0 && (
+                                        <span className="font-semibold ml-2" style={{ color: isNight ? '#f59e0b' : '#b45309' }}>
+                                            🔇 Unmute in {formatDuration(muteRemaining)}
+                                        </span>
+                                    )}
+                                </span>
+                                <span>Messages: <span className="font-semibold">{userData.messageCount}</span></span>
+                                <span>RabbitPoints: <span className="font-semibold">{userData.totalScore}</span></span>
+                            </div>
+
+                            {isModerator && (
+                                <button
+                                    type="button"
+                                    onClick={() => setIsModerationPanelOpen((previous) => !previous)}
+                                    aria-expanded={isModerationPanelOpen}
+                                    style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '6px',
+                                        background: isModerationPanelOpen
+                                            ? (isNight ? '#7f1d1d' : '#fee2e2')
+                                            : (isNight ? '#252525' : '#ffffff'),
+                                        color: isModerationPanelOpen
+                                            ? (isNight ? '#fca5a5' : '#dc2626')
+                                            : (isNight ? '#e5e7eb' : '#1f2937'),
+                                        border: `1px solid ${isModerationPanelOpen ? (isNight ? '#991b1b' : '#fecaca') : borderColor}`,
+                                        borderRadius: '8px',
+                                        padding: '6px 10px',
+                                        fontSize: '12px',
+                                        fontWeight: 800,
+                                        cursor: 'pointer',
+                                        flexShrink: 0
+                                    }}
+                                    title={isModerationPanelOpen ? 'Hide moderation tools' : 'Show moderation tools'}
+                                >
+                                    <Shield size={14} />
+                                    Moderation
+                                </button>
+                            )}
                         </div>
 
                         {/* Boutons de modération pour les modérateurs */}
-                        {isModerator && (
+                        {isModerator && isModerationPanelOpen && (
                             <div style={{
                                 display: 'flex',
                                 gap: '8px',
