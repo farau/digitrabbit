@@ -504,7 +504,7 @@ export default function Game({ playerData, preSignedPool, isInitializing, error,
         err.shortMessage?.toLowerCase().includes("maximum limit") ||
         err.shortMessage?.toLowerCase().includes("exceeds the balance of the account")
       ) {
-        setErrorStartGame("Please fund your wallet with testnet tokens. Go to the Settings section, copy your wallet address and paste it into the faucet.");
+        setErrorStartGame("Please fund your wallet with ETH tokens. Go to the Settings section to do so.");
       } else if (err.shortMessage?.toLowerCase().includes("not finished")) {
         setErrorStartGame("Cooldown not finished yet. Please try again later.");
       } else {

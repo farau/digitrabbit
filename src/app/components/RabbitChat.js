@@ -59,7 +59,7 @@ function MessageBubble({ message, messages, isNight, playerData, onReply }) {
     const txUrl = typeof message?.txUrl === 'string' && message.txUrl
         ? message.txUrl
         : (typeof message?.transactionHash === 'string' && message.transactionHash
-            ? `https://megaeth-testnet-v2.blockscout.com/tx/${message.transactionHash}`
+            ? `https://megaeth.blockscout.com/tx/${message.transactionHash}`
             : '')
     const shortTxHash = typeof message?.transactionHash === 'string' && message.transactionHash.length > 12
         ? `${message.transactionHash.slice(0, 6)}...${message.transactionHash.slice(-4)}`

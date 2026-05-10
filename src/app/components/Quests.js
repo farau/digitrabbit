@@ -8,6 +8,8 @@ import { DIGIT_RABBITS_ADDRESS, DIGIT_RABBITS_ABI } from '@/utils/chainConfig';
 import { useQuestsStatus, isQuestClaimed, canClaimQuest, formatRemainingTime } from '../hooks/useQuestsStatus';
 import { useWalletClient } from '../hooks/useWalletClient';
 
+const DAILY_HOLD_MAX_REWARDED_NFTS = 10;
+
 function QuestCard({ quest, progress, streak, isNight, claimed, onClaim, isClaimingQuest, cooldowns, formatRemainingTime }) {
     const cardBg = isNight ? '#1a1a1a' : '#f8f8f8';
     const textColor = isNight ? '#eee' : '#333';
@@ -114,6 +116,17 @@ function QuestCard({ quest, progress, streak, isNight, claimed, onClaim, isClaim
                                 }}>
                                     Reward
                                 </div>
+                                {quest.rewardDescription ? (
+                                    <div style={{
+                                        fontSize: '10px',
+                                        color: subTextColor,
+                                        lineHeight: 1.25,
+                                        marginTop: '2px',
+                                        maxWidth: '120px'
+                                    }}>
+                                        {quest.rewardDescription}
+                                    </div>
+                                ) : null}
                             </div>
                         </div>
 
@@ -421,11 +434,12 @@ export default function Quests({ playerData, embeddedWallet, onQuestClaimed = nu
         {
             id: 'daily_hold',
             title: 'NFT Enthusiast',
-            description: `Hold ${streak} Digit Rabbit NFT(s) to earn extra rewards`,
+            description: 'Hold at least 1 Digit Rabbit NFT to earn bonus rewards',
             type: 'NFTs',
             icon: '🎨',
-            targetBase: streak,
-            rewardBase: 100 * streak,
+            targetBase: 1,
+            rewardBase: 50 + (Math.min(Math.max(questProgress.daily_hold || 0, 1), DAILY_HOLD_MAX_REWARDED_NFTS) - 1) * 15,
+            rewardDescription: '+15 pts per extra NFT, capped at 10 NFTs',
             progress: questProgress.daily_hold || 0, // Will be fetched from API
             period: 'daily'
         }

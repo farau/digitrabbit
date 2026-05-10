@@ -152,7 +152,7 @@ export default function MainPage() {
     const targets = {
       daily_messages: Math.max(10 + Math.max(streak - 1, 0) * 2, 10),
       daily_streak: 1,
-      daily_hold: Math.max(streak, 1),
+      daily_hold: 1,
       weekly_messages: 500,
       weekly_games: 14,
     }

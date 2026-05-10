@@ -49,7 +49,7 @@ export const defineGasPrice = async (walletClient) => {
   }
 }
 
-// Digit Rabbits smart contract on MegaETH Testnet
+// Digit Rabbits smart contract on MegaETH
 export const DIGIT_RABBITS_ADDRESS = process.env.NEXT_PUBLIC_DIGIT_RABBITS_ADDRESS
 export const DIGIT_RABBITS_CHAT_ADDRESS = process.env.NEXT_PUBLIC_DIGIT_RABBITS_CHAT_ADDRESS
 export const NUM_SLOTS = 5

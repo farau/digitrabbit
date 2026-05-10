@@ -17,6 +17,7 @@ const erc721Abi = parseAbi([
 const NFT_ADDRESS = process.env.ERC721_DIGIT_RABBITS_CONTRACT_ADDRESS;
 const AUTH_CACHE_TTL_SECONDS = 60;
 const HOLDINGS_CACHE_TTL_SECONDS = 60;
+const DAILY_HOLD_MAX_REWARDED_NFTS = 10;
 
 /**
  * ✅ Configuration centralisée des quêtes
@@ -35,8 +36,11 @@ const QUEST_CONFIG = {
     },
     daily_hold: {
         type: 'daily',
-        calculateTarget: (streak) => streak,
-        calculateReward: (streak) => (100 * streak) * 10 ** 6,
+        calculateTarget: () => 1,
+        calculateReward: (_streak, nftBalance = 0) => {
+            const rewardedNfts = Math.min(Math.max(Number(nftBalance) || 0, 1), DAILY_HOLD_MAX_REWARDED_NFTS);
+            return (50 + (rewardedNfts - 1) * 15) * 10 ** 6;
+        },
     },
     weekly_messages: {
         type: 'weekly',
@@ -225,7 +229,7 @@ async function validateQuestCompletion(
                         error: `Need ${target} NFTs, currently holding ${nftBalance}`
                     };
                 }
-                break;
+                return { success: true, nftBalance };
             }
 
             case 'weekly_messages': {
@@ -348,12 +352,7 @@ export async function POST(request) {
 
         const streak = Number(playerData[4]);
 
-        // 4️⃣ ✅ CALCULER le montant de la récompense côté serveur
-        const rewardAmount = questConfig.calculateReward(streak);
-
-        console.log(`💰 Calculated reward for ${questId}: ${rewardAmount} (streak: ${streak})`);
-
-        // 5️⃣ Récupérer le dernier claim time
+        // 4️⃣ Récupérer le dernier claim time
         const lastQuestClaimTime = await publicClient.readContract({
             address: DIGIT_RABBITS_ADDRESS,
             abi: DIGIT_RABBITS_ABI,
@@ -361,7 +360,7 @@ export async function POST(request) {
             args: [playerAddress, questId]
         });
 
-        // 6️⃣ Valider les conditions de la quête
+        // 5️⃣ Valider les conditions de la quête
         const validation = await validateQuestCompletion(
             questId,
             playerAddress,
@@ -376,6 +375,11 @@ export async function POST(request) {
                 error: validation.error
             }, { status: 400 });
         }
+
+        // 6️⃣ ✅ CALCULER le montant de la récompense côté serveur
+        const rewardAmount = questConfig.calculateReward(streak, validation.nftBalance || 0);
+
+        console.log(`💰 Calculated reward for ${questId}: ${rewardAmount} (streak: ${streak}, NFTs: ${validation.nftBalance || 0})`);
 
         // 7️⃣ Générer un nonce unique
         const nonce = Date.now() + Math.floor(Math.random() * 1000000);

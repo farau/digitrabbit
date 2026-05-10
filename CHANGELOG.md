@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 
 ## Changelog
 
+## [10/05/2026]
+
+### Quests / NFT Holding
+- Reworked the daily NFT holding quest so it no longer scales with streak.
+- Set the daily NFT holding requirement to at least `1` Digit Rabbit NFT.
+- Updated the daily NFT holding reward to `50` points for the first NFT, plus `15` points for each additional NFT.
+- Capped the daily NFT holding reward calculation at `10` rewarded NFTs.
+- Added reward helper copy in the quest card explaining the `+15` points per extra NFT bonus and the `10` NFT cap.
+- Updated quest notification readiness so the NFT holding quest becomes claimable from `1` held NFT.
+
+### Mainnet UX
+- Updated MegaETH explorer links from testnet Blockscout to mainnet Blockscout in chat reward messages and transaction history surfaces.
+- Updated the start-game funding error copy to reference ETH funding instead of testnet faucet tokens.
+
 ## [08/05/2026]
 
 ### API / Wallet Validation
