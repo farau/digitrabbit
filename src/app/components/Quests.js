@@ -438,8 +438,8 @@ export default function Quests({ playerData, embeddedWallet, onQuestClaimed = nu
             type: 'NFTs',
             icon: '🎨',
             targetBase: 1,
-            rewardBase: 50 + (Math.min(Math.max(questProgress.daily_hold || 0, 1), DAILY_HOLD_MAX_REWARDED_NFTS) - 1) * 15,
-            rewardDescription: '+15 pts per extra NFT, capped at 10 NFTs',
+            rewardBase: 50 + Math.min(Math.max(questProgress.daily_hold || 0, 1), DAILY_HOLD_MAX_REWARDED_NFTS) * 15,
+            rewardDescription: '+15 pts per NFT, capped at 10 NFTs',
             progress: questProgress.daily_hold || 0, // Will be fetched from API
             period: 'daily'
         }

@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 
 ## Changelog
 
+## [12/05/2026]
+
+### Quests / NFT Holding
+- Fixed `daily_hold` reward calculation so the daily NFT holding bonus now computes `50 + rewardedNfts * 15` points.
+- Ensured the daily NFT holding bonus still caps at `10` rewarded NFTs and that values above `10` do not undercount extra NFTs.
+
 ## [10/05/2026]
 
 ### Quests / NFT Holding

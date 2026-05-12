@@ -39,7 +39,7 @@ const QUEST_CONFIG = {
         calculateTarget: () => 1,
         calculateReward: (_streak, nftBalance = 0) => {
             const rewardedNfts = Math.min(Math.max(Number(nftBalance) || 0, 1), DAILY_HOLD_MAX_REWARDED_NFTS);
-            return (50 + (rewardedNfts - 1) * 15) * 10 ** 6;
+            return (50 + rewardedNfts * 15) * 10 ** 6;
         },
     },
     weekly_messages: {
