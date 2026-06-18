@@ -19,6 +19,7 @@ function timeoutPromise(ms, message) {
  */
 async function executeGraphQLQuery(query, variables = {}) {
     const graphqlEndpoint = process.env.GRAPHQL_ENDPOINT;
+    const graphqlAuthToken = process.env.GRAPHQL_AUTH_TOKEN;
     const isDevelopment = process.env.NODE_ENV === 'development';
 
     if (!graphqlEndpoint) {
@@ -42,6 +43,8 @@ async function executeGraphQLQuery(query, variables = {}) {
             signal: controller.signal,
             headers: {
                 'Content-Type': 'application/json',
+                Accept: 'application/json',
+                ...(graphqlAuthToken ? { Authorization: `Bearer ${graphqlAuthToken}` } : {}),
             },
             body: JSON.stringify({
                 query,
@@ -52,7 +55,11 @@ async function executeGraphQLQuery(query, variables = {}) {
         clearTimeout(timeoutId);
 
         if (!response.ok) {
-            throw new Error(`GraphQL request failed: ${response.status} ${response.statusText}`);
+            const errorBody = await response.text().catch(() => '');
+            if (response.status === 401 && graphqlEndpoint.includes('api.goldsky.com')) {
+                throw new Error('GraphQL request failed: Goldsky authorization missing or invalid. Set GRAPHQL_AUTH_TOKEN.');
+            }
+            throw new Error(`GraphQL request failed: ${response.status} ${response.statusText}${errorBody ? ` - ${errorBody}` : ''}`);
         }
 
         const payload = await response.json();

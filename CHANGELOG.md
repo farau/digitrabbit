@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 
 ## Changelog
 
+## [18/06/2026]
+
+### GraphQL / Goldsky
+- Added optional `GRAPHQL_AUTH_TOKEN` support for private Goldsky GraphQL endpoints.
+- Sent `Authorization: Bearer <token>` from server-side GraphQL requests when configured.
+- Improved Goldsky `401` errors so missing or invalid tokens point to `GRAPHQL_AUTH_TOKEN`.
+- Documented the private GraphQL auth token environment variable.
+
 ## [12/05/2026]
 
 ### Quests / NFT Holding

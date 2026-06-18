@@ -64,7 +64,8 @@ Example variables used in the project include:
 - `NEXT_PUBLIC_PRIVY_APP_ID`, `NEXT_PUBLIC_PRIVY_CLIENT_ID` - Privy auth config
 - `PRIVY_APP_SECRET` - Privy secret (server-only)
 - `NEXT_PUBLIC_DIGIT_RABBITS_ADDRESS` - contract address for on-chain data
-- `GRAPHQL_ENDPOINT` - The Graph endpoint for indexing/queries
+- `GRAPHQL_ENDPOINT` - The Graph/Goldsky endpoint for indexing/queries
+- `GRAPHQL_AUTH_TOKEN` - Bearer token for private GraphQL endpoints such as Goldsky
 - RabbitBot backend vars:
   - `RABBITBOT_ENABLED`
   - `RABBITBOT_PRIVATE_KEY`
